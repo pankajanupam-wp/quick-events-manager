@@ -59,6 +59,6 @@ function pa_event(){
   );   
   register_post_type('events', $args);
 }
-pa_event();
+add_action('init', 'pa_event');
 
 ?>
