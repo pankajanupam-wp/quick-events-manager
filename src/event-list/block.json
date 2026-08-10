@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "qem/event-list",
+	"title": "Event List",
+	"category": "widgets",
+	"icon": "calendar-alt",
+	"description": "A list of upcoming or past events.",
+	"textdomain": "quick-events-manager",
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"attributes": {
+		"limit": { "type": "number", "default": 10 },
+		"show": { "type": "string", "default": "upcoming" },
+		"category": { "type": "string", "default": "" },
+		"columns": { "type": "number", "default": 2 }
+	},
+	"editorScript": "file:./index.js"
+}

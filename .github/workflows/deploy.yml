@@ -1,0 +1,68 @@
+name: Deploy to WordPress.org
+
+# Publishing is a tag push. The tag name becomes the SVN tag directory and
+# must match "Stable tag" in readme.txt exactly, so tag 26.0 — not v26.0.
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # WordPress.org serves whatever "Stable tag" points at. If the git tag
+      # and the readme disagree, users get a version that does not exist, so
+      # fail here rather than after it is published.
+      - name: Verify the tag matches the readme stable tag
+        run: |
+          STABLE_TAG="$(grep -i '^Stable tag:' readme.txt | sed 's/^[^:]*: *//' | tr -d '[:space:]')"
+          echo "git tag:    ${GITHUB_REF_NAME}"
+          echo "stable tag: ${STABLE_TAG}"
+          if [ "${GITHUB_REF_NAME}" != "${STABLE_TAG}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match 'Stable tag: ${STABLE_TAG}' in readme.txt."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      # Never publish a red build. This also re-checks that the plugin header,
+      # the version constant and the readme all agree.
+      - name: Run tests
+        run: composer test
+
+      # build/ is gitignored, so the blocks have to be compiled here or the
+      # published package ships without them and every block silently vanishes.
+      - name: Build blocks
+        run: |
+          npm ci
+          npm run build
+          for block in event-list event-details event-registration; do
+            test -f "build/${block}/block.json" || { echo "::error::build/${block}/block.json missing"; exit 1; }
+          done
+
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: quick-events-manager

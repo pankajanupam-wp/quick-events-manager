@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/pankajanupam-wp/quick-events-manager/blob/main/SECURITY.md
+    about: Please report security issues privately, not as a public issue.
+  - name: Support question
+    url: https://wordpress.org/support/plugin/quick-events-manager/
+    about: For help using the plugin, the WordPress.org support forum is the better place.

@@ -1,0 +1,29 @@
+# Files kept out of the plugin package published to WordPress.org.
+# Everything here lives in the repository only.
+
+.git
+.github
+.gitignore
+.distignore
+.editorconfig
+.wordpress-org
+docs
+tests
+src
+node_modules
+vendor
+composer.json
+composer.lock
+package.json
+package-lock.json
+phpunit.xml.dist
+phpunit-integration.xml.dist
+.phpunit.result.cache
+.phpunit.cache
+README.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+CHANGELOG.md
+.wp-env.json
+.wp-env.override.json

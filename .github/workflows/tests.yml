@@ -1,0 +1,69 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer
+
+      # Proves the "Requires PHP: 7.4" claim in the plugin header: the shipped
+      # files must parse on every version in the matrix, not just the newest.
+      - name: Lint shipped files
+        run: |
+          find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+      # No lock file is committed, so each PHP version resolves the PHPUnit
+      # release that supports it.
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run unit tests
+        run: composer test
+
+  build:
+    name: Build blocks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The build output is not committed, so a broken block source has to be
+      # caught here rather than at deploy time.
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Confirm every block was built
+        run: |
+          for block in event-list event-details event-registration; do
+            test -f "build/${block}/block.json" || { echo "::error::build/${block}/block.json missing"; exit 1; }
+          done

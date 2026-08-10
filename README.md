@@ -1,0 +1,167 @@
+# Quick Events Manager
+
+A free, open-source event manager for WordPress. Events, registration, attendees — and nothing you did not ask for.
+
+[![WordPress](https://img.shields.io/badge/WordPress-5.0%20%E2%80%93%207.0-blue)](https://wordpress.org/)
+[![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)](https://www.php.net/)
+[![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green)](LICENSE)
+
+There is no paid tier, no locked feature and no upsell, and there is not going to be one.
+
+## The idea
+
+Most event plugins greet a new user with ticketing, payment gateways and recurrence rules before they have created a single event. This one starts with events and stops there.
+
+Everything else is a **module** the site owner switches on under **Events → Features**. A module that is off registers no hooks, creates no tables and enqueues no assets — the toggle is a real boundary, not a display filter over code that runs anyway. `RegressionTest` and the integration suite both check that.
+
+```
+Core      always on   Events, listing, single event, search, categories/tags
+Level 1   opt-in      Registration & attendees · Calendar view
+Level 2   opt-in      Custom fields · Email templates · Reusable venues
+Level 3   opt-in      Ticketing · Check-in · Payments · WooCommerce · Recurring
+```
+
+A plugin this size is only pleasant to use because most of it is switched off. Somebody putting a list of meetups on a page should never be handed a payment gateway screen.
+
+> **Status: in development.** 26.0 ships as a single release and is not published until everything in [docs/roadmap.md](docs/roadmap.md) is built. Core, registration and attendees are done; the Level 2 and 3 modules are not. See the roadmap for the build order.
+
+## Architecture
+
+```
+quick-events-manager.php     Header, constants, autoloader, bootstrap
+uninstall.php                Deletes options, caps and the table — never the events
+includes/
+  Autoloader.php             ~40 lines, QEM\ -> includes/
+  Plugin.php                 Wires the registry; activation and upgrade
+  Modules/                   Module interface + Registry (the feature gate)
+  Install/                   Installer (schema, caps), Migrator (1.0 -> 26.0)
+  Events/                    PostType, Meta, Event, Query, MetaBox, AdminColumns
+  Registration/              Module, Service, Repository, FormHandler, emails, CSV
+  Frontend/                  Templates, Renderer, Shortcodes, SingleEvent, Schema, Ics
+  Blocks/                    Registers the three dynamic blocks
+  Rest/                      Read-only qem/v1 controller
+  Admin/                     Settings, FeaturesScreen
+  Privacy/                   GDPR exporter and eraser
+templates/                   Overridable by themes
+src/                         Block editor sources (JSX)
+```
+
+Namespaced classes with a hand-written autoloader — Composer's is a dev dependency only, because `vendor/` must not ship to WordPress.org. No DI container and no service locator: a `Plugin` singleton wires the registry, and each module owns its own hooks.
+
+### Storage
+
+| Entity | Where | Why |
+| --- | --- | --- |
+| Event | CPT `qem_event` + post meta | Needs the editor, blocks, media, taxonomies, permalinks, revisions |
+| Registration | Custom table `{prefix}qem_registrations` | See below |
+| Settings | Three options | Small, and read on every request |
+
+Registrations are the one thing that must not be posts. The question asked most often is "how many confirmed registrations does this event have", which in a custom table is one indexed `COUNT`. As a post type it is a `meta_query` join, and a 500-person event would add thousands of rows to `wp_postmeta` that every unrelated `WP_Query` then walks past.
+
+The table is created when the Registration module is first switched on, not at activation. A site that never takes registrations never grows it.
+
+### Dates and times
+
+The bug that ruins event plugins is storing local time and nothing else: every event silently moves the day somebody changes the site timezone, and nobody notices until attendees turn up an hour late.
+
+Each event stores three things — the wall-clock time the organiser typed (`_qem_start_local`), the timezone they meant it in (`_qem_timezone`), and the equivalent UTC instant (`_qem_start_utc`). **UTC is the only value ever sorted or queried on**; display always uses the event's own zone.
+
+`Y-m-d H:i:s` is zero-padded and big-endian, so lexical order is chronological order — which is why the archive can `orderby => meta_value` with no `CAST`. `MetaTest` asserts that property rather than assuming it.
+
+### Capacity
+
+Capacity uses **insert-then-rank**, not check-then-insert:
+
+1. Insert the registration as `pending`.
+2. Count the places taken by rows with an id at or below this one.
+3. Position within capacity → `confirmed`. Beyond it → `waitlisted`.
+
+Check-then-insert has a race between the count and the insert, and a transaction does not close it — under the `REPEATABLE READ` isolation MySQL defaults to, two concurrent transactions read the same snapshot and both decide there is room. Inserting first removes the window entirely: an auto-increment id fixes a row's position in the queue for good, so two simultaneous inserts can never both be position N.
+
+Verified with eight parallel processes against a capacity-1 event: one confirmed, seven waitlisted, one place taken.
+
+## Front end
+
+- Templates resolve from `your-theme/quick-events-manager/` before the plugin's `templates/`. That is the whole theming system — no template hierarchy of our own, no layout settings.
+- Event details are injected through `the_content`, not a `single-qem_event.php` takeover. A template takeover only works in classic themes; a block theme renders singles through its own block template and never looks at the plugin's file. Filtering the content works in both.
+- The three blocks are **dynamic** — they render in PHP, so the front end downloads no block JavaScript. The shortcodes call the same render functions, so there is one implementation and one security review per feature.
+- The stylesheet loads only on pages that actually show an event.
+
+## Tests
+
+```sh
+composer install
+composer test
+```
+
+The unit suite stubs the slice of WordPress the pure-logic classes touch, so it runs in about a second with no database, no WordPress and no Docker. It covers timezone conversion, sanitisation, iCalendar escaping and folding, CSV formula defusing, and release metadata.
+
+What it deliberately does **not** cover is anything involving `$wpdb`. SQL cannot be meaningfully faked — a stub that returns what you tell it proves only that you can write a stub. The custom table, the capacity ranking, the REST routes and the migration are checked against a real MySQL instead.
+
+`tests/unit/RegressionTest.php` is worth reading on its own. Every test in it corresponds to something that was genuinely broken and that the stubbed suite could not have caught:
+
+| Bug | How it presented |
+| --- | --- |
+| `the_content` re-entrancy | `get_the_excerpt()` re-applies `the_content` for posts with no manual excerpt, so the filter re-entered itself and exhausted PHP's memory on every event page |
+| `sanitize_title` as a bare `sanitize_callback` | WordPress calls it as `( $value, $request, $param )`, and its second parameter is `$fallback_title` — so an empty category came back as the `WP_REST_Request` object and fatalled the list endpoint |
+| Ungated registration form | The form rendered on every event even with the module switched off, which is the opposite of what the Features screen promises |
+| Rate limit too tight | 5 per 5 minutes per address locks out an entire office, university or conference venue behind one NAT gateway — exactly the places that run events |
+
+PHPUnit is capped at 10.5 on purpose: PHPUnit 11 drops `@dataProvider` in favour of PHP 8 attributes, which cannot be used while PHP 7.4 is still supported.
+
+## Checking against a real install
+
+Unit tests stub WordPress, so they cannot catch a change in core's own behaviour — and every bug in the table above was found this way, not by the suite.
+
+```sh
+npx @wordpress/env start   # localhost:8888, admin / password
+```
+
+Worth checking by hand before any release:
+
+1. Activate with `WP_DEBUG` on and confirm no notices anywhere.
+2. Create an event in a timezone different from the site's, then change the site timezone and confirm the event does not move.
+3. Set a capacity of 1 and register twice — the second must be waitlisted, not refused or accepted.
+4. Switch every module off and confirm the front end shows no form and loads no assets.
+5. Create a post with `post_type = 'events'`, run the migration, and confirm the URL still resolves.
+
+## Blocks
+
+```sh
+npm install
+npm run build     # or npm start to watch
+```
+
+`build/` is gitignored and produced by CI and by the deploy workflow. It is deliberately **not** in `.distignore` — the compiled blocks are the one build artefact that has to ship, and `PluginTest` fails if somebody adds it.
+
+## REST API
+
+Read-only, at `/wp-json/qem/v1/`:
+
+```
+GET /qem/v1/events?show=upcoming&per_page=10&category=&search=
+GET /qem/v1/events/{id}
+```
+
+Write endpoints are deliberately absent. The post type is registered with `show_in_rest`, so core already serves authenticated CRUD at `/wp/v2/qem_event` with the permission handling the block editor relies on. A second write path would mean a second permission surface to audit for no benefit.
+
+The joining link of an online event is only included for a user who can edit that event — a public meeting URL is an open door into the meeting.
+
+## Upgrading from 1.0
+
+Version 1.0 (2012) was 34 lines that registered one post type, `events`, and did nothing else. That is the entire legacy surface.
+
+The key moves to `qem_event`, because `events` is generic enough that any other event plugin or theme registering it silently collides. Public URLs are unaffected — the new post type pins its rewrite slug and archive back to `events`, so `/events/` and `/events/{slug}` resolve exactly as before. The migration is version-gated, idempotent, and touches only `post_type`.
+
+## Requirements
+
+- WordPress 5.0 or newer
+- PHP 7.4 or newer
+
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Security reports go through [SECURITY.md](SECURITY.md) rather than a public issue.
+
+## License
+
+[GPL-2.0-or-later](LICENSE). Copyright 2011–2026 Pankaj Anupam.

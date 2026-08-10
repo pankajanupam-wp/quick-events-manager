@@ -1,0 +1,246 @@
+/**
+ * Quick Events Manager — front end.
+ *
+ * Deliberately unopinionated: inherits the theme's fonts, colours and link
+ * styles, and only sets the layout the theme cannot know about. Everything
+ * uses CSS custom properties so a theme can restyle it without overriding
+ * selectors.
+ */
+
+.qem-event-details,
+.qem-event-list,
+.qem-registration {
+	--qem-gap: 1rem;
+	--qem-radius: 6px;
+	--qem-border: 1px solid rgba(0, 0, 0, 0.12);
+	--qem-muted: rgba(0, 0, 0, 0.62);
+	--qem-accent: currentColor;
+}
+
+@media (prefers-color-scheme: dark) {
+	.qem-event-details,
+	.qem-event-list,
+	.qem-registration {
+		--qem-border: 1px solid rgba(255, 255, 255, 0.18);
+		--qem-muted: rgba(255, 255, 255, 0.68);
+	}
+}
+
+/* Event details
+   ------------------------------------------------------------------------ */
+
+.qem-event-details {
+	margin: 0 0 1.5rem;
+	padding: var(--qem-gap);
+	border: var(--qem-border);
+	border-radius: var(--qem-radius);
+}
+
+.qem-event-meta {
+	display: grid;
+	gap: 0.75rem;
+	margin: 0;
+}
+
+.qem-event-meta__item {
+	display: grid;
+	grid-template-columns: minmax(6rem, max-content) 1fr;
+	gap: 0.75rem;
+	align-items: baseline;
+}
+
+.qem-event-meta dt {
+	margin: 0;
+	font-weight: 600;
+	color: var(--qem-muted);
+}
+
+.qem-event-meta dd {
+	margin: 0;
+}
+
+.qem-event-meta__tz,
+.qem-event-meta__separator {
+	color: var(--qem-muted);
+}
+
+.qem-event-status {
+	margin: 0 0 var(--qem-gap);
+	font-weight: 600;
+}
+
+.qem-event-status--past {
+	color: var(--qem-muted);
+}
+
+.qem-add-to-calendar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--qem-gap);
+	align-items: center;
+	margin: var(--qem-gap) 0 0;
+}
+
+/* Event list
+   ------------------------------------------------------------------------ */
+
+.qem-event-list {
+	display: grid;
+	gap: 1.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.qem-event-list--cols-2 {
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+}
+
+.qem-event-list--cols-3 {
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+
+.qem-event-list--cols-4 {
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+}
+
+.qem-event-card {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border: var(--qem-border);
+	border-radius: var(--qem-radius);
+}
+
+.qem-event-card__image img {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 16 / 9;
+	object-fit: cover;
+}
+
+.qem-event-card__body {
+	padding: var(--qem-gap);
+}
+
+.qem-event-card__date {
+	margin: 0 0 0.25rem;
+	font-size: 0.875em;
+	font-weight: 600;
+	color: var(--qem-muted);
+}
+
+.qem-event-card__title {
+	margin: 0 0 0.5rem;
+	font-size: 1.125em;
+	line-height: 1.3;
+}
+
+.qem-event-card__location,
+.qem-event-card__excerpt {
+	margin: 0 0 0.5rem;
+	font-size: 0.9375em;
+	color: var(--qem-muted);
+}
+
+.qem-event-list__empty {
+	color: var(--qem-muted);
+}
+
+/* Registration
+   ------------------------------------------------------------------------ */
+
+.qem-registration {
+	margin: 2rem 0 0;
+	padding: 1.25rem;
+	border: var(--qem-border);
+	border-radius: var(--qem-radius);
+}
+
+.qem-registration__heading {
+	margin-top: 0;
+}
+
+.qem-registration__form {
+	display: grid;
+	gap: var(--qem-gap);
+	max-width: 32rem;
+}
+
+.qem-field {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0;
+}
+
+.qem-field label {
+	font-weight: 600;
+}
+
+.qem-field input {
+	width: 100%;
+	padding: 0.5rem;
+	border: var(--qem-border);
+	border-radius: 4px;
+	font: inherit;
+	color: inherit;
+	background: transparent;
+}
+
+.qem-field input:focus-visible {
+	outline: 2px solid var(--qem-accent);
+	outline-offset: 1px;
+}
+
+.qem-required {
+	color: #b32d2e;
+}
+
+.qem-button {
+	display: inline-block;
+	padding: 0.6rem 1.25rem;
+	border: var(--qem-border);
+	border-radius: 4px;
+	font: inherit;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.qem-notice {
+	margin: 0 0 var(--qem-gap);
+	padding: 0.75rem 1rem;
+	border-left: 4px solid var(--qem-muted);
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.04);
+}
+
+.qem-notice--success {
+	border-left-color: #007017;
+}
+
+.qem-notice--error {
+	border-left-color: #b32d2e;
+}
+
+.qem-notice--info {
+	border-left-color: #996800;
+}
+
+.qem-registration__remaining {
+	font-weight: 600;
+}
+
+/*
+ * The honeypot must be invisible to people but still submitted by a browser,
+ * so it cannot use display:none — some bots skip fields that are hidden that
+ * way, which defeats the point.
+ */
+.qem-honeypot {
+	position: absolute !important;
+	left: -9999px !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}

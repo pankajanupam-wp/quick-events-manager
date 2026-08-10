@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "qem/event-details",
+	"title": "Event Details",
+	"category": "widgets",
+	"icon": "clock",
+	"description": "The date, time and location of an event.",
+	"textdomain": "quick-events-manager",
+	"supports": { "html": false },
+	"attributes": {
+		"id": { "type": "number", "default": 0 }
+	},
+	"editorScript": "file:./index.js"
+}

@@ -1,0 +1,34 @@
+{
+	"name": "pankajanupam/quick-events-manager",
+	"description": "Create events, publish them, and take free registrations. Start simple and switch on more features only when you need them.",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"homepage": "https://www.pankajanupam.com/wordpress-plugins/quick-events-manager/",
+	"authors": [
+		{
+			"name": "Pankaj Anupam",
+			"homepage": "https://www.pankajanupam.com"
+		}
+	],
+	"support": {
+		"issues": "https://github.com/pankajanupam-wp/quick-events-manager/issues",
+		"source": "https://github.com/pankajanupam-wp/quick-events-manager"
+	},
+	"require": {
+		"php": ">=7.4"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^9.6 || ^10.5"
+	},
+	"extra": {
+		"note": "PHPUnit is capped at 10.5 deliberately: PHPUnit 11 deprecates @dataProvider in favour of PHP 8 attributes, which cannot be used while the plugin still supports PHP 7.4. No composer.lock is committed, so each PHP version in CI resolves the PHPUnit release that supports it."
+	},
+	"scripts": {
+		"test": "phpunit",
+		"i18n": "for po in languages/*.po; do msgfmt --check-format -o \"${po%.po}.mo\" \"$po\" || exit 1; done && echo 'Compiled all .po files.'",
+		"lint": "find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l"
+	},
+	"config": {
+		"sort-packages": true
+	}
+}
