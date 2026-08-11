@@ -33,7 +33,7 @@ Calendar view, custom registration fields, email templates, reusable venues and 
 
 - Events moved from the generic `events` post type to `qem_event`, keeping their existing `/events/` URLs. Existing events are migrated automatically on first admin load.
 - Event archives sort by start date rather than publish date.
-- Minimum requirements raised to WordPress 5.0 and PHP 7.4.
+- Minimum requirements raised to WordPress 6.5 and PHP 8.1.
 
 ### Security
 

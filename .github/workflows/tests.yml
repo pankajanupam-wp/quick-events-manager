@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5']
 
     steps:
       - name: Check out the repository
@@ -54,8 +54,10 @@ jobs:
           coverage: none
           tools: composer
 
-      # Proves the "Requires PHP: 7.4" claim in the plugin header: the shipped
+      # Proves the "Requires PHP: 8.1" claim in the plugin header: the shipped
       # files must parse on every version in the matrix, not just the newest.
+      # This is what catches an 8.2-only feature slipping into a codebase that
+      # promises 8.1.
       - name: Lint shipped files
         run: |
           find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 \

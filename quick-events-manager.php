@@ -4,9 +4,9 @@
  * Plugin URI:        https://www.pankajanupam.com/wordpress-plugins/quick-events-manager/
  * Description:       Create events, publish them, and take free registrations. Start simple and switch on more features only when you need them.
  * Version:           26.0
- * Requires at least: 5.0
+ * Requires at least: 6.5
  * Tested up to:      7.0
- * Requires PHP:      7.4
+ * Requires PHP:      8.1
  * Author:            Pankaj Anupam
  * Author URI:        https://www.pankajanupam.com
  * License:           GPL-2.0-or-later
@@ -35,6 +35,60 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+/*
+ * Refuse to load on an unsupported platform, and say why.
+ *
+ * WordPress reads the Requires PHP and Requires at least headers and blocks
+ * activation and auto-update accordingly, so this guard is not the first line
+ * of defence. It is the second: a site that is already active and whose host
+ * then downgrades PHP gets an admin notice here rather than a fatal error and
+ * a white screen.
+ *
+ * This has to happen before the autoloader, because the classes in src/ use
+ * enums and readonly properties. Those are parse errors on PHP below 8.1, and
+ * a parse error cannot be caught by any check that runs after the file loads.
+ *
+ * Everything above this point must itself parse on ancient PHP, which is why
+ * this block uses nothing newer than a closure.
+ *
+ * See docs/adr/0002-php-and-wordpress-versions.md.
+ */
+if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
+	add_action(
+		'admin_notices',
+		static function () {
+			echo '<div class="notice notice-error"><p>';
+			printf(
+				/* translators: 1: Required PHP version, 2: PHP version currently running. */
+				esc_html__( 'Quick Events Manager requires PHP %1$s or newer. This site is running PHP %2$s, so the plugin has not been loaded.', 'quick-events-manager' ),
+				'8.1',
+				esc_html( PHP_VERSION )
+			);
+			echo '</p></div>';
+		}
+	);
+
+	return;
+}
+
+if ( version_compare( get_bloginfo( 'version' ), '6.5', '<' ) ) {
+	add_action(
+		'admin_notices',
+		static function () {
+			echo '<div class="notice notice-error"><p>';
+			printf(
+				/* translators: 1: Required WordPress version, 2: WordPress version currently running. */
+				esc_html__( 'Quick Events Manager requires WordPress %1$s or newer. This site is running WordPress %2$s, so the plugin has not been loaded.', 'quick-events-manager' ),
+				'6.5',
+				esc_html( get_bloginfo( 'version' ) )
+			);
+			echo '</p></div>';
+		}
+	);
+
+	return;
+}
 
 /**
  * Plugin version, kept in sync with the header and the readme stable tag.

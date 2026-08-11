@@ -1,9 +1,9 @@
 === Quick Events Manager ===
 Contributors: pankajanupam
 Tags: events, event manager, calendar, registration, tickets
-Requires at least: 5.0
+Requires at least: 6.5
 Tested up to: 7.0
-Requires PHP: 7.4
+Requires PHP: 8.1
 Stable tag: 26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -158,7 +158,7 @@ Changed:
 
 * Events moved from the generic `events` post type to `qem_event`, keeping their existing `/events/` addresses. Existing events are migrated automatically.
 * Event archives now sort by start date instead of publish date.
-* Minimum requirements are WordPress 5.0 and PHP 7.4.
+* Minimum requirements are WordPress 6.5 and PHP 8.1.
 
 == Upgrade Notice ==
 

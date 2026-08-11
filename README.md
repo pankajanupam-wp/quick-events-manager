@@ -2,8 +2,8 @@
 
 A free, open-source event manager for WordPress. Events, registration, attendees — and nothing you did not ask for.
 
-[![WordPress](https://img.shields.io/badge/WordPress-5.0%20%E2%80%93%207.0-blue)](https://wordpress.org/)
-[![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)](https://www.php.net/)
+[![WordPress](https://img.shields.io/badge/WordPress-6.5%20%E2%80%93%207.0-blue)](https://wordpress.org/)
+[![PHP](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://www.php.net/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green)](LICENSE)
 
 There is no paid tier, no locked feature and no upsell, and there is not going to be one.
@@ -107,7 +107,7 @@ What it deliberately does **not** cover is anything involving `$wpdb`. SQL canno
 | Ungated registration form | The form rendered on every event even with the module switched off, which is the opposite of what the Features screen promises |
 | Rate limit too tight | 5 per 5 minutes per address locks out an entire office, university or conference venue behind one NAT gateway — exactly the places that run events |
 
-PHPUnit is capped at 10.5 on purpose: PHPUnit 11 drops `@dataProvider` in favour of PHP 8 attributes, which cannot be used while PHP 7.4 is still supported.
+No `composer.lock` is committed, so each PHP version in CI resolves the PHPUnit release that supports it.
 
 ## Checking against a real install
 
@@ -155,8 +155,10 @@ The key moves to `qem_event`, because `events` is generic enough that any other 
 
 ## Requirements
 
-- WordPress 5.0 or newer
-- PHP 7.4 or newer
+- WordPress 6.5 or newer
+- PHP 8.1 or newer
+
+Why 8.1 rather than 7.4, and what it costs in reach, is recorded in [docs/adr/0002-php-and-wordpress-versions.md](docs/adr/0002-php-and-wordpress-versions.md).
 
 ## Contributing
 
