@@ -21,18 +21,23 @@ defined( 'ABSPATH' ) || exit;
 final class Event {
 
 	/**
-	 * The underlying post.
+	 * The underlying post, or null when the id resolved to nothing.
 	 *
-	 * @var \WP_Post
+	 * Nullable because get_post() returns null for an id that does not exist,
+	 * and callers routinely construct an Event straight from a request
+	 * parameter. is_valid() is the guard, and it is only meaningful because
+	 * this can genuinely be null.
+	 *
+	 * @var \WP_Post|null
 	 */
-	private $post;
+	private ?\WP_Post $post;
 
 	/**
 	 * Meta values, read once per event.
 	 *
 	 * @var array<string, mixed>|null
 	 */
-	private $meta = null;
+	private ?array $meta = null;
 
 	/**
 	 * Wrap a post or post id.

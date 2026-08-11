@@ -68,7 +68,7 @@ twice as much code.
 | **C0.4** | **Rename**: `qem`→`qevm`, `QEM\`→`QuickEventsManager\` | L | [ADR-0001](adr/0001-naming-and-namespace.md). Includes `block.json`, CSS classes, capabilities, test bootstrap, docs. Directory names are unchanged — see the note below |
 | **C0.5** | Enums for existing statuses — `RegistrationStatus`, `ModuleLevel` | S | First use of 8.1; proves the toolchain |
 | **C0.6** | PHPCS cleanup — see the measured baseline below | M | Added after C0.2 measured the real number |
-| **C0.7** | Type declarations to reach PHPStan level 6 — 162 findings | L | Added after C0.2 measured the real number; count corrected at C0.6 |
+| **C0.7** | Type declarations to reach PHPStan level 6 — 162 findings | L | Added after C0.2 measured the real number; count corrected at C0.6. Grew to include two CI breaks and four defects the phars could not see — see below |
 
 ### Measured baseline, from C0.2
 
@@ -129,6 +129,52 @@ declarations**, which is expected for code written against PHP 7.4.
 Level 6 is kept rather than lowered: `docs/engineering-standards.md` says typed
 properties and return types are expected, and lowering the bar to make a number go
 away is how standards stop meaning anything. The work is scheduled as C0.7 instead.
+
+### What C0.7 found by running the real toolchain
+
+Every number above was measured with standalone phars, because Composer is not
+installed on this machine. C0.7 installed the actual dev dependencies, and the first
+honest run of `composer check` failed for reasons that had nothing to do with types.
+
+**Two of them would have broken CI on its first run.** Nothing had ever been pushed,
+so nothing had ever executed `.github/workflows/tests.yml`.
+
+| Defect | Effect | Fix |
+| --- | --- | --- |
+| `composer analyse` ran with `--memory-limit=512M` | PHPStan crashed outright once `php-stubs/wordpress-stubs` loaded | Raised to `1G` |
+| `composer.json` allowed PHPUnit `^12.0` | PHPUnit 12 removed doc-comment metadata. `@dataProvider` was silently ignored, every provider-driven test ran once with no arguments, and the suite fell from **82 tests to 52** | Migrated to `#[DataProvider]` / `#[CoversClass]` attributes, which work on 10.5, 11 and 12 alike |
+
+The PHPUnit one is the more serious of the two, because the failure mode is silent
+rather than loud: had the tests not errored on the missing argument, thirty cases
+would simply have stopped running while CI stayed green.
+
+**The stubs were narrower than the functions they stand in for.** `do_action()` and
+`apply_filters()` were declared here with fixed arity, so every call passing extra
+arguments — eleven of them — was a call that works against this stub and fails
+against WordPress. `esc_url_raw()` used `FILTER_SANITIZE_URL`, which keeps `<` and
+`>`; core uses an allowlist that strips them, so the stub was weaker than the
+function it imitates. None of this was visible to a green suite.
+
+The lesson is the one CLAUDE.md already records, arriving from a new direction: a
+stub that lies is worse than no stub. `tests/unit/bootstrap.php` now mirrors core's
+signatures, including variadics and defaults, and says so at the top.
+
+**Three defects were in production code**, all invisible to the phar run because it
+had no WordPress symbols to compare against:
+
+- `Module::level()` and both implementations still carried `@return int` after C0.5
+  changed the native return type to `ModuleLevel`. Introduced by C0.5, caught here.
+- `Event::$post` was documented `@var \WP_Post` when `get_post()` plainly returns
+  `WP_Post|null`. That inaccuracy made the `is_valid()` guard look redundant to
+  static analysis; the property is now `?\WP_Post` and the guard reads as the real
+  check it is.
+- `WP_HTTP_Response::header()` takes a string, and the pagination headers were
+  passing ints.
+
+**One test could never fail.** `test_every_meta_key_has_a_sanitiser` asserted that
+each definition's `sanitize` entry was callable — which the declared array shape
+already guarantees and PHPStan already enforces. It now invokes every sanitiser with
+hostile input instead, and that rewrite is what exposed the `esc_url_raw()` gap.
 
 > **C0.4 is the highest-risk mechanical change in the plan.** A naive replace over
 > `*.php` misses `block.json` names, CSS class names, script handles, the `.pot`
@@ -359,7 +405,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 
 | Stage | Chunks | Status |
 | --- | :-: | --- |
-| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓** · C0.7 pending |
+| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓ · C0.7 ✓** — stage complete |
 | 1 · Schema foundation | 11 | not started |
 | 2 · Correctness gaps | 7 | not started |
 | 3 · Records and fields | 6 | not started |

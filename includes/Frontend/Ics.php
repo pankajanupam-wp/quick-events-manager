@@ -45,8 +45,8 @@ final class Ics {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $vars Public query variables.
-	 * @return array
+	 * @param array<int, string> $vars Public query variables.
+	 * @return array<int, string>
 	 */
 	public function add_query_var( $vars ) {
 		$vars[] = self::QUERY_VAR;

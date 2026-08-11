@@ -49,8 +49,8 @@ final class Privacy {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $exporters Registered exporters.
-	 * @return array
+	 * @param array<string, array{exporter_friendly_name: string, callback: callable}> $exporters Registered exporters.
+	 * @return array<string, array{exporter_friendly_name: string, callback: callable}>
 	 */
 	public function add_exporter( $exporters ) {
 		$exporters['quick-events-manager'] = array(
@@ -66,8 +66,8 @@ final class Privacy {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $erasers Registered erasers.
-	 * @return array
+	 * @param array<string, array{eraser_friendly_name: string, callback: callable}> $erasers Registered erasers.
+	 * @return array<string, array{eraser_friendly_name: string, callback: callable}>
 	 */
 	public function add_eraser( $erasers ) {
 		$erasers['quick-events-manager'] = array(
@@ -85,7 +85,7 @@ final class Privacy {
 	 *
 	 * @param string $email_address Address being exported.
 	 * @param int    $page          One-based page number.
-	 * @return array
+	 * @return array{data: array<int, array{group_id: string, group_label: string, item_id: string, data: array<int, array{name: string, value: string}>}>, done: bool}
 	 */
 	public function export( $email_address, $page = 1 ) {
 		$registrations = Repository::find_by_email( $email_address );
@@ -116,8 +116,10 @@ final class Privacy {
 						'value' => $registration->phone(),
 					),
 					array(
+						// Cast, because every other value in this report is a
+						// string and the exporter renders them all the same way.
 						'name'  => __( 'Places', 'quick-events-manager' ),
-						'value' => $registration->quantity(),
+						'value' => (string) $registration->quantity(),
 					),
 					array(
 						'name'  => __( 'Reference', 'quick-events-manager' ),
@@ -158,7 +160,7 @@ final class Privacy {
 	 *
 	 * @param string $email_address Address being erased.
 	 * @param int    $page          One-based page number. Unused; see above.
-	 * @return array
+	 * @return array{items_removed: int, items_retained: bool, messages: array<int, string>, done: bool}
 	 */
 	public function erase( $email_address, $page = 1 ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by the wp_privacy_personal_data_erasers signature; see above.
 		$registrations = Repository::find_by_email( $email_address );

@@ -127,7 +127,7 @@ final class Settings {
 	 *
 	 * @since 26.0
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function defaults() {
 		return array(
@@ -183,7 +183,7 @@ final class Settings {
 	 * @since 26.0
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function sanitize( $input ) {
 		$input    = is_array( $input ) ? $input : array();

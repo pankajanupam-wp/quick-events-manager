@@ -56,9 +56,20 @@ final class Registry {
 		 *
 		 * @param Module[] $modules Module instances.
 		 */
-		$modules = apply_filters( 'qevm_modules', $modules );
+		$filtered = apply_filters( 'qevm_modules', $modules );
 
-		foreach ( $modules as $module ) {
+		/*
+		 * PHPStan reads the @param above as the filter's return type and so
+		 * calls the instanceof below redundant. It is not. That docblock is the
+		 * contract this hook publishes; it describes what a well-behaved filter
+		 * hands back and cannot compel another plugin to do so. A filter that
+		 * returns a string, or an array with one stray value in it, must not be
+		 * able to fatal the Features screen for every site that installed the
+		 * add-on. Documented type and trusted type are different things, and
+		 * this is the boundary between them.
+		 */
+		foreach ( (array) $filtered as $module ) {
+			// @phpstan-ignore instanceof.alwaysTrue (Third-party filter output is untrusted; see above.)
 			if ( $module instanceof Module ) {
 				$this->modules[ $module->id() ] = $module;
 			}

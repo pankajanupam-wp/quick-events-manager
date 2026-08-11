@@ -456,6 +456,24 @@ Rules:
    *(already true — eight processes against a capacity-1 event)*.
 5. A migration is not merged without an integration test that runs it against a
    populated database, twice, asserting the second run changes nothing.
+6. **A stub matches core's signature exactly** — variadics, defaults, parameter
+   count, return type. A stub narrower than the real function turns a call that
+   would fail against WordPress into one that passes here. `do_action()` and
+   `apply_filters()` were declared with fixed arity in `tests/unit/bootstrap.php`,
+   and eleven call sites passing extra arguments went unnoticed until static
+   analysis had core's real signatures to compare against. When a stub's behaviour
+   matters, copy core's implementation rather than approximating it: `esc_url_raw()`
+   used `FILTER_SANITIZE_URL`, which keeps `<` and `>` where core's allowlist strips
+   them.
+7. **PHPUnit metadata is attributes, never doc-comments.** `#[DataProvider]`,
+   `#[CoversClass]`. PHPUnit 12 removed doc-comment metadata: `@dataProvider` is not
+   an error there, it is *ignored*, so provider-driven tests run once with no
+   arguments and the suite quietly shrinks. Attributes work on 10.5 through 12,
+   which is the whole supported range.
+8. **A test that cannot fail is not a test.** If PHPStan can prove an assertion
+   always holds, the assertion is checking a type declaration rather than any
+   behaviour, and the declaration is already enforced. Assert on what the code
+   does — invoke the sanitiser rather than checking that it is callable.
 
 ---
 

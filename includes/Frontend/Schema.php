@@ -70,7 +70,7 @@ final class Schema {
 	 * @since 26.0
 	 *
 	 * @param Event $event Event.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function build( Event $event ) {
 		$data = array(
@@ -137,7 +137,7 @@ final class Schema {
 	 * @since 26.0
 	 *
 	 * @param Event $event Event.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	private function place( Event $event ) {
 		$address = array_filter(

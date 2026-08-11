@@ -10,16 +10,16 @@
  * @package QuickEventsManager
  */
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use QuickEventsManager\Domain\ModuleLevel;
 use QuickEventsManager\Domain\RegistrationStatus;
 
 /**
  * Covers the two state machines introduced with PHP 8.1 enums.
- *
- * @covers \QuickEventsManager\Domain\RegistrationStatus
- * @covers \QuickEventsManager\Domain\ModuleLevel
  */
+#[CoversClass( RegistrationStatus::class )]
+#[CoversClass( ModuleLevel::class )]
 class DomainEnumTest extends TestCase {
 
 	/**
@@ -28,6 +28,8 @@ class DomainEnumTest extends TestCase {
 	 * Pinned literally rather than derived from the enum, because the whole
 	 * point is to fail if somebody changes one. Renaming a case is free;
 	 * changing its value is a schema migration.
+	 *
+	 * @return void
 	 */
 	public function test_registration_status_values_are_the_stored_contract() {
 		$this->assertSame( 'pending', RegistrationStatus::Pending->value );
@@ -47,6 +49,8 @@ class DomainEnumTest extends TestCase {
 	 * This is the single definition capacity counting depends on. A waitlisted
 	 * registration occupying a place would mean a full event never drains, and
 	 * a cancelled one occupying a place would mean it never frees up.
+	 *
+	 * @return void
 	 */
 	public function test_only_confirmed_and_pending_occupy_a_place() {
 		$this->assertTrue( RegistrationStatus::Confirmed->occupies_place() );
@@ -62,6 +66,8 @@ class DomainEnumTest extends TestCase {
 
 	/**
 	 * The occupying list and the per-case flag cannot disagree.
+	 *
+	 * @return void
 	 */
 	public function test_occupying_list_is_derived_not_duplicated() {
 		foreach ( RegistrationStatus::all() as $status ) {
@@ -75,6 +81,8 @@ class DomainEnumTest extends TestCase {
 
 	/**
 	 * Only a cancelled registration cannot be cancelled again.
+	 *
+	 * @return void
 	 */
 	public function test_cancellability() {
 		$this->assertTrue( RegistrationStatus::Confirmed->is_cancellable() );
@@ -89,6 +97,8 @@ class DomainEnumTest extends TestCase {
 	 * Callers are reading a database column or a request parameter. An
 	 * unrecognised value means bad data or tampering, and neither should take
 	 * an admin screen down.
+	 *
+	 * @return void
 	 */
 	public function test_registration_status_coerce_falls_back() {
 		$this->assertSame(
@@ -118,6 +128,8 @@ class DomainEnumTest extends TestCase {
 
 	/**
 	 * Every case has a distinct, non-empty label.
+	 *
+	 * @return void
 	 */
 	public function test_every_registration_status_has_a_distinct_label() {
 		$labels = array_map(
@@ -137,6 +149,8 @@ class DomainEnumTest extends TestCase {
 	 *
 	 * The Features screen renders them in this order, so a beginner meets the
 	 * basics before ticketing.
+	 *
+	 * @return void
 	 */
 	public function test_module_levels_are_ordered_shallowest_first() {
 		$values = array_map(
@@ -154,6 +168,8 @@ class DomainEnumTest extends TestCase {
 	 * Modules can be registered by other plugins through the qevm_modules
 	 * filter, so level() can return anything. Defaulting to Advanced keeps an
 	 * unknown feature off the first screen a beginner sees.
+	 *
+	 * @return void
 	 */
 	public function test_module_level_coerce_defaults_to_advanced() {
 		$this->assertSame( ModuleLevel::Standard, ModuleLevel::coerce( 1 ) );
@@ -165,6 +181,8 @@ class DomainEnumTest extends TestCase {
 
 	/**
 	 * Every level has a distinct title and a non-empty description.
+	 *
+	 * @return void
 	 */
 	public function test_every_module_level_has_a_distinct_title() {
 		$titles = array_map(

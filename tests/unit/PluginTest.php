@@ -10,6 +10,7 @@
  * @package QuickEventsManager
  */
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -100,11 +101,10 @@ final class PluginTest extends TestCase {
 	/**
 	 * Support claims in the header and the readme must match each other.
 	 *
-	 * @dataProvider shared_header_provider
-	 *
 	 * @param string $field Header name present in both files.
 	 * @return void
 	 */
+	#[DataProvider( 'shared_header_provider' )]
 	public function test_support_headers_match_the_readme( $field ) {
 		$this->assertSame(
 			$this->header_value( $this->plugin_file( 'quick-events-manager.php' ), $field ),
@@ -116,7 +116,7 @@ final class PluginTest extends TestCase {
 	/**
 	 * Headers that appear in both files.
 	 *
-	 * @return array
+	 * @return array<int, array{string}>
 	 */
 	public static function shared_header_provider() {
 		return array(
@@ -221,11 +221,10 @@ final class PluginTest extends TestCase {
 	/**
 	 * Development files must not reach the published package.
 	 *
-	 * @dataProvider excluded_path_provider
-	 *
 	 * @param string $path Path that must be excluded.
 	 * @return void
 	 */
+	#[DataProvider( 'excluded_path_provider' )]
 	public function test_distignore_excludes_development_files( $path ) {
 		$distignore = $this->plugin_file( '.distignore' );
 
@@ -239,7 +238,7 @@ final class PluginTest extends TestCase {
 	/**
 	 * Paths that must never ship.
 	 *
-	 * @return array
+	 * @return array<int, array{string}>
 	 */
 	public static function excluded_path_provider() {
 		return array(

@@ -62,8 +62,6 @@ interface Module {
 	 * never has to read past the top of the page.
 	 *
 	 * @since 26.0
-	 *
-	 * @return int
 	 */
 	public function level(): ModuleLevel;
 

@@ -25,7 +25,9 @@ final class Blocks {
 	/**
 	 * Blocks this plugin provides, mapped to their renderer.
 	 *
-	 * @var array<string, callable-string>
+	 * The value is a Renderer method name, not a function name.
+	 *
+	 * @var array<string, string>
 	 */
 	const BLOCKS = array(
 		'event-list'         => 'event_list',

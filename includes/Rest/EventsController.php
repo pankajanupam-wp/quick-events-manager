@@ -198,8 +198,9 @@ final class EventsController {
 
 		$response = rest_ensure_response( $items );
 
-		$response->header( 'X-WP-Total', (int) $query->found_posts );
-		$response->header( 'X-WP-TotalPages', (int) $query->max_num_pages );
+		// Headers are strings on the wire; WP_HTTP_Response::header() says so too.
+		$response->header( 'X-WP-Total', (string) (int) $query->found_posts );
+		$response->header( 'X-WP-TotalPages', (string) (int) $query->max_num_pages );
 
 		return $response;
 	}
@@ -232,7 +233,7 @@ final class EventsController {
 	 * @since 26.0
 	 *
 	 * @param Event $event Event.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	private function prepare( Event $event ) {
 		$data = array(

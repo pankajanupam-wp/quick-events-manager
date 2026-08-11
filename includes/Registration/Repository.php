@@ -115,8 +115,8 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $data     Column values.
-	 * @param int   $capacity Places available, or 0 for unlimited.
+	 * @param array<string, mixed> $data     Column values.
+	 * @param int                  $capacity Places available, or 0 for unlimited.
 	 * @return Registration|\WP_Error
 	 */
 	public static function insert_with_capacity( array $data, $capacity ) {
@@ -315,8 +315,8 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int   $event_id Event id.
-	 * @param array $args     Query arguments: status, search, per_page, page, orderby, order.
+	 * @param int                  $event_id Event id.
+	 * @param array<string, mixed> $args     Query arguments: status, search, per_page, page, orderby, order.
 	 * @return Registration[]
 	 */
 	public static function for_event( $event_id, array $args = array() ) {
@@ -388,8 +388,8 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int   $event_id Event id.
-	 * @param array $args     Same status/search arguments as for_event().
+	 * @param int                  $event_id Event id.
+	 * @param array<string, mixed> $args     Same status/search arguments as for_event().
 	 * @return int
 	 */
 	public static function count_for_event( $event_id, array $args = array() ) {
@@ -429,9 +429,9 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int   $event_id Event id.
-	 * @param array $args     Query arguments: status, search.
-	 * @return array{clause: string, params: array} SQL fragment and its bindings, in order.
+	 * @param int                  $event_id Event id.
+	 * @param array<string, mixed> $args     Query arguments: status, search.
+	 * @return array{clause: string, params: array<int, mixed>} SQL fragment and its bindings, in order.
 	 */
 	private static function build_filter( $event_id, array $args ) {
 		global $wpdb;

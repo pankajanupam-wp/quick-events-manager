@@ -45,8 +45,8 @@ final class RegistrationService {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int   $event_id Event id.
-	 * @param array $input    Raw, untrusted input.
+	 * @param int                  $event_id Event id.
+	 * @param array<string, mixed> $input    Raw, untrusted input.
 	 * @return Registration|\WP_Error
 	 */
 	public function create( $event_id, array $input ) {
@@ -193,8 +193,8 @@ final class RegistrationService {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $input Raw input.
-	 * @return array|\WP_Error
+	 * @param array<string, mixed> $input Raw input.
+	 * @return array{name: string, email: string, phone: string, quantity: int}|\WP_Error
 	 */
 	private function validate( array $input ) {
 		$name = isset( $input['name'] ) ? sanitize_text_field( $input['name'] ) : '';

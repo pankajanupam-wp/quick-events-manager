@@ -69,8 +69,8 @@ final class Templates {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $template File name.
-	 * @param array  $vars     Variables to expose.
+	 * @param string               $template File name.
+	 * @param array<string, mixed> $vars     Variables to expose.
 	 * @return string Rendered markup.
 	 */
 	public static function render( $template, array $vars = array() ) {

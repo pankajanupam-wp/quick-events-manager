@@ -9,6 +9,7 @@
  * @package QuickEventsManager
  */
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use QuickEventsManager\Frontend\Ics;
 use QuickEventsManager\Frontend\SingleEvent;
@@ -96,11 +97,10 @@ final class RegressionTest extends TestCase {
 	/**
 	 * Only callbacks that take a single argument are safe to pass by name.
 	 *
-	 * @dataProvider single_argument_callback_provider
-	 *
 	 * @param string $callback Core function used as a sanitize_callback.
 	 * @return void
 	 */
+	#[DataProvider( 'single_argument_callback_provider' )]
 	public function test_only_single_argument_callbacks_are_passed_by_name( $callback ) {
 		$reflection = new ReflectionFunction( $callback );
 
@@ -181,11 +181,10 @@ final class RegressionTest extends TestCase {
 	 * file is opened, so an attendee's name becomes code running on the
 	 * organiser's machine.
 	 *
-	 * @dataProvider formula_provider
-	 *
 	 * @param string $input Hostile cell value.
 	 * @return void
 	 */
+	#[DataProvider( 'formula_provider' )]
 	public function test_csv_formulas_are_defused( $input ) {
 		$this->assertStringStartsWith( "\t", Exporter::defuse( $input ) );
 	}

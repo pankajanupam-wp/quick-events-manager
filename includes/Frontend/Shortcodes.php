@@ -38,7 +38,7 @@ final class Shortcodes {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array|string $atts Shortcode attributes.
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
 	 * @return string
 	 */
 	public function event_list( $atts ) {
@@ -50,7 +50,7 @@ final class Shortcodes {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array|string $atts Shortcode attributes.
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
 	 * @return string
 	 */
 	public function event_details( $atts ) {
@@ -62,7 +62,7 @@ final class Shortcodes {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array|string $atts Shortcode attributes.
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
 	 * @return string
 	 */
 	public function registration_form( $atts ) {

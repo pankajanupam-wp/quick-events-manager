@@ -31,7 +31,7 @@ final class Renderer {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $atts Display attributes.
+	 * @param array<string, mixed> $atts Display attributes.
 	 * @return string
 	 */
 	public static function event_list( array $atts = array() ) {
@@ -88,7 +88,7 @@ final class Renderer {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $atts Display attributes.
+	 * @param array<string, mixed> $atts Display attributes.
 	 * @return string
 	 */
 	public static function event_details( array $atts = array() ) {
@@ -114,7 +114,7 @@ final class Renderer {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $atts Display attributes.
+	 * @param array<string, mixed> $atts Display attributes.
 	 * @return string
 	 */
 	public static function registration_form( array $atts = array() ) {

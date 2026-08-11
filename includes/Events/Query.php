@@ -98,8 +98,8 @@ final class Query {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $args Additional WP_Query arguments to merge in.
-	 * @return array
+	 * @param array<string, mixed> $args Additional WP_Query arguments to merge in.
+	 * @return array<string, mixed>
 	 */
 	public static function upcoming_args( array $args = array() ) {
 		$now = Meta::now_utc();
@@ -147,8 +147,8 @@ final class Query {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $args Additional WP_Query arguments to merge in.
-	 * @return array
+	 * @param array<string, mixed> $args Additional WP_Query arguments to merge in.
+	 * @return array<string, mixed>
 	 */
 	public static function past_args( array $args = array() ) {
 		$now = Meta::now_utc();

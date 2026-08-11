@@ -30,7 +30,7 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array|object $row Database row.
+	 * @param array<string, mixed>|object $row Database row.
 	 */
 	public function __construct( $row ) {
 		$this->data = (array) $row;
@@ -164,7 +164,7 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function fields() {
 		$raw = $this->get( 'fields', '' );
@@ -192,7 +192,7 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function to_array() {
 		return array(

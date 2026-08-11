@@ -38,8 +38,8 @@ final class AdminColumns {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $columns Existing columns.
-	 * @return array
+	 * @param array<string, string> $columns Existing columns.
+	 * @return array<string, string>
 	 */
 	public function columns( $columns ) {
 		$reordered = array();
@@ -115,8 +115,8 @@ final class AdminColumns {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $columns Sortable columns.
-	 * @return array
+	 * @param array<string, string> $columns Sortable columns.
+	 * @return array<string, string>
 	 */
 	public function sortable( $columns ) {
 		$columns['qevm_start'] = 'qevm_start';

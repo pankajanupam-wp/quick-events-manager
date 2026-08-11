@@ -58,8 +58,6 @@ final class EventsModule implements Module {
 	 * Disclosure level.
 	 *
 	 * @since 26.0
-	 *
-	 * @return int
 	 */
 	public function level(): ModuleLevel {
 		return ModuleLevel::Core;

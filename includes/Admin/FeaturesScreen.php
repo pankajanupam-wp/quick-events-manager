@@ -89,8 +89,8 @@ final class FeaturesScreen {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $links Existing action links.
-	 * @return array
+	 * @param array<string, string> $links Existing action links.
+	 * @return array<string, string>
 	 */
 	public function action_links( $links ) {
 		$url = admin_url( 'edit.php?post_type=' . QEVM_POST_TYPE . '&page=' . self::SLUG );

@@ -308,7 +308,7 @@ final class MetaBox {
 	 *
 	 * @since 26.0
 	 *
-	 * @return array
+	 * @return array<string, array<string, array<string, bool>>>
 	 */
 	private static function allowed_option_html() {
 		return array(
