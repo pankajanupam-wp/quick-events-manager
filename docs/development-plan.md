@@ -185,6 +185,23 @@ hostile input instead, and that rewrite is what exposed the `esc_url_raw()` gap.
 `qem` outside the ADR that explains the rename · plugin activates on a real install
 with `WP_DEBUG` on and no notices.
 
+> **Gate passed, 2026-08-11.**
+>
+> | Criterion | Result |
+> | --- | --- |
+> | Unit tests green | **82 tests, 260 assertions.** The gate said 73, which was the count when it was written; C0.5 and C0.7 added nine. The number to hold from here is 82 |
+> | PHPCS clean | Zero violations, exit 0 |
+> | PHPStan clean | Level 6, "No errors", with `szepeviktor/phpstan-wordpress` actually installed |
+> | No `qem` in code | Zero across `*.php`, `*.json`, `*.js`, `*.css`, `*.pot`, `*.txt`, `*.yml`. Remaining occurrences are all in `docs/` and one `phpcs.xml.dist` comment, every one of them prose about the rename |
+> | Activates clean on a real install | WordPress 7.0.3, `WP_DEBUG` and `WP_DEBUG_LOG` on. Activated, then requested the front page, the event archive and both REST routes: four 200s and **no `debug.log` was created at all** |
+>
+> Two things worth carrying into Stage 1. `composer check` passes end to end for the
+> first time — every earlier "green" in this stage was measured with standalone phars
+> that had no WordPress symbols, and installing the real dependencies is what exposed
+> both CI breaks. And the integration suite still does not exist: everything touching
+> `$wpdb` has been verified with throwaway scripts against wp-env, which is C1.10's
+> job to replace with something that runs unattended.
+
 > **Directory layout is deliberately unchanged.** An earlier draft of this plan moved
 > PHP from `includes/` to `src/` and block sources from `src/` to `src-js/`. That was
 > reverted during C0.4: `includes/` is the WordPress convention, PSR-4 does not
