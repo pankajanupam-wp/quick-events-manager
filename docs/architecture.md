@@ -21,6 +21,61 @@ Two things follow, and both are why the design earns its complexity:
 2. **The plugin can keep growing.** Every feature arrives off by default and cannot
    destabilise an install that never enables it.
 
+
+## Date queries
+
+Every date filter and every date sort goes through `Events\OccurrenceQuery`. Nothing
+else builds a `meta_query` for a date, and nothing else writes date SQL.
+
+A caller adds one query variable:
+
+```php
+new WP_Query( OccurrenceQuery::upcoming_args( array( 'posts_per_page' => 10 ) ) );
+```
+
+A single `posts_clauses` filter turns that into a join against `qevm_occurrences`, a
+range condition on `end_utc` and an ordering on `start_utc`. Because it modifies the
+query rather than replacing it, pagination, `found_posts`, search, taxonomy filters
+and post-status handling all keep working — WP_Query is still doing its job.
+
+The generated SQL for an upcoming list:
+
+```sql
+SELECT SQL_CALC_FOUND_ROWS wp_posts.*
+FROM wp_posts
+INNER JOIN wp_qevm_occurrences qevm_occ
+        ON qevm_occ.event_id = wp_posts.ID
+       AND qevm_occ.status IN ( 'scheduled', 'moved' )
+WHERE wp_posts.post_type = 'qevm_event'
+  AND wp_posts.post_status = 'publish'
+  AND qevm_occ.end_utc >= '2030-06-15 12:00:00'
+GROUP BY wp_posts.ID
+ORDER BY MIN( qevm_occ.start_utc ) ASC, wp_posts.ID ASC
+LIMIT 0, 10
+```
+
+No `CAST`, no `postmeta`, one indexed range condition. Compare
+[adr/0003-occurrence-table.md](adr/0003-occurrence-table.md), which describes what this
+replaced: four `postmeta` self-joins, a `CAST` in the `WHERE` and a filesort over an
+unindexed `longtext`.
+
+Three details that are load-bearing:
+
+- **The status test is in the `ON` clause, not the `WHERE`.** On a `LEFT` join a
+  `WHERE` condition against the joined table discards rows with no match, silently
+  turning it back into an `INNER` join and losing exactly the undated events the
+  `LEFT` join existed to keep.
+- **`GROUP BY` with an aggregated `ORDER BY`.** An event may hold several dates once
+  recurrence lands; an upcoming list sorts on the soonest still to come (`MIN`), a past
+  list on the most recent that has been (`MAX`). A bare column would let MySQL pick any
+  row in the group and the order would be stable only by accident. Passing
+  `'group' => false` gives one row per date instead, which is what a calendar wants.
+- **Writes to the occurrence table invalidate the post query cache.** WP_Query caches
+  the ids a set of arguments resolved to, keyed on the `posts` group's `last_changed`.
+  Editing a post bumps that; writing to a table core has never heard of does not. Every
+  write in `OccurrenceRepository` calls `wp_cache_set_last_changed( 'posts' )`, without
+  which a cancelled date keeps appearing until something unrelated touches a post.
+
 ## Layers
 
 Four. Dependencies point **downward only**.

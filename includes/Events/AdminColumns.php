@@ -142,26 +142,17 @@ final class AdminColumns {
 		}
 
 		/*
-		 * A LEFT JOIN rather than meta_key, so events with no date set still
-		 * appear in the list instead of vanishing the moment someone sorts by
-		 * date. meta_key would turn this into an INNER JOIN.
+		 * A LEFT join, so events with no date set still appear in the list
+		 * instead of vanishing the moment someone sorts by date. An event
+		 * nobody can reach because they sorted a column is a lost post.
 		 */
 		$query->set(
-			'meta_query',
+			OccurrenceQuery::QUERY_VAR,
 			array(
-				'relation' => 'OR',
-				array(
-					'key'     => Meta::START_UTC,
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => Meta::START_UTC,
-					'compare' => 'NOT EXISTS',
-				),
+				'when'     => 'any',
+				'order'    => 'DESC' === strtoupper( (string) $query->get( 'order' ) ) ? 'DESC' : 'ASC',
+				'required' => false,
 			)
 		);
-
-		$query->set( 'orderby', 'meta_value' );
-		$query->set( 'meta_key', Meta::START_UTC );
 	}
 }

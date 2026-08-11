@@ -115,6 +115,11 @@ positives and the annotations say so, each pointing at the note in `Events/Query
 `phpcs:ignore`, so nothing else will remind anyone. If removing them produces no new
 findings, the migration off meta is complete.
 
+> **Done at C1.4.** Every `meta_key` and `meta_query` date suppression is gone, and
+> PHPCS reports nothing in their place. The two remaining `SlowDBQuery` annotations
+> are `tax_query` ones, which were never part of this and are explained where they
+> sit. The migration off meta is complete.
+
 **PHPStan — level 6.** Of 539 local errors, ~356 are missing WordPress symbols that
 `szepeviktor/phpstan-wordpress` resolves in CI. The real signal is **missing type
 declarations**, which is expected for code written against PHP 7.4.
@@ -423,7 +428,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | Stage | Chunks | Status |
 | --- | :-: | --- |
 | 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓ · C0.7 ✓** — stage complete |
-| 1 · Schema foundation | 11 | **C1.1 ✓ · C1.2 ✓ · C1.3 ✓** · C1.4–C1.11 pending |
+| 1 · Schema foundation | 11 | **C1.1 ✓ · C1.2 ✓ · C1.3 ✓ · C1.4 ✓** · C1.5–C1.11 pending |
 | 2 · Correctness gaps | 7 | not started |
 | 3 · Records and fields | 6 | not started |
 | 4 · Calendar | 4 | not started |

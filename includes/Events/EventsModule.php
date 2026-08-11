@@ -88,6 +88,7 @@ final class EventsModule implements Module {
 		add_action( 'init', array( Meta::class, 'register' ) );
 
 		( new Query() )->register();
+		( new OccurrenceQuery() )->register();
 		( new OccurrenceSync() )->register();
 		( new \QuickEventsManager\Frontend\Shortcodes() )->register();
 		( new \QuickEventsManager\Frontend\Assets() )->register();

@@ -234,7 +234,13 @@ final class OccurrenceRepository {
 
 		$inserted = $wpdb->insert( self::table(), $row, self::formats( $row ) );
 
-		return $inserted ? (int) $wpdb->insert_id : 0;
+		if ( ! $inserted ) {
+			return 0;
+		}
+
+		self::invalidate_query_cache();
+
+		return (int) $wpdb->insert_id;
 	}
 
 	/**
@@ -256,13 +262,21 @@ final class OccurrenceRepository {
 		$row               = self::normalise( $data );
 		$row['updated_at'] = gmdate( 'Y-m-d H:i:s' );
 
-		return false !== $wpdb->update(
+		$updated = $wpdb->update(
 			self::table(),
 			$row,
 			array( 'id' => $id ),
 			self::formats( $row ),
 			array( '%d' )
 		);
+
+		if ( false === $updated ) {
+			return false;
+		}
+
+		self::invalidate_query_cache();
+
+		return true;
 	}
 
 	/**
@@ -279,7 +293,13 @@ final class OccurrenceRepository {
 			return false;
 		}
 
-		return (bool) $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
+		$deleted = (bool) $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
+
+		if ( $deleted ) {
+			self::invalidate_query_cache();
+		}
+
+		return $deleted;
 	}
 
 	/**
@@ -297,7 +317,13 @@ final class OccurrenceRepository {
 			return 0;
 		}
 
-		return (int) $wpdb->delete( self::table(), array( 'event_id' => $event_id ), array( '%d' ) );
+		$deleted = (int) $wpdb->delete( self::table(), array( 'event_id' => $event_id ), array( '%d' ) );
+
+		if ( $deleted > 0 ) {
+			self::invalidate_query_cache();
+		}
+
+		return $deleted;
 	}
 
 	/**
@@ -377,6 +403,30 @@ final class OccurrenceRepository {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Tell WordPress that any cached post query may now be wrong.
+	 *
+	 * WP_Query caches the ids a set of arguments resolved to, keyed partly on
+	 * the `posts` group's `last_changed` value. Editing a post bumps that;
+	 * writing to this table does not, because core has never heard of it.
+	 *
+	 * Without this, a date that is cancelled or rescheduled keeps appearing in
+	 * listings until something unrelated happens to touch a post — and
+	 * `wp qevm occurrence rebuild` would appear to do nothing at all. It is the
+	 * derived-data drift ADR-0003 warns about, arriving through the cache
+	 * rather than through the table.
+	 *
+	 * Found by running the same query either side of a status change against a
+	 * real WordPress. No stub could have shown it.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	private static function invalidate_query_cache() {
+		wp_cache_set_last_changed( 'posts' );
 	}
 
 	/**

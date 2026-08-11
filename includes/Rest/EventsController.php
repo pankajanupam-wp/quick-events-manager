@@ -9,6 +9,7 @@ namespace QuickEventsManager\Rest;
 
 use QuickEventsManager\Events\Event;
 use QuickEventsManager\Events\Meta;
+use QuickEventsManager\Events\OccurrenceQuery;
 use QuickEventsManager\Events\Query;
 
 defined( 'ABSPATH' ) || exit;
@@ -176,17 +177,7 @@ final class EventsController {
 		} elseif ( 'upcoming' === $show ) {
 			$args = Query::upcoming_args( $args );
 		} else {
-			$args = array_merge(
-				array(
-					'post_type'   => QEVM_POST_TYPE,
-					'post_status' => 'publish',
-					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Sorting by a meta value; the occurrence table replaces this. See the note in Events/Query.php.
-					'meta_key'    => Meta::START_UTC,
-					'orderby'     => 'meta_value',
-					'order'       => 'ASC',
-				),
-				$args
-			);
+			$args = OccurrenceQuery::all_args( $args );
 		}
 
 		$query = new \WP_Query( $args );
