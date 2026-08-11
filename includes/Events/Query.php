@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -48,9 +48,9 @@ final class Query {
 			return;
 		}
 
-		$is_event_archive = $query->is_post_type_archive( QEM_POST_TYPE )
-			|| $query->is_tax( QEM_TAX_CATEGORY )
-			|| $query->is_tax( QEM_TAX_TAG );
+		$is_event_archive = $query->is_post_type_archive( QEVM_POST_TYPE )
+			|| $query->is_tax( QEVM_TAX_CATEGORY )
+			|| $query->is_tax( QEVM_TAX_TAG );
 
 		if ( ! $is_event_archive ) {
 			return;
@@ -85,7 +85,7 @@ final class Query {
 
 		return array_merge(
 			array(
-				'post_type'      => QEM_POST_TYPE,
+				'post_type'      => QEVM_POST_TYPE,
 				'post_status'    => 'publish',
 				'meta_key'       => Meta::START_UTC,
 				'orderby'        => 'meta_value',
@@ -134,7 +134,7 @@ final class Query {
 
 		return array_merge(
 			array(
-				'post_type'      => QEM_POST_TYPE,
+				'post_type'      => QEVM_POST_TYPE,
 				'post_status'    => 'publish',
 				'meta_key'       => Meta::START_UTC,
 				'orderby'        => 'meta_value',

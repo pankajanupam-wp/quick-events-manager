@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,7 +23,7 @@ final class MetaBox {
 	/**
 	 * Nonce action for saving.
 	 */
-	const NONCE = 'qem_save_event_details';
+	const NONCE = 'qevm_save_event_details';
 
 	/**
 	 * Hook into the editor.
@@ -34,7 +34,7 @@ final class MetaBox {
 	 */
 	public function register() {
 		add_action( 'add_meta_boxes', array( $this, 'add' ) );
-		add_action( 'save_post_' . QEM_POST_TYPE, array( $this, 'save' ), 10, 2 );
+		add_action( 'save_post_' . QEVM_POST_TYPE, array( $this, 'save' ), 10, 2 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -47,10 +47,10 @@ final class MetaBox {
 	 */
 	public function add() {
 		add_meta_box(
-			'qem-event-details',
+			'qevm-event-details',
 			__( 'Event Details', 'quick-events-manager' ),
 			array( $this, 'render' ),
-			QEM_POST_TYPE,
+			QEVM_POST_TYPE,
 			'normal',
 			'high'
 		);
@@ -69,12 +69,12 @@ final class MetaBox {
 			return;
 		}
 
-		if ( get_post_type() !== QEM_POST_TYPE ) {
+		if ( get_post_type() !== QEVM_POST_TYPE ) {
 			return;
 		}
 
-		wp_enqueue_style( 'qem-admin', QEM_URL . 'assets/css/admin.css', array(), QEM_VERSION );
-		wp_enqueue_script( 'qem-admin', QEM_URL . 'assets/js/admin.js', array(), QEM_VERSION, true );
+		wp_enqueue_style( 'qevm-admin', QEVM_URL . 'assets/css/admin.css', array(), QEVM_VERSION );
+		wp_enqueue_script( 'qevm-admin', QEVM_URL . 'assets/js/admin.js', array(), QEVM_VERSION, true );
 	}
 
 	/**
@@ -89,37 +89,37 @@ final class MetaBox {
 		$event    = new Event( $post );
 		$timezone = $event->timezone();
 
-		wp_nonce_field( self::NONCE, 'qem_event_details_nonce' );
+		wp_nonce_field( self::NONCE, 'qevm_event_details_nonce' );
 
 		$start   = $event->start_local();
 		$end     = $event->end_local();
 		$all_day = $event->is_all_day();
 		$online  = $event->is_online();
 		?>
-		<div class="qem-fields">
-			<div class="qem-field-row">
-				<div class="qem-field">
-					<label for="qem_start_local"><?php esc_html_e( 'Starts', 'quick-events-manager' ); ?></label>
-					<input type="datetime-local" id="qem_start_local" name="qem_start_local"
+		<div class="qevm-fields">
+			<div class="qevm-field-row">
+				<div class="qevm-field">
+					<label for="qevm_start_local"><?php esc_html_e( 'Starts', 'quick-events-manager' ); ?></label>
+					<input type="datetime-local" id="qevm_start_local" name="qevm_start_local"
 						value="<?php echo esc_attr( self::to_input( $start ) ); ?>" />
 				</div>
-				<div class="qem-field">
-					<label for="qem_end_local"><?php esc_html_e( 'Ends', 'quick-events-manager' ); ?></label>
-					<input type="datetime-local" id="qem_end_local" name="qem_end_local"
+				<div class="qevm-field">
+					<label for="qevm_end_local"><?php esc_html_e( 'Ends', 'quick-events-manager' ); ?></label>
+					<input type="datetime-local" id="qevm_end_local" name="qevm_end_local"
 						value="<?php echo esc_attr( self::to_input( $end ) ); ?>" />
 				</div>
 			</div>
 
-			<p class="qem-checkbox">
+			<p class="qevm-checkbox">
 				<label>
-					<input type="checkbox" name="qem_all_day" value="1" <?php checked( $all_day ); ?> />
+					<input type="checkbox" name="qevm_all_day" value="1" <?php checked( $all_day ); ?> />
 					<?php esc_html_e( 'All-day event', 'quick-events-manager' ); ?>
 				</label>
 			</p>
 
-			<div class="qem-field">
-				<label for="qem_timezone"><?php esc_html_e( 'Timezone', 'quick-events-manager' ); ?></label>
-				<select id="qem_timezone" name="qem_timezone">
+			<div class="qevm-field">
+				<label for="qevm_timezone"><?php esc_html_e( 'Timezone', 'quick-events-manager' ); ?></label>
+				<select id="qevm_timezone" name="qevm_timezone">
 					<?php echo wp_kses( self::timezone_options( $timezone ), self::allowed_option_html() ); ?>
 				</select>
 				<p class="description">
@@ -127,45 +127,45 @@ final class MetaBox {
 				</p>
 			</div>
 
-			<p class="qem-checkbox">
+			<p class="qevm-checkbox">
 				<label>
-					<input type="checkbox" id="qem_is_online" name="qem_is_online" value="1" <?php checked( $online ); ?> />
+					<input type="checkbox" id="qevm_is_online" name="qevm_is_online" value="1" <?php checked( $online ); ?> />
 					<?php esc_html_e( 'This is an online event', 'quick-events-manager' ); ?>
 				</label>
 			</p>
 
-			<div class="qem-field qem-online-only" <?php echo $online ? '' : 'hidden'; ?>>
-				<label for="qem_online_url"><?php esc_html_e( 'Joining link', 'quick-events-manager' ); ?></label>
-				<input type="url" id="qem_online_url" name="qem_online_url" class="widefat"
+			<div class="qevm-field qevm-online-only" <?php echo $online ? '' : 'hidden'; ?>>
+				<label for="qevm_online_url"><?php esc_html_e( 'Joining link', 'quick-events-manager' ); ?></label>
+				<input type="url" id="qevm_online_url" name="qevm_online_url" class="widefat"
 					value="<?php echo esc_attr( $event->online_url() ); ?>" placeholder="https://" />
 			</div>
 
-			<details class="qem-more" <?php echo $event->has_location_details() ? 'open' : ''; ?>>
+			<details class="qevm-more" <?php echo $event->has_location_details() ? 'open' : ''; ?>>
 				<summary><?php esc_html_e( 'Location and organiser', 'quick-events-manager' ); ?></summary>
 
-				<div class="qem-venue-only" <?php echo $online ? 'hidden' : ''; ?>>
+				<div class="qevm-venue-only" <?php echo $online ? 'hidden' : ''; ?>>
 					<?php
-					self::text_field( 'qem_venue_name', __( 'Venue name', 'quick-events-manager' ), $event->meta( Meta::VENUE_NAME ) );
-					self::text_field( 'qem_venue_address', __( 'Address', 'quick-events-manager' ), $event->meta( Meta::VENUE_ADDRESS ) );
+					self::text_field( 'qevm_venue_name', __( 'Venue name', 'quick-events-manager' ), $event->meta( Meta::VENUE_NAME ) );
+					self::text_field( 'qevm_venue_address', __( 'Address', 'quick-events-manager' ), $event->meta( Meta::VENUE_ADDRESS ) );
 					?>
-					<div class="qem-field-row">
+					<div class="qevm-field-row">
 						<?php
-						self::text_field( 'qem_venue_city', __( 'City', 'quick-events-manager' ), $event->meta( Meta::VENUE_CITY ) );
-						self::text_field( 'qem_venue_region', __( 'State / region', 'quick-events-manager' ), $event->meta( Meta::VENUE_REGION ) );
+						self::text_field( 'qevm_venue_city', __( 'City', 'quick-events-manager' ), $event->meta( Meta::VENUE_CITY ) );
+						self::text_field( 'qevm_venue_region', __( 'State / region', 'quick-events-manager' ), $event->meta( Meta::VENUE_REGION ) );
 						?>
 					</div>
-					<div class="qem-field-row">
+					<div class="qevm-field-row">
 						<?php
-						self::text_field( 'qem_venue_postal_code', __( 'Postal code', 'quick-events-manager' ), $event->meta( Meta::VENUE_POSTAL ) );
-						self::text_field( 'qem_venue_country', __( 'Country', 'quick-events-manager' ), $event->meta( Meta::VENUE_COUNTRY ) );
+						self::text_field( 'qevm_venue_postal_code', __( 'Postal code', 'quick-events-manager' ), $event->meta( Meta::VENUE_POSTAL ) );
+						self::text_field( 'qevm_venue_country', __( 'Country', 'quick-events-manager' ), $event->meta( Meta::VENUE_COUNTRY ) );
 						?>
 					</div>
 				</div>
 
-				<div class="qem-field-row">
+				<div class="qevm-field-row">
 					<?php
-					self::text_field( 'qem_organizer_name', __( 'Organiser', 'quick-events-manager' ), $event->meta( Meta::ORGANIZER_NAME ) );
-					self::text_field( 'qem_organizer_email', __( 'Organiser email', 'quick-events-manager' ), $event->meta( Meta::ORGANIZER_EMAIL ), 'email' );
+					self::text_field( 'qevm_organizer_name', __( 'Organiser', 'quick-events-manager' ), $event->meta( Meta::ORGANIZER_NAME ) );
+					self::text_field( 'qevm_organizer_email', __( 'Organiser email', 'quick-events-manager' ), $event->meta( Meta::ORGANIZER_EMAIL ), 'email' );
 					?>
 				</div>
 			</details>
@@ -191,8 +191,8 @@ final class MetaBox {
 			return;
 		}
 
-		$nonce = isset( $_POST['qem_event_details_nonce'] )
-			? sanitize_text_field( wp_unslash( $_POST['qem_event_details_nonce'] ) )
+		$nonce = isset( $_POST['qevm_event_details_nonce'] )
+			? sanitize_text_field( wp_unslash( $_POST['qevm_event_details_nonce'] ) )
 			: '';
 
 		if ( '' === $nonce || ! wp_verify_nonce( $nonce, self::NONCE ) ) {
@@ -203,16 +203,16 @@ final class MetaBox {
 			return;
 		}
 
-		$timezone = isset( $_POST['qem_timezone'] )
-			? Meta::sanitize_timezone( sanitize_text_field( wp_unslash( $_POST['qem_timezone'] ) ) )
+		$timezone = isset( $_POST['qevm_timezone'] )
+			? Meta::sanitize_timezone( sanitize_text_field( wp_unslash( $_POST['qevm_timezone'] ) ) )
 			: '';
 
 		if ( '' === $timezone ) {
 			$timezone = Meta::site_timezone();
 		}
 
-		$start_local = self::from_input( isset( $_POST['qem_start_local'] ) ? sanitize_text_field( wp_unslash( $_POST['qem_start_local'] ) ) : '' );
-		$end_local   = self::from_input( isset( $_POST['qem_end_local'] ) ? sanitize_text_field( wp_unslash( $_POST['qem_end_local'] ) ) : '' );
+		$start_local = self::from_input( isset( $_POST['qevm_start_local'] ) ? sanitize_text_field( wp_unslash( $_POST['qevm_start_local'] ) ) : '' );
+		$end_local   = self::from_input( isset( $_POST['qevm_end_local'] ) ? sanitize_text_field( wp_unslash( $_POST['qevm_end_local'] ) ) : '' );
 
 		/*
 		 * An end before the start is a typo, not an intention. Dropping it is
@@ -229,24 +229,24 @@ final class MetaBox {
 		update_post_meta( $post_id, Meta::START_UTC, Meta::to_utc( $start_local, $timezone ) );
 		update_post_meta( $post_id, Meta::END_UTC, Meta::to_utc( $end_local, $timezone ) );
 
-		update_post_meta( $post_id, Meta::ALL_DAY, isset( $_POST['qem_all_day'] ) ? 1 : 0 );
-		update_post_meta( $post_id, Meta::IS_ONLINE, isset( $_POST['qem_is_online'] ) ? 1 : 0 );
+		update_post_meta( $post_id, Meta::ALL_DAY, isset( $_POST['qevm_all_day'] ) ? 1 : 0 );
+		update_post_meta( $post_id, Meta::IS_ONLINE, isset( $_POST['qevm_is_online'] ) ? 1 : 0 );
 
 		update_post_meta(
 			$post_id,
 			Meta::ONLINE_URL,
-			isset( $_POST['qem_online_url'] ) ? esc_url_raw( wp_unslash( $_POST['qem_online_url'] ) ) : ''
+			isset( $_POST['qevm_online_url'] ) ? esc_url_raw( wp_unslash( $_POST['qevm_online_url'] ) ) : ''
 		);
 
 		$text_fields = array(
-			'qem_venue_name'        => Meta::VENUE_NAME,
-			'qem_venue_address'     => Meta::VENUE_ADDRESS,
-			'qem_venue_city'        => Meta::VENUE_CITY,
-			'qem_venue_region'      => Meta::VENUE_REGION,
-			'qem_venue_postal_code' => Meta::VENUE_POSTAL,
-			'qem_venue_country'     => Meta::VENUE_COUNTRY,
-			'qem_organizer_name'    => Meta::ORGANIZER_NAME,
-			'qem_organizer_phone'   => Meta::ORGANIZER_PHONE,
+			'qevm_venue_name'        => Meta::VENUE_NAME,
+			'qevm_venue_address'     => Meta::VENUE_ADDRESS,
+			'qevm_venue_city'        => Meta::VENUE_CITY,
+			'qevm_venue_region'      => Meta::VENUE_REGION,
+			'qevm_venue_postal_code' => Meta::VENUE_POSTAL,
+			'qevm_venue_country'     => Meta::VENUE_COUNTRY,
+			'qevm_organizer_name'    => Meta::ORGANIZER_NAME,
+			'qevm_organizer_phone'   => Meta::ORGANIZER_PHONE,
 		);
 
 		foreach ( $text_fields as $field => $meta_key ) {
@@ -260,7 +260,7 @@ final class MetaBox {
 		update_post_meta(
 			$post_id,
 			Meta::ORGANIZER_EMAIL,
-			isset( $_POST['qem_organizer_email'] ) ? sanitize_email( wp_unslash( $_POST['qem_organizer_email'] ) ) : ''
+			isset( $_POST['qevm_organizer_email'] ) ? sanitize_email( wp_unslash( $_POST['qevm_organizer_email'] ) ) : ''
 		);
 	}
 
@@ -277,7 +277,7 @@ final class MetaBox {
 	 */
 	private static function text_field( $name, $label, $value, $type = 'text' ) {
 		?>
-		<div class="qem-field">
+		<div class="qevm-field">
 			<label for="<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $label ); ?></label>
 			<input type="<?php echo esc_attr( $type ); ?>" id="<?php echo esc_attr( $name ); ?>"
 				name="<?php echo esc_attr( $name ); ?>" class="widefat"

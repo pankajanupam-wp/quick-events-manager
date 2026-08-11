@@ -5,9 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
-use QEM\Events\Event;
+use QuickEventsManager\Events\Event;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,12 +21,12 @@ final class AttendeesScreen {
 	/**
 	 * Menu slug.
 	 */
-	const SLUG = 'qem-attendees';
+	const SLUG = 'qevm-attendees';
 
 	/**
 	 * Nonce action for changing a status.
 	 */
-	const NONCE = 'qem_attendee_action';
+	const NONCE = 'qevm_attendee_action';
 
 	/**
 	 * Rows per page.
@@ -42,7 +42,7 @@ final class AttendeesScreen {
 	 */
 	public function register() {
 		add_action( 'admin_menu', array( $this, 'add_page' ) );
-		add_action( 'admin_post_qem_update_registration', array( $this, 'handle_update' ) );
+		add_action( 'admin_post_qevm_update_registration', array( $this, 'handle_update' ) );
 	}
 
 	/**
@@ -54,10 +54,10 @@ final class AttendeesScreen {
 	 */
 	public function add_page() {
 		add_submenu_page(
-			'edit.php?post_type=' . QEM_POST_TYPE,
+			'edit.php?post_type=' . QEVM_POST_TYPE,
 			__( 'Attendees', 'quick-events-manager' ),
 			__( 'Attendees', 'quick-events-manager' ),
-			'manage_qem_registrations',
+			'manage_qevm_registrations',
 			self::SLUG,
 			array( $this, 'render' )
 		);
@@ -71,7 +71,7 @@ final class AttendeesScreen {
 	 * @return void
 	 */
 	public function render() {
-		if ( ! current_user_can( 'manage_qem_registrations' ) ) {
+		if ( ! current_user_can( 'manage_qevm_registrations' ) ) {
 			wp_die( esc_html__( 'You do not have permission to view attendees.', 'quick-events-manager' ) );
 		}
 
@@ -82,7 +82,7 @@ final class AttendeesScreen {
 		$paged    = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		echo '<div class="wrap qem-attendees">';
+		echo '<div class="wrap qevm-attendees">';
 		echo '<h1>' . esc_html__( 'Attendees', 'quick-events-manager' ) . '</h1>';
 
 		if ( 0 === $event_id ) {
@@ -129,10 +129,10 @@ final class AttendeesScreen {
 	private function render_event_picker() {
 		$events = get_posts(
 			array(
-				'post_type'      => QEM_POST_TYPE,
+				'post_type'      => QEVM_POST_TYPE,
 				'post_status'    => array( 'publish', 'draft', 'future', 'private' ),
 				'posts_per_page' => 100,
-				'meta_key'       => \QEM\Events\Meta::START_UTC,
+				'meta_key'       => \QuickEventsManager\Events\Meta::START_UTC,
 				'orderby'        => 'meta_value',
 				'order'          => 'DESC',
 			)
@@ -145,7 +145,7 @@ final class AttendeesScreen {
 		}
 
 		echo '<p>' . esc_html__( 'Choose an event to see who has registered.', 'quick-events-manager' ) . '</p>';
-		echo '<form method="get"><input type="hidden" name="post_type" value="' . esc_attr( QEM_POST_TYPE ) . '" />';
+		echo '<form method="get"><input type="hidden" name="post_type" value="' . esc_attr( QEVM_POST_TYPE ) . '" />';
 		echo '<input type="hidden" name="page" value="' . esc_attr( self::SLUG ) . '" />';
 		echo '<select name="event_id">';
 
@@ -177,8 +177,8 @@ final class AttendeesScreen {
 		$taken     = Repository::count_taken( $event->id() );
 		$remaining = RegistrationService::places_remaining( $event );
 
-		echo '<h2 class="qem-attendees-event">' . esc_html( get_the_title( $event->id() ) ) . '</h2>';
-		echo '<p class="qem-attendees-summary">';
+		echo '<h2 class="qevm-attendees-event">' . esc_html( get_the_title( $event->id() ) ) . '</h2>';
+		echo '<p class="qevm-attendees-summary">';
 
 		printf(
 			/* translators: %s: Number of places taken. */
@@ -210,17 +210,17 @@ final class AttendeesScreen {
 	 */
 	private function render_filters( $event_id, $status, $search ) {
 		$export_url = wp_nonce_url(
-			admin_url( 'admin-post.php?action=qem_export_registrations&event_id=' . $event_id ),
+			admin_url( 'admin-post.php?action=qevm_export_registrations&event_id=' . $event_id ),
 			Exporter::NONCE
 		);
 		?>
-		<form method="get" class="qem-attendees-filters">
-			<input type="hidden" name="post_type" value="<?php echo esc_attr( QEM_POST_TYPE ); ?>" />
+		<form method="get" class="qevm-attendees-filters">
+			<input type="hidden" name="post_type" value="<?php echo esc_attr( QEVM_POST_TYPE ); ?>" />
 			<input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>" />
 			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>" />
 
-			<label class="screen-reader-text" for="qem-status"><?php esc_html_e( 'Filter by status', 'quick-events-manager' ); ?></label>
-			<select name="status" id="qem-status">
+			<label class="screen-reader-text" for="qevm-status"><?php esc_html_e( 'Filter by status', 'quick-events-manager' ); ?></label>
+			<select name="status" id="qevm-status">
 				<option value=""><?php esc_html_e( 'All statuses', 'quick-events-manager' ); ?></option>
 				<?php foreach ( Registration::statuses() as $key ) : ?>
 					<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $status, $key ); ?>>
@@ -229,8 +229,8 @@ final class AttendeesScreen {
 				<?php endforeach; ?>
 			</select>
 
-			<label class="screen-reader-text" for="qem-search"><?php esc_html_e( 'Search attendees', 'quick-events-manager' ); ?></label>
-			<input type="search" id="qem-search" name="s" value="<?php echo esc_attr( $search ); ?>"
+			<label class="screen-reader-text" for="qevm-search"><?php esc_html_e( 'Search attendees', 'quick-events-manager' ); ?></label>
+			<input type="search" id="qevm-search" name="s" value="<?php echo esc_attr( $search ); ?>"
 				placeholder="<?php esc_attr_e( 'Name, email or reference', 'quick-events-manager' ); ?>" />
 
 			<?php submit_button( __( 'Filter', 'quick-events-manager' ), 'secondary', '', false ); ?>
@@ -287,15 +287,15 @@ final class AttendeesScreen {
 							?>
 						</td>
 						<td>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="qem-status-form">
-								<input type="hidden" name="action" value="qem_update_registration" />
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="qevm-status-form">
+								<input type="hidden" name="action" value="qevm_update_registration" />
 								<input type="hidden" name="registration_id" value="<?php echo esc_attr( (string) $registration->id() ); ?>" />
 								<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>" />
 								<?php wp_nonce_field( self::NONCE ); ?>
-								<label class="screen-reader-text" for="qem-status-<?php echo esc_attr( (string) $registration->id() ); ?>">
+								<label class="screen-reader-text" for="qevm-status-<?php echo esc_attr( (string) $registration->id() ); ?>">
 									<?php esc_html_e( 'Change status', 'quick-events-manager' ); ?>
 								</label>
-								<select name="status" id="qem-status-<?php echo esc_attr( (string) $registration->id() ); ?>">
+								<select name="status" id="qevm-status-<?php echo esc_attr( (string) $registration->id() ); ?>">
 									<?php foreach ( Registration::statuses() as $key ) : ?>
 										<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $registration->status(), $key ); ?>>
 											<?php echo esc_html( Registration::status_label( $key ) ); ?>
@@ -342,7 +342,7 @@ final class AttendeesScreen {
 				'current'   => $paged,
 				'add_args'  => array_filter(
 					array(
-						'post_type' => QEM_POST_TYPE,
+						'post_type' => QEVM_POST_TYPE,
 						'page'      => self::SLUG,
 						'event_id'  => $event_id,
 						'status'    => $status,
@@ -365,7 +365,7 @@ final class AttendeesScreen {
 	 * @return void
 	 */
 	public function handle_update() {
-		if ( ! current_user_can( 'manage_qem_registrations' ) ) {
+		if ( ! current_user_can( 'manage_qevm_registrations' ) ) {
 			wp_die( esc_html__( 'You do not have permission to change registrations.', 'quick-events-manager' ) );
 		}
 
@@ -386,13 +386,13 @@ final class AttendeesScreen {
 			 * @param int    $id     Registration id.
 			 * @param string $status New status.
 			 */
-			do_action( 'qem_registration_status_changed', $id, $status );
+			do_action( 'qevm_registration_status_changed', $id, $status );
 		}
 
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'post_type' => QEM_POST_TYPE,
+					'post_type' => QEVM_POST_TYPE,
 					'page'      => self::SLUG,
 					'event_id'  => $event_id,
 				),

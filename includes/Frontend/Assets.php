@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,7 +23,7 @@ final class Assets {
 	/**
 	 * Handle for the front-end stylesheet.
 	 */
-	const HANDLE = 'qem-frontend';
+	const HANDLE = 'qevm-frontend';
 
 	/**
 	 * Hook into asset loading.
@@ -46,16 +46,16 @@ final class Assets {
 	public function register_assets() {
 		wp_register_style(
 			self::HANDLE,
-			QEM_URL . 'assets/css/frontend.css',
+			QEVM_URL . 'assets/css/frontend.css',
 			array(),
-			QEM_VERSION
+			QEVM_VERSION
 		);
 
 		/*
 		 * A single-event page always shows details, so enqueue eagerly there.
 		 * Everywhere else waits until a block or shortcode asks.
 		 */
-		if ( is_singular( QEM_POST_TYPE ) || is_post_type_archive( QEM_POST_TYPE ) ) {
+		if ( is_singular( QEVM_POST_TYPE ) || is_post_type_archive( QEVM_POST_TYPE ) ) {
 			self::enqueue_frontend();
 		}
 	}
@@ -72,7 +72,7 @@ final class Assets {
 	 */
 	public static function enqueue_frontend() {
 		if ( ! wp_style_is( self::HANDLE, 'registered' ) ) {
-			wp_register_style( self::HANDLE, QEM_URL . 'assets/css/frontend.css', array(), QEM_VERSION );
+			wp_register_style( self::HANDLE, QEVM_URL . 'assets/css/frontend.css', array(), QEVM_VERSION );
 		}
 
 		wp_enqueue_style( self::HANDLE );

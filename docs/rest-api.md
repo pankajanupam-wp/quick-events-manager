@@ -1,16 +1,16 @@
 # REST API
 
-Namespace `qem/v1`. Read-only.
+Namespace `qevm/v1`. Read-only.
 
 ## Why read-only
 
-The post type is registered with `show_in_rest`, so core already serves authenticated CRUD at `/wp/v2/qem_event`, with the permission handling the block editor depends on. Hand-rolling a second write path would mean a second permission surface to audit, for no benefit.
+The post type is registered with `show_in_rest`, so core already serves authenticated CRUD at `/wp/v2/qevm_event`, with the permission handling the block editor depends on. Hand-rolling a second write path would mean a second permission surface to audit, for no benefit.
 
 What core does *not* give is an event-shaped read — dates resolved into the event's own timezone, the venue flattened, upcoming/past filtering. That is what these endpoints are for.
 
-To create or update events programmatically, use `/wp/v2/qem_event` with an application password.
+To create or update events programmatically, use `/wp/v2/qevm_event` with an application password.
 
-## `GET /wp-json/qem/v1/events`
+## `GET /wp-json/qevm/v1/events`
 
 Public. Returns published events.
 
@@ -27,10 +27,10 @@ Pagination is returned in headers: `X-WP-Total` and `X-WP-TotalPages`.
 An event counts as upcoming until it *ends*, so a three-day conference on its second day is still listed rather than disappearing the moment it starts.
 
 ```sh
-curl 'https://example.com/wp-json/qem/v1/events?show=upcoming&per_page=5'
+curl 'https://example.com/wp-json/qevm/v1/events?show=upcoming&per_page=5'
 ```
 
-## `GET /wp-json/qem/v1/events/{id}`
+## `GET /wp-json/qevm/v1/events/{id}`
 
 Public. 404s for anything that is not a published event.
 
@@ -86,8 +86,8 @@ Only present when the authenticated user can edit that event. A meeting link is 
 
 | Code | HTTP | Meaning |
 | --- | --- | --- |
-| `qem_event_not_found` | 404 | No published event with that id |
+| `qevm_event_not_found` | 404 | No published event with that id |
 
 ## Stability
 
-The response shape is additive from 26.0: fields may be added, but existing fields will not be removed or change meaning within a major version. Add your own with `qem_rest_prepare_event`.
+The response shape is additive from 26.0: fields may be added, but existing fields will not be removed or change meaning within a major version. Add your own with `qevm_rest_prepare_event`.

@@ -5,10 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
-use QEM\Install\Installer;
-use QEM\Modules\Module;
+use QuickEventsManager\Install\Installer;
+use QuickEventsManager\Modules\Module;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -92,7 +92,7 @@ final class RegistrationModule implements Module {
 	public function register() {
 		( new FormHandler() )->register();
 		( new Emails() )->register();
-		( new \QEM\Privacy\Privacy() )->register();
+		( new \QuickEventsManager\Privacy\Privacy() )->register();
 
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();

@@ -81,7 +81,7 @@ final class PluginTest extends TestCase {
 		$stable_tag     = $this->header_value( $this->plugin_file( 'readme.txt' ), 'Stable tag' );
 
 		$this->assertNotSame( '', $header_version, 'Plugin header is missing a Version.' );
-		$this->assertSame( $header_version, QEM_VERSION, 'QEM_VERSION is out of sync with the plugin header.' );
+		$this->assertSame( $header_version, QEVM_VERSION, 'QEVM_VERSION is out of sync with the plugin header.' );
 		$this->assertSame( $header_version, $stable_tag, 'Readme stable tag is out of sync with the plugin header.' );
 	}
 
@@ -160,7 +160,7 @@ final class PluginTest extends TestCase {
 	 */
 	public function test_changelog_documents_the_current_version() {
 		$this->assertMatchesRegularExpression(
-			'/^=\s*' . preg_quote( QEM_VERSION, '/' ) . '\s*=$/m',
+			'/^=\s*' . preg_quote( QEVM_VERSION, '/' ) . '\s*=$/m',
 			$this->plugin_file( 'readme.txt' ),
 			'readme.txt has no changelog entry for the current version.'
 		);
@@ -193,7 +193,7 @@ final class PluginTest extends TestCase {
 		$uninstall = $this->plugin_file( 'uninstall.php' );
 
 		$this->assertStringContainsString( 'WP_UNINSTALL_PLUGIN', $uninstall );
-		$this->assertStringContainsString( 'qem_settings', $uninstall );
+		$this->assertStringContainsString( 'qevm_settings', $uninstall );
 		$this->assertStringContainsString( 'is_multisite', $uninstall );
 	}
 
@@ -277,9 +277,9 @@ final class PluginTest extends TestCase {
 	 * @return void
 	 */
 	public function test_post_type_key_is_valid_and_stable() {
-		$this->assertSame( 'qem_event', QEM_POST_TYPE );
-		$this->assertLessThanOrEqual( 20, strlen( QEM_POST_TYPE ) );
-		$this->assertMatchesRegularExpression( '/^[a-z0-9_-]+$/', QEM_POST_TYPE );
+		$this->assertSame( 'qevm_event', QEVM_POST_TYPE );
+		$this->assertLessThanOrEqual( 20, strlen( QEVM_POST_TYPE ) );
+		$this->assertMatchesRegularExpression( '/^[a-z0-9_-]+$/', QEVM_POST_TYPE );
 	}
 
 	/**
@@ -288,7 +288,7 @@ final class PluginTest extends TestCase {
 	 * @return void
 	 */
 	public function test_taxonomy_keys_are_valid() {
-		foreach ( array( QEM_TAX_CATEGORY, QEM_TAX_TAG ) as $taxonomy ) {
+		foreach ( array( QEVM_TAX_CATEGORY, QEVM_TAX_TAG ) as $taxonomy ) {
 			$this->assertLessThanOrEqual( 32, strlen( $taxonomy ) );
 			$this->assertMatchesRegularExpression( '/^[a-z0-9_-]+$/', $taxonomy );
 		}

@@ -5,10 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
-use QEM\Events\Event;
-use QEM\Events\Meta;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -42,7 +42,7 @@ final class Schema {
 	 * @return void
 	 */
 	public function output() {
-		if ( ! is_singular( QEM_POST_TYPE ) ) {
+		if ( ! is_singular( QEVM_POST_TYPE ) ) {
 			return;
 		}
 
@@ -128,7 +128,7 @@ final class Schema {
 		 * @param array $data  JSON-LD data.
 		 * @param Event $event The event.
 		 */
-		return apply_filters( 'qem_schema_data', $data, $event );
+		return apply_filters( 'qevm_schema_data', $data, $event );
 	}
 
 	/**

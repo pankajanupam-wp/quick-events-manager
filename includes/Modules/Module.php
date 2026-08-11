@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Modules;
+namespace QuickEventsManager\Modules;
 
 defined( 'ABSPATH' ) || exit;
 

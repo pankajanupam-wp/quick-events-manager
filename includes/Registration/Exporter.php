@@ -5,9 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
-use QEM\Events\Event;
+use QuickEventsManager\Events\Event;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,7 +21,7 @@ final class Exporter {
 	/**
 	 * Nonce action.
 	 */
-	const NONCE = 'qem_export_registrations';
+	const NONCE = 'qevm_export_registrations';
 
 	/**
 	 * Hook into admin-post.
@@ -31,7 +31,7 @@ final class Exporter {
 	 * @return void
 	 */
 	public function register() {
-		add_action( 'admin_post_qem_export_registrations', array( $this, 'handle' ) );
+		add_action( 'admin_post_qevm_export_registrations', array( $this, 'handle' ) );
 	}
 
 	/**
@@ -42,7 +42,7 @@ final class Exporter {
 	 * @return void
 	 */
 	public function handle() {
-		if ( ! current_user_can( 'manage_qem_registrations' ) ) {
+		if ( ! current_user_can( 'manage_qevm_registrations' ) ) {
 			wp_die( esc_html__( 'You do not have permission to export attendees.', 'quick-events-manager' ) );
 		}
 

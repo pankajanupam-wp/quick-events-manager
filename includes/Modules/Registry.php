@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Modules;
+namespace QuickEventsManager\Modules;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -40,15 +40,15 @@ final class Registry {
 	 */
 	public function __construct() {
 		$modules = array(
-			new \QEM\Events\EventsModule(),
-			new \QEM\Registration\RegistrationModule(),
+			new \QuickEventsManager\Events\EventsModule(),
+			new \QuickEventsManager\Registration\RegistrationModule(),
 		);
 
 		/**
 		 * Filter the feature modules available on the Features screen.
 		 *
 		 * This is the extension point for add-on plugins: return your own
-		 * object implementing QEM\Modules\Module and it gains a toggle, an
+		 * object implementing QuickEventsManager\Modules\Module and it gains a toggle, an
 		 * activation routine and the same enabled/disabled guarantees as a
 		 * bundled module.
 		 *
@@ -56,7 +56,7 @@ final class Registry {
 		 *
 		 * @param Module[] $modules Module instances.
 		 */
-		$modules = apply_filters( 'qem_modules', $modules );
+		$modules = apply_filters( 'qevm_modules', $modules );
 
 		foreach ( $modules as $module ) {
 			if ( $module instanceof Module ) {
@@ -99,7 +99,7 @@ final class Registry {
 	 * @return string[]
 	 */
 	public function enabled_ids() {
-		$stored = get_option( QEM_OPTION_MODULES, array() );
+		$stored = get_option( QEVM_OPTION_MODULES, array() );
 
 		if ( ! is_array( $stored ) ) {
 			$stored = array();
@@ -165,10 +165,10 @@ final class Registry {
 		}
 
 		if ( ! $this->is_enabled( $id ) ) {
-			$stored   = (array) get_option( QEM_OPTION_MODULES, array() );
+			$stored   = (array) get_option( QEVM_OPTION_MODULES, array() );
 			$stored[] = $id;
 
-			update_option( QEM_OPTION_MODULES, array_values( array_unique( $stored ) ) );
+			update_option( QEVM_OPTION_MODULES, array_values( array_unique( $stored ) ) );
 
 			$module->activate();
 
@@ -179,7 +179,7 @@ final class Registry {
 			 *
 			 * @param string $id Module id.
 			 */
-			do_action( 'qem_module_enabled', $id );
+			do_action( 'qevm_module_enabled', $id );
 		}
 
 		return true;
@@ -201,9 +201,9 @@ final class Registry {
 		}
 
 		if ( $this->is_enabled( $id ) ) {
-			$stored = array_diff( (array) get_option( QEM_OPTION_MODULES, array() ), array( $id ) );
+			$stored = array_diff( (array) get_option( QEVM_OPTION_MODULES, array() ), array( $id ) );
 
-			update_option( QEM_OPTION_MODULES, array_values( $stored ) );
+			update_option( QEVM_OPTION_MODULES, array_values( $stored ) );
 
 			$module->deactivate();
 
@@ -214,7 +214,7 @@ final class Registry {
 			 *
 			 * @param string $id Module id.
 			 */
-			do_action( 'qem_module_disabled', $id );
+			do_action( 'qevm_module_disabled', $id );
 		}
 
 		return true;

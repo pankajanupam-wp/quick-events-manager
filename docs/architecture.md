@@ -63,7 +63,7 @@ beyond what is caught before it reaches a boundary.
 quick-events-manager.php
   ├─ defines constants                  QEVM_VERSION, QEVM_PATH, …
   ├─ checks PHP and WordPress versions
-  ├─ registers the autoloader           QuickEventsManager\ -> src/
+  ├─ registers the autoloader           QuickEventsManager\ -> includes/
   ├─ registers activation hooks
   └─ Plugin::instance()->boot()
         ├─ plugins_loaded  ─► Registry->boot()

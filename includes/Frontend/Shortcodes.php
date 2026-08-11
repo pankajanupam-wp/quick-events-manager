@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -28,13 +28,13 @@ final class Shortcodes {
 	 * @return void
 	 */
 	public function register() {
-		add_shortcode( 'qem_event_list', array( $this, 'event_list' ) );
-		add_shortcode( 'qem_event_details', array( $this, 'event_details' ) );
-		add_shortcode( 'qem_event_registration', array( $this, 'registration_form' ) );
+		add_shortcode( 'qevm_event_list', array( $this, 'event_list' ) );
+		add_shortcode( 'qevm_event_details', array( $this, 'event_details' ) );
+		add_shortcode( 'qevm_event_registration', array( $this, 'registration_form' ) );
 	}
 
 	/**
-	 * `[qem_event_list]`
+	 * `[qevm_event_list]`
 	 *
 	 * @since 26.0
 	 *
@@ -46,7 +46,7 @@ final class Shortcodes {
 	}
 
 	/**
-	 * `[qem_event_details]`
+	 * `[qevm_event_details]`
 	 *
 	 * @since 26.0
 	 *
@@ -58,7 +58,7 @@ final class Shortcodes {
 	}
 
 	/**
-	 * `[qem_event_registration]`
+	 * `[qevm_event_registration]`
 	 *
 	 * @since 26.0
 	 *

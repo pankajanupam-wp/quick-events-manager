@@ -60,7 +60,7 @@ Two things matter more than style:
 
 The plugin's organising idea is that a fresh install does one thing and everything else is opted into. A feature that is off must register no hooks, create no tables and enqueue no assets.
 
-If you are adding something substantial, add a class implementing `QEM\Modules\Module` and register it through the `qem_modules` filter. See `includes/Registration/RegistrationModule.php` for a worked example.
+If you are adding something substantial, add a class implementing `QuickEventsManager\Modules\Module` and register it through the `qevm_modules` filter. See `includes/Registration/RegistrationModule.php` for a worked example.
 
 ## Testing philosophy
 

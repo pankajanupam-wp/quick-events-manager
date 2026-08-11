@@ -5,12 +5,12 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Registers `qem_event` and the two taxonomies that classify it.
+ * Registers `qevm_event` and the two taxonomies that classify it.
  *
  * @since 26.0
  */
@@ -67,7 +67,7 @@ final class PostType {
 			'show_in_rest'       => true,
 			'menu_icon'          => 'dashicons-calendar-alt',
 			'menu_position'      => 20,
-			'capability_type'    => array( 'qem_event', 'qem_events' ),
+			'capability_type'    => array( 'qevm_event', 'qevm_events' ),
 			'map_meta_cap'       => true,
 			'hierarchical'       => false,
 			'supports'           => array( 'title', 'editor', 'author', 'thumbnail', 'excerpt', 'revisions', 'custom-fields' ),
@@ -87,9 +87,9 @@ final class PostType {
 		 *
 		 * @param array $args Arguments passed to register_post_type().
 		 */
-		$args = apply_filters( 'qem_post_type_args', $args );
+		$args = apply_filters( 'qevm_post_type_args', $args );
 
-		register_post_type( QEM_POST_TYPE, $args );
+		register_post_type( QEVM_POST_TYPE, $args );
 	}
 
 	/**
@@ -105,8 +105,8 @@ final class PostType {
 	 */
 	public static function register_taxonomies() {
 		register_taxonomy(
-			QEM_TAX_CATEGORY,
-			QEM_POST_TYPE,
+			QEVM_TAX_CATEGORY,
+			QEVM_POST_TYPE,
 			array(
 				'labels'            => array(
 					'name'          => _x( 'Event Categories', 'taxonomy general name', 'quick-events-manager' ),
@@ -133,8 +133,8 @@ final class PostType {
 		);
 
 		register_taxonomy(
-			QEM_TAX_TAG,
-			QEM_POST_TYPE,
+			QEVM_TAX_TAG,
+			QEVM_POST_TYPE,
 			array(
 				'labels'            => array(
 					'name'          => _x( 'Event Tags', 'taxonomy general name', 'quick-events-manager' ),

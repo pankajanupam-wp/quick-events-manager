@@ -9,14 +9,14 @@
 	'use strict';
 
 	document.addEventListener( 'DOMContentLoaded', function () {
-		var onlineToggle = document.getElementById( 'qem_is_online' );
+		var onlineToggle = document.getElementById( 'qevm_is_online' );
 
 		if ( ! onlineToggle ) {
 			return;
 		}
 
-		var onlineOnly = document.querySelectorAll( '.qem-online-only' );
-		var venueOnly = document.querySelectorAll( '.qem-venue-only' );
+		var onlineOnly = document.querySelectorAll( '.qevm-online-only' );
+		var venueOnly = document.querySelectorAll( '.qevm-venue-only' );
 
 		function sync() {
 			var isOnline = onlineToggle.checked;

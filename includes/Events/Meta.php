@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,52 +25,52 @@ final class Meta {
 	/**
 	 * The canonical sortable start time, `Y-m-d H:i:s` in UTC.
 	 */
-	const START_UTC = '_qem_start_utc';
+	const START_UTC = '_qevm_start_utc';
 
 	/**
 	 * The canonical sortable end time, `Y-m-d H:i:s` in UTC.
 	 */
-	const END_UTC = '_qem_end_utc';
+	const END_UTC = '_qevm_end_utc';
 
 	/**
 	 * Start time as the organiser typed it, `Y-m-d H:i:s`.
 	 */
-	const START_LOCAL = '_qem_start_local';
+	const START_LOCAL = '_qevm_start_local';
 
 	/**
 	 * End time as the organiser typed it, `Y-m-d H:i:s`.
 	 */
-	const END_LOCAL = '_qem_end_local';
+	const END_LOCAL = '_qevm_end_local';
 
 	/**
 	 * PHP timezone identifier the local times are expressed in.
 	 */
-	const TIMEZONE = '_qem_timezone';
+	const TIMEZONE = '_qevm_timezone';
 
 	/**
 	 * Whether the event has no meaningful time of day.
 	 */
-	const ALL_DAY = '_qem_all_day';
+	const ALL_DAY = '_qevm_all_day';
 
 	/**
 	 * Whether the event happens online.
 	 */
-	const IS_ONLINE = '_qem_is_online';
+	const IS_ONLINE = '_qevm_is_online';
 
 	/**
 	 * Joining URL for an online event.
 	 */
-	const ONLINE_URL = '_qem_online_url';
+	const ONLINE_URL = '_qevm_online_url';
 
 	/**
 	 * Venue fields.
 	 */
-	const VENUE_NAME    = '_qem_venue_name';
-	const VENUE_ADDRESS = '_qem_venue_address';
-	const VENUE_CITY    = '_qem_venue_city';
-	const VENUE_REGION  = '_qem_venue_region';
-	const VENUE_POSTAL  = '_qem_venue_postal_code';
-	const VENUE_COUNTRY = '_qem_venue_country';
+	const VENUE_NAME    = '_qevm_venue_name';
+	const VENUE_ADDRESS = '_qevm_venue_address';
+	const VENUE_CITY    = '_qevm_venue_city';
+	const VENUE_REGION  = '_qevm_venue_region';
+	const VENUE_POSTAL  = '_qevm_venue_postal_code';
+	const VENUE_COUNTRY = '_qevm_venue_country';
 
 	/**
 	 * Reserved for the reusable-venues module.
@@ -80,22 +80,22 @@ final class Meta {
 	 * venues into reusable records can populate it without a schema change or
 	 * a second migration.
 	 */
-	const VENUE_ID = '_qem_venue_id';
+	const VENUE_ID = '_qevm_venue_id';
 
 	/**
 	 * Organizer fields.
 	 */
-	const ORGANIZER_NAME  = '_qem_organizer_name';
-	const ORGANIZER_EMAIL = '_qem_organizer_email';
-	const ORGANIZER_PHONE = '_qem_organizer_phone';
-	const ORGANIZER_URL   = '_qem_organizer_url';
+	const ORGANIZER_NAME  = '_qevm_organizer_name';
+	const ORGANIZER_EMAIL = '_qevm_organizer_email';
+	const ORGANIZER_PHONE = '_qevm_organizer_phone';
+	const ORGANIZER_URL   = '_qevm_organizer_url';
 
 	/**
 	 * Registration fields, written by the Registration module.
 	 */
-	const CAPACITY             = '_qem_capacity';
-	const REGISTRATION_CLOSES  = '_qem_registration_closes_utc';
-	const REGISTRATION_ENABLED = '_qem_registration_enabled';
+	const CAPACITY             = '_qevm_capacity';
+	const REGISTRATION_CLOSES  = '_qevm_registration_closes_utc';
+	const REGISTRATION_ENABLED = '_qevm_registration_enabled';
 
 	/**
 	 * The format every stored datetime uses.
@@ -116,7 +116,7 @@ final class Meta {
 	public static function register() {
 		foreach ( self::definitions() as $key => $definition ) {
 			register_post_meta(
-				QEM_POST_TYPE,
+				QEVM_POST_TYPE,
 				$key,
 				array(
 					'type'              => $definition['type'],

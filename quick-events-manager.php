@@ -93,37 +93,37 @@ if ( version_compare( get_bloginfo( 'version' ), '6.5', '<' ) ) {
 /**
  * Plugin version, kept in sync with the header and the readme stable tag.
  */
-define( 'QEM_VERSION', '26.0' );
+define( 'QEVM_VERSION', '26.0' );
 
 /**
  * Schema version for the custom tables.
  *
  * Bumped only when a table changes, which is far less often than the plugin
- * version. The installer compares this against the stored qem_db_version and
+ * version. The installer compares this against the stored qevm_db_version and
  * runs dbDelta() when they differ, so an upgrade that touches no table costs
  * nothing on the front end.
  */
-define( 'QEM_DB_VERSION', '1' );
+define( 'QEVM_DB_VERSION', '1' );
 
 /**
  * Absolute path to this file.
  */
-define( 'QEM_FILE', __FILE__ );
+define( 'QEVM_FILE', __FILE__ );
 
 /**
  * Plugin directory path, with trailing slash.
  */
-define( 'QEM_PATH', plugin_dir_path( __FILE__ ) );
+define( 'QEVM_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
  * Plugin directory URL, with trailing slash.
  */
-define( 'QEM_URL', plugin_dir_url( __FILE__ ) );
+define( 'QEVM_URL', plugin_dir_url( __FILE__ ) );
 
 /**
  * Plugin basename, e.g. quick-events-manager/quick-events-manager.php.
  */
-define( 'QEM_BASENAME', plugin_basename( __FILE__ ) );
+define( 'QEVM_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
  * Post type key for events.
@@ -134,38 +134,38 @@ define( 'QEM_BASENAME', plugin_basename( __FILE__ ) );
  * are preserved by the rewrite slug instead, and Migrator moves existing rows
  * across. Never change this value again — it is written into wp_posts.
  */
-define( 'QEM_POST_TYPE', 'qem_event' );
+define( 'QEVM_POST_TYPE', 'qevm_event' );
 
 /**
  * Taxonomy key for event categories.
  */
-define( 'QEM_TAX_CATEGORY', 'qem_event_category' );
+define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );
 
 /**
  * Taxonomy key for event tags.
  */
-define( 'QEM_TAX_TAG', 'qem_event_tag' );
+define( 'QEVM_TAX_TAG', 'qevm_event_tag' );
 
 /**
  * Option holding the ids of the feature modules the site has switched on.
  */
-define( 'QEM_OPTION_MODULES', 'qem_enabled_modules' );
+define( 'QEVM_OPTION_MODULES', 'qevm_enabled_modules' );
 
 /**
  * Option holding general plugin settings.
  */
-define( 'QEM_OPTION_SETTINGS', 'qem_settings' );
+define( 'QEVM_OPTION_SETTINGS', 'qevm_settings' );
 
 /**
  * Option holding the installed schema version.
  */
-define( 'QEM_OPTION_DB_VERSION', 'qem_db_version' );
+define( 'QEVM_OPTION_DB_VERSION', 'qevm_db_version' );
 
-require_once QEM_PATH . 'includes/Autoloader.php';
+require_once QEVM_PATH . 'includes/Autoloader.php';
 
-QEM\Autoloader::register();
+QuickEventsManager\Autoloader::register();
 
-register_activation_hook( __FILE__, array( 'QEM\Plugin', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'QEM\Plugin', 'deactivate' ) );
+register_activation_hook( __FILE__, array( 'QuickEventsManager\Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'QuickEventsManager\Plugin', 'deactivate' ) );
 
-QEM\Plugin::instance()->boot();
+QuickEventsManager\Plugin::instance()->boot();

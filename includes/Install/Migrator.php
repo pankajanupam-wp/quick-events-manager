@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Install;
+namespace QuickEventsManager\Install;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -34,7 +34,7 @@ final class Migrator {
 	/**
 	 * Option recording that the migration has run.
 	 */
-	const OPTION = 'qem_migrated_legacy_post_type';
+	const OPTION = 'qevm_migrated_legacy_post_type';
 
 	/**
 	 * Run the migration once, if it is needed.
@@ -54,7 +54,7 @@ final class Migrator {
 
 		$migrated = self::migrate();
 
-		update_option( self::OPTION, QEM_VERSION );
+		update_option( self::OPTION, QEVM_VERSION );
 
 		if ( $migrated > 0 ) {
 			/**
@@ -64,7 +64,7 @@ final class Migrator {
 			 *
 			 * @param int $migrated Number of posts updated.
 			 */
-			do_action( 'qem_legacy_posts_migrated', $migrated );
+			do_action( 'qevm_legacy_posts_migrated', $migrated );
 		}
 	}
 
@@ -104,7 +104,7 @@ final class Migrator {
 
 		$updated = $wpdb->update(
 			$wpdb->posts,
-			array( 'post_type' => QEM_POST_TYPE ),
+			array( 'post_type' => QEVM_POST_TYPE ),
 			array( 'post_type' => self::LEGACY_POST_TYPE ),
 			array( '%s' ),
 			array( '%s' )

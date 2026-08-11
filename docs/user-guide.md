@@ -27,9 +27,9 @@ There is also an automatic archive of every event at `yoursite.com/events/`.
 If you use the classic editor, the shortcodes do the same thing:
 
 ```
-[qem_event_list limit="10" show="upcoming" columns="2"]
-[qem_event_details id="123"]
-[qem_event_registration id="123"]
+[qevm_event_list limit="10" show="upcoming" columns="2"]
+[qevm_event_details id="123"]
+[qevm_event_registration id="123"]
 ```
 
 ## Taking registrations

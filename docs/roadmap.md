@@ -8,7 +8,7 @@ That means this document is a build order, not a release schedule. Versions afte
 
 ## Why still modules, then
 
-Every feature is still a `QEM\Modules\Module` that is off by default, even though they all arrive together.
+Every feature is still a `QuickEventsManager\Modules\Module` that is off by default, even though they all arrive together.
 
 The reason is no longer release staging. It is that somebody installing this to put a list of meetups on a page should not be handed ticketing, payment gateways and recurrence rules. They switch on what they need under **Events → Features**, and a module that is off registers no hooks, creates no tables and enqueues no assets.
 
@@ -46,7 +46,7 @@ Editable subject and body with placeholders, and an HTML option. Replaces the pl
 
 ### 4. Reusable venues and organisers
 
-Promote the flat meta fields to real records, using the `_qem_venue_id` column already reserved in 26.0. Needs a migration from flat fields to records for anyone who used the earlier build, and the flat fields must keep working for anyone who does not switch on the module.
+Promote the flat meta fields to real records, using the `_qevm_venue_id` column already reserved in 26.0. Needs a migration from flat fields to records for anyone who used the earlier build, and the flat fields must keep working for anyone who does not switch on the module.
 
 ### 5. Ticketing
 
@@ -54,7 +54,7 @@ Multiple ticket types per event, each with its own quantity, capacity and sale w
 
 ### 6. QR codes and check-in
 
-QR on confirmations, a mobile-friendly check-in screen, manual search, check-in timestamps, and a staff role that can check people in without being able to edit events. `manage_qem_registrations` already exists as a separate capability for exactly this.
+QR on confirmations, a mobile-friendly check-in screen, manual search, check-in timestamps, and a staff role that can check people in without being able to edit events. `manage_qevm_registrations` already exists as a separate capability for exactly this.
 
 ### 7. Payments
 

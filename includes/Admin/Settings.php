@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Admin;
+namespace QuickEventsManager\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -24,12 +24,12 @@ final class Settings {
 	/**
 	 * Menu slug.
 	 */
-	const SLUG = 'qem-settings';
+	const SLUG = 'qevm-settings';
 
 	/**
 	 * Settings group.
 	 */
-	const GROUP = 'qem_settings_group';
+	const GROUP = 'qevm_settings_group';
 
 	/**
 	 * Hook into the admin.
@@ -52,7 +52,7 @@ final class Settings {
 	 */
 	public function add_page() {
 		add_submenu_page(
-			'edit.php?post_type=' . QEM_POST_TYPE,
+			'edit.php?post_type=' . QEVM_POST_TYPE,
 			__( 'Event Settings', 'quick-events-manager' ),
 			__( 'Settings', 'quick-events-manager' ),
 			'manage_options',
@@ -71,7 +71,7 @@ final class Settings {
 	public function register_settings() {
 		register_setting(
 			self::GROUP,
-			QEM_OPTION_SETTINGS,
+			QEVM_OPTION_SETTINGS,
 			array(
 				'type'              => 'array',
 				'sanitize_callback' => array( $this, 'sanitize' ),
@@ -80,7 +80,7 @@ final class Settings {
 		);
 
 		add_settings_section(
-			'qem_display',
+			'qevm_display',
 			__( 'Display', 'quick-events-manager' ),
 			static function () {
 				echo '<p>' . esc_html__( 'How events appear on the front end of your site.', 'quick-events-manager' ) . '</p>';
@@ -93,7 +93,7 @@ final class Settings {
 			__( 'Event details', 'quick-events-manager' ),
 			array( $this, 'render_auto_details' ),
 			self::SLUG,
-			'qem_display'
+			'qevm_display'
 		);
 
 		add_settings_field(
@@ -101,11 +101,11 @@ final class Settings {
 			__( 'Events per page', 'quick-events-manager' ),
 			array( $this, 'render_archive_per_page' ),
 			self::SLUG,
-			'qem_display'
+			'qevm_display'
 		);
 
 		add_settings_section(
-			'qem_notifications',
+			'qevm_notifications',
 			__( 'Notifications', 'quick-events-manager' ),
 			static function () {
 				echo '<p>' . esc_html__( 'Where messages about your events are sent.', 'quick-events-manager' ) . '</p>';
@@ -118,7 +118,7 @@ final class Settings {
 			__( 'Send notifications to', 'quick-events-manager' ),
 			array( $this, 'render_notification_email' ),
 			self::SLUG,
-			'qem_notifications'
+			'qevm_notifications'
 		);
 	}
 
@@ -147,7 +147,7 @@ final class Settings {
 	 * @return mixed
 	 */
 	public static function get( $key, $default = null ) {
-		$settings = get_option( QEM_OPTION_SETTINGS, array() );
+		$settings = get_option( QEVM_OPTION_SETTINGS, array() );
 		$defaults = self::defaults();
 
 		if ( isset( $settings[ $key ] ) ) {
@@ -213,7 +213,7 @@ final class Settings {
 	public function render_auto_details() {
 		?>
 		<label>
-			<input type="checkbox" name="<?php echo esc_attr( QEM_OPTION_SETTINGS ); ?>[auto_details]"
+			<input type="checkbox" name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[auto_details]"
 				value="1" <?php checked( (bool) self::get( 'auto_details' ) ); ?> />
 			<?php esc_html_e( 'Show the date, time and location above the description on a single event page', 'quick-events-manager' ); ?>
 		</label>
@@ -233,7 +233,7 @@ final class Settings {
 	public function render_archive_per_page() {
 		?>
 		<input type="number" min="1" max="100" class="small-text"
-			name="<?php echo esc_attr( QEM_OPTION_SETTINGS ); ?>[archive_per_page]"
+			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[archive_per_page]"
 			value="<?php echo esc_attr( (string) self::get( 'archive_per_page' ) ); ?>" />
 		<?php
 	}
@@ -248,7 +248,7 @@ final class Settings {
 	public function render_notification_email() {
 		?>
 		<input type="email" class="regular-text"
-			name="<?php echo esc_attr( QEM_OPTION_SETTINGS ); ?>[notification_email]"
+			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[notification_email]"
 			value="<?php echo esc_attr( (string) self::get( 'notification_email' ) ); ?>"
 			placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>" />
 		<p class="description">

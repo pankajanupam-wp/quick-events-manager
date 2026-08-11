@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,12 +23,12 @@ final class FormHandler {
 	/**
 	 * Nonce action.
 	 */
-	const NONCE = 'qem_register';
+	const NONCE = 'qevm_register';
 
 	/**
 	 * Query argument carrying the outcome back to the event page.
 	 */
-	const RESULT_ARG = 'qem_result';
+	const RESULT_ARG = 'qevm_result';
 
 	/**
 	 * Hook into admin-post.
@@ -38,8 +38,8 @@ final class FormHandler {
 	 * @return void
 	 */
 	public function register() {
-		add_action( 'admin_post_nopriv_qem_register', array( $this, 'handle' ) );
-		add_action( 'admin_post_qem_register', array( $this, 'handle' ) );
+		add_action( 'admin_post_nopriv_qevm_register', array( $this, 'handle' ) );
+		add_action( 'admin_post_qevm_register', array( $this, 'handle' ) );
 	}
 
 	/**
@@ -63,15 +63,15 @@ final class FormHandler {
 		 * it removes the bulk of automated submissions without putting a
 		 * CAPTCHA in front of real attendees.
 		 */
-		if ( ! empty( $_POST['qem_website'] ) ) {
+		if ( ! empty( $_POST['qevm_website'] ) ) {
 			$this->redirect( $event_id, 'success', '' );
 		}
 
 		$input = array(
-			'name'     => isset( $_POST['qem_name'] ) ? wp_unslash( $_POST['qem_name'] ) : '',
-			'email'    => isset( $_POST['qem_email'] ) ? wp_unslash( $_POST['qem_email'] ) : '',
-			'phone'    => isset( $_POST['qem_phone'] ) ? wp_unslash( $_POST['qem_phone'] ) : '',
-			'quantity' => isset( $_POST['qem_quantity'] ) ? wp_unslash( $_POST['qem_quantity'] ) : 1,
+			'name'     => isset( $_POST['qevm_name'] ) ? wp_unslash( $_POST['qevm_name'] ) : '',
+			'email'    => isset( $_POST['qevm_email'] ) ? wp_unslash( $_POST['qevm_email'] ) : '',
+			'phone'    => isset( $_POST['qevm_phone'] ) ? wp_unslash( $_POST['qevm_phone'] ) : '',
+			'quantity' => isset( $_POST['qevm_quantity'] ) ? wp_unslash( $_POST['qevm_quantity'] ) : 1,
 		);
 
 		$result = ( new RegistrationService() )->create( $event_id, $input );
@@ -112,10 +112,10 @@ final class FormHandler {
 		$args = array( self::RESULT_ARG => $status );
 
 		if ( '' !== $message ) {
-			$args['qem_message'] = rawurlencode( $message );
+			$args['qevm_message'] = rawurlencode( $message );
 		}
 
-		wp_safe_redirect( add_query_arg( $args, $url ) . '#qem-registration' );
+		wp_safe_redirect( add_query_arg( $args, $url ) . '#qevm-registration' );
 
 		exit;
 	}
@@ -134,8 +134,8 @@ final class FormHandler {
 		}
 
 		$status  = sanitize_key( wp_unslash( $_GET[ self::RESULT_ARG ] ) );
-		$message = isset( $_GET['qem_message'] )
-			? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qem_message'] ) ) )
+		$message = isset( $_GET['qevm_message'] )
+			? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qevm_message'] ) ) )
 			: '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 

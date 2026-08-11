@@ -5,9 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Blocks;
+namespace QuickEventsManager\Blocks;
 
-use QEM\Frontend\Renderer;
+use QuickEventsManager\Frontend\Renderer;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -62,7 +62,7 @@ final class Blocks {
 		}
 
 		foreach ( self::BLOCKS as $name => $renderer ) {
-			$metadata = QEM_PATH . 'build/' . $name;
+			$metadata = QEVM_PATH . 'build/' . $name;
 
 			if ( ! is_readable( $metadata . '/block.json' ) ) {
 				continue;

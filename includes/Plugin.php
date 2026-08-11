@@ -5,11 +5,11 @@
  * @package QuickEventsManager
  */
 
-namespace QEM;
+namespace QuickEventsManager;
 
-use QEM\Install\Installer;
-use QEM\Install\Migrator;
-use QEM\Modules\Registry;
+use QuickEventsManager\Install\Installer;
+use QuickEventsManager\Install\Migrator;
+use QuickEventsManager\Modules\Registry;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -73,7 +73,7 @@ final class Plugin {
 	 * Register the hooks that exist regardless of which modules are on.
 	 *
 	 * Modules are booted on `plugins_loaded` rather than immediately, so that
-	 * another plugin has a chance to add its own through the `qem_modules`
+	 * another plugin has a chance to add its own through the `qevm_modules`
 	 * filter before the registry is first built.
 	 *
 	 * @since 26.0
@@ -114,7 +114,7 @@ final class Plugin {
 	 * @return void
 	 */
 	public function load_textdomain() {
-		load_plugin_textdomain( 'quick-events-manager', false, dirname( QEM_BASENAME ) . '/languages' );
+		load_plugin_textdomain( 'quick-events-manager', false, dirname( QEVM_BASENAME ) . '/languages' );
 	}
 
 	/**

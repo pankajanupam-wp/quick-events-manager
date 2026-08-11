@@ -5,20 +5,20 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
-use QEM\Admin\Settings;
-use QEM\Events\Event;
-use QEM\Events\Query;
-use QEM\Registration\FormHandler;
-use QEM\Registration\RegistrationService;
+use QuickEventsManager\Admin\Settings;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Query;
+use QuickEventsManager\Registration\FormHandler;
+use QuickEventsManager\Registration\RegistrationService;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
  * One implementation per piece of front-end output.
  *
- * The `qem/event-list` block and the `[qem_event_list]` shortcode both call
+ * The `qevm/event-list` block and the `[qevm_event_list]` shortcode both call
  * event_list(). Two entry points, one renderer — so markup, escaping and
  * capability decisions are made in exactly one place per feature.
  *
@@ -43,7 +43,7 @@ final class Renderer {
 				'columns'  => 2,
 			),
 			$atts,
-			'qem_event_list'
+			'qevm_event_list'
 		);
 
 		$args = array(
@@ -53,7 +53,7 @@ final class Renderer {
 		if ( '' !== $atts['category'] ) {
 			$args['tax_query'] = array(
 				array(
-					'taxonomy' => QEM_TAX_CATEGORY,
+					'taxonomy' => QEVM_TAX_CATEGORY,
 					'field'    => 'slug',
 					'terms'    => array_map( 'sanitize_title', explode( ',', $atts['category'] ) ),
 				),
@@ -94,7 +94,7 @@ final class Renderer {
 		$atts = shortcode_atts(
 			array( 'id' => 0 ),
 			$atts,
-			'qem_event_details'
+			'qevm_event_details'
 		);
 
 		$event = new Event( (int) $atts['id'] > 0 ? (int) $atts['id'] : get_the_ID() );
@@ -120,7 +120,7 @@ final class Renderer {
 		$atts = shortcode_atts(
 			array( 'id' => 0 ),
 			$atts,
-			'qem_event_registration'
+			'qevm_event_registration'
 		);
 
 		/*
@@ -131,7 +131,7 @@ final class Renderer {
 		 * absence of this check meant a site with registration switched off
 		 * still showed a working form on every event.
 		 */
-		if ( ! \QEM\Plugin::instance()->registry()->is_enabled( \QEM\Registration\RegistrationModule::ID ) ) {
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\Registration\RegistrationModule::ID ) ) {
 			return '';
 		}
 

@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
 defined( 'ABSPATH' ) || exit;
 

@@ -5,9 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
-use QEM\Install\Installer;
+use QuickEventsManager\Install\Installer;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -108,7 +108,7 @@ final class Repository {
 
 		if ( ! $inserted ) {
 			return new \WP_Error(
-				'qem_registration_failed',
+				'qevm_registration_failed',
 				__( 'Your registration could not be saved. Please try again.', 'quick-events-manager' )
 			);
 		}
@@ -517,7 +517,7 @@ final class Repository {
 		$length   = strlen( $alphabet );
 
 		for ( $attempt = 0; $attempt < 10; $attempt++ ) {
-			$code = 'QEM-';
+			$code = 'QEVM-';
 
 			for ( $i = 0; $i < 8; $i++ ) {
 				$code .= $alphabet[ wp_rand( 0, $length - 1 ) ];
@@ -529,6 +529,6 @@ final class Repository {
 		}
 
 		// Ten collisions against a 32^8 space means something is very wrong; fall back to something certainly unique.
-		return 'QEM-' . strtoupper( substr( md5( uniqid( '', true ) ), 0, 12 ) );
+		return 'QEVM-' . strtoupper( substr( md5( uniqid( '', true ) ), 0, 12 ) );
 	}
 }

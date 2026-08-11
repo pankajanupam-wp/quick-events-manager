@@ -5,9 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Admin;
+namespace QuickEventsManager\Admin;
 
-use QEM\Modules\Registry;
+use QuickEventsManager\Modules\Registry;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,12 +26,12 @@ final class FeaturesScreen {
 	/**
 	 * Menu slug.
 	 */
-	const SLUG = 'qem-features';
+	const SLUG = 'qevm-features';
 
 	/**
 	 * Nonce action.
 	 */
-	const NONCE = 'qem_save_features';
+	const NONCE = 'qevm_save_features';
 
 	/**
 	 * Module registry.
@@ -60,8 +60,8 @@ final class FeaturesScreen {
 	 */
 	public function register() {
 		add_action( 'admin_menu', array( $this, 'add_page' ) );
-		add_action( 'admin_post_qem_save_features', array( $this, 'handle_save' ) );
-		add_filter( 'plugin_action_links_' . QEM_BASENAME, array( $this, 'action_links' ) );
+		add_action( 'admin_post_qevm_save_features', array( $this, 'handle_save' ) );
+		add_filter( 'plugin_action_links_' . QEVM_BASENAME, array( $this, 'action_links' ) );
 	}
 
 	/**
@@ -73,7 +73,7 @@ final class FeaturesScreen {
 	 */
 	public function add_page() {
 		add_submenu_page(
-			'edit.php?post_type=' . QEM_POST_TYPE,
+			'edit.php?post_type=' . QEVM_POST_TYPE,
 			__( 'Features', 'quick-events-manager' ),
 			__( 'Features', 'quick-events-manager' ),
 			'manage_options',
@@ -91,7 +91,7 @@ final class FeaturesScreen {
 	 * @return array
 	 */
 	public function action_links( $links ) {
-		$url = admin_url( 'edit.php?post_type=' . QEM_POST_TYPE . '&page=' . self::SLUG );
+		$url = admin_url( 'edit.php?post_type=' . QEVM_POST_TYPE . '&page=' . self::SLUG );
 
 		array_unshift(
 			$links,
@@ -123,10 +123,10 @@ final class FeaturesScreen {
 
 		ksort( $levels );
 		?>
-		<div class="wrap qem-features">
+		<div class="wrap qevm-features">
 			<h1><?php esc_html_e( 'Features', 'quick-events-manager' ); ?></h1>
 
-			<p class="qem-intro">
+			<p class="qevm-intro">
 				<?php esc_html_e( 'Quick Events Manager starts simple. Switch on only what you need — anything you leave off adds nothing to your site, loads no code and creates no database tables.', 'quick-events-manager' ); ?>
 			</p>
 
@@ -137,35 +137,35 @@ final class FeaturesScreen {
 			<?php endif; ?>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="qem_save_features" />
+				<input type="hidden" name="action" value="qevm_save_features" />
 				<?php wp_nonce_field( self::NONCE ); ?>
 
 				<?php foreach ( $levels as $level => $level_modules ) : ?>
-					<h2 class="qem-level-heading"><?php echo esc_html( self::level_title( $level ) ); ?></h2>
-					<p class="qem-level-description"><?php echo esc_html( self::level_description( $level ) ); ?></p>
+					<h2 class="qevm-level-heading"><?php echo esc_html( self::level_title( $level ) ); ?></h2>
+					<p class="qevm-level-description"><?php echo esc_html( self::level_description( $level ) ); ?></p>
 
-					<ul class="qem-module-list">
+					<ul class="qevm-module-list">
 						<?php foreach ( $level_modules as $module ) : ?>
 							<?php
 							$id         = $module->id();
 							$is_on      = in_array( $id, $enabled, true );
 							$is_locked  = $module->is_required();
-							$element_id = 'qem-module-' . sanitize_html_class( $id );
+							$element_id = 'qevm-module-' . sanitize_html_class( $id );
 							?>
-							<li class="qem-module<?php echo $is_on ? ' is-enabled' : ''; ?>">
+							<li class="qevm-module<?php echo $is_on ? ' is-enabled' : ''; ?>">
 								<label for="<?php echo esc_attr( $element_id ); ?>">
 									<input type="checkbox" id="<?php echo esc_attr( $element_id ); ?>"
-										name="qem_modules[]" value="<?php echo esc_attr( $id ); ?>"
+										name="qevm_modules[]" value="<?php echo esc_attr( $id ); ?>"
 										<?php checked( $is_on ); ?>
 										<?php disabled( $is_locked ); ?> />
-									<span class="qem-module-title"><?php echo esc_html( $module->title() ); ?></span>
+									<span class="qevm-module-title"><?php echo esc_html( $module->title() ); ?></span>
 								</label>
-								<p class="qem-module-description"><?php echo esc_html( $module->description() ); ?></p>
+								<p class="qevm-module-description"><?php echo esc_html( $module->description() ); ?></p>
 								<?php if ( $is_locked ) : ?>
-									<p class="qem-module-note">
+									<p class="qevm-module-note">
 										<?php esc_html_e( 'Always on — this is what the plugin does.', 'quick-events-manager' ); ?>
 									</p>
-									<input type="hidden" name="qem_modules[]" value="<?php echo esc_attr( $id ); ?>" />
+									<input type="hidden" name="qevm_modules[]" value="<?php echo esc_attr( $id ); ?>" />
 								<?php endif; ?>
 							</li>
 						<?php endforeach; ?>
@@ -192,7 +192,7 @@ final class FeaturesScreen {
 
 		check_admin_referer( self::NONCE );
 
-		$submitted = isset( $_POST['qem_modules'] ) ? (array) wp_unslash( $_POST['qem_modules'] ) : array();
+		$submitted = isset( $_POST['qevm_modules'] ) ? (array) wp_unslash( $_POST['qevm_modules'] ) : array();
 		$submitted = array_map( 'sanitize_key', $submitted );
 
 		foreach ( $this->registry->all() as $id => $module ) {
@@ -206,7 +206,7 @@ final class FeaturesScreen {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'post_type' => QEM_POST_TYPE,
+					'post_type' => QEVM_POST_TYPE,
 					'page'      => self::SLUG,
 					'updated'   => '1',
 				),

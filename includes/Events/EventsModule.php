@@ -5,9 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
-use QEM\Modules\Module;
+use QuickEventsManager\Modules\Module;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -87,13 +87,13 @@ final class EventsModule implements Module {
 		add_action( 'init', array( Meta::class, 'register' ) );
 
 		( new Query() )->register();
-		( new \QEM\Frontend\Shortcodes() )->register();
-		( new \QEM\Frontend\Assets() )->register();
-		( new \QEM\Frontend\SingleEvent() )->register();
-		( new \QEM\Frontend\Schema() )->register();
-		( new \QEM\Frontend\Ics() )->register();
-		( new \QEM\Blocks\Blocks() )->register();
-		( new \QEM\Rest\EventsController() )->register();
+		( new \QuickEventsManager\Frontend\Shortcodes() )->register();
+		( new \QuickEventsManager\Frontend\Assets() )->register();
+		( new \QuickEventsManager\Frontend\SingleEvent() )->register();
+		( new \QuickEventsManager\Frontend\Schema() )->register();
+		( new \QuickEventsManager\Frontend\Ics() )->register();
+		( new \QuickEventsManager\Blocks\Blocks() )->register();
+		( new \QuickEventsManager\Rest\EventsController() )->register();
 
 		if ( is_admin() ) {
 			( new MetaBox() )->register();

@@ -5,10 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
-use QEM\Admin\Settings;
-use QEM\Events\Event;
+use QuickEventsManager\Admin\Settings;
+use QuickEventsManager\Events\Event;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,8 +31,8 @@ final class Emails {
 	 * @return void
 	 */
 	public function register() {
-		add_action( 'qem_registration_created', array( $this, 'send_attendee_confirmation' ), 10, 2 );
-		add_action( 'qem_registration_created', array( $this, 'send_organizer_notification' ), 20, 2 );
+		add_action( 'qevm_registration_created', array( $this, 'send_attendee_confirmation' ), 10, 2 );
+		add_action( 'qevm_registration_created', array( $this, 'send_organizer_notification' ), 20, 2 );
 	}
 
 	/**
@@ -87,7 +87,7 @@ final class Emails {
 		 * @param Event        $event        The event.
 		 */
 		$email = apply_filters(
-			'qem_attendee_email',
+			'qevm_attendee_email',
 			array(
 				'to'      => $registration->email(),
 				'subject' => $subject,
@@ -133,7 +133,7 @@ final class Emails {
 		/* translators: %s: Registration reference code. */
 		$lines[] = sprintf( __( 'Reference: %s', 'quick-events-manager' ), $registration->code() );
 		$lines[] = '';
-		$lines[] = admin_url( 'edit.php?post_type=' . QEM_POST_TYPE . '&page=qem-attendees&event_id=' . $event->id() );
+		$lines[] = admin_url( 'edit.php?post_type=' . QEVM_POST_TYPE . '&page=qevm-attendees&event_id=' . $event->id() );
 
 		/**
 		 * Filter the notification email sent to the site.
@@ -147,7 +147,7 @@ final class Emails {
 		 * @param Event        $event        The event.
 		 */
 		$email = apply_filters(
-			'qem_organizer_email',
+			'qevm_organizer_email',
 			array(
 				'to'      => Settings::notification_email(),
 				/* translators: %s: Event title. */

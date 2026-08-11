@@ -10,10 +10,10 @@
  */
 
 use PHPUnit\Framework\TestCase;
-use QEM\Frontend\Ics;
-use QEM\Frontend\SingleEvent;
-use QEM\Registration\Exporter;
-use QEM\Registration\RegistrationService;
+use QuickEventsManager\Frontend\Ics;
+use QuickEventsManager\Frontend\SingleEvent;
+use QuickEventsManager\Registration\Exporter;
+use QuickEventsManager\Registration\RegistrationService;
 
 /**
  * Regression guards.
@@ -171,7 +171,7 @@ final class RegressionTest extends TestCase {
 	 */
 	public function test_rate_limit_is_filterable() {
 		$this->assertStringContainsString(
-			'qem_registration_rate_limit',
+			'qevm_registration_rate_limit',
 			$this->source( 'includes/Registration/RegistrationService.php' )
 		);
 	}

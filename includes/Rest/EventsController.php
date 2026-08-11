@@ -5,20 +5,20 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Rest;
+namespace QuickEventsManager\Rest;
 
-use QEM\Events\Event;
-use QEM\Events\Meta;
-use QEM\Events\Query;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
+use QuickEventsManager\Events\Query;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * `qem/v1/events` — a shaped, public read API.
+ * `qevm/v1/events` — a shaped, public read API.
  *
  * Write endpoints are deliberately absent. The post type is registered with
  * `show_in_rest`, so core already serves authenticated CRUD at
- * `/wp/v2/qem_event` with permission handling the block editor relies on.
+ * `/wp/v2/qevm_event` with permission handling the block editor relies on.
  * Hand-rolling a second write path would mean a second permission surface to
  * audit for no benefit.
  *
@@ -33,7 +33,7 @@ final class EventsController {
 	/**
 	 * REST namespace.
 	 */
-	const NAMESPACE = 'qem/v1';
+	const NAMESPACE = 'qevm/v1';
 
 	/**
 	 * Hook into REST initialisation.
@@ -162,7 +162,7 @@ final class EventsController {
 		if ( '' !== $category ) {
 			$args['tax_query'] = array(
 				array(
-					'taxonomy' => QEM_TAX_CATEGORY,
+					'taxonomy' => QEVM_TAX_CATEGORY,
 					'field'    => 'slug',
 					'terms'    => array( $category ),
 				),
@@ -176,7 +176,7 @@ final class EventsController {
 		} else {
 			$args = array_merge(
 				array(
-					'post_type'   => QEM_POST_TYPE,
+					'post_type'   => QEVM_POST_TYPE,
 					'post_status' => 'publish',
 					'meta_key'    => Meta::START_UTC,
 					'orderby'     => 'meta_value',
@@ -214,7 +214,7 @@ final class EventsController {
 
 		if ( ! $event->is_valid() || 'publish' !== get_post_status( $event->id() ) ) {
 			return new \WP_Error(
-				'qem_event_not_found',
+				'qevm_event_not_found',
 				__( 'That event could not be found.', 'quick-events-manager' ),
 				array( 'status' => 404 )
 			);
@@ -256,7 +256,7 @@ final class EventsController {
 				'name' => (string) $event->meta( Meta::ORGANIZER_NAME ),
 				'url'  => (string) $event->meta( Meta::ORGANIZER_URL ),
 			),
-			'categories' => wp_get_post_terms( $event->id(), QEM_TAX_CATEGORY, array( 'fields' => 'names' ) ),
+			'categories' => wp_get_post_terms( $event->id(), QEVM_TAX_CATEGORY, array( 'fields' => 'names' ) ),
 		);
 
 		/*
@@ -277,6 +277,6 @@ final class EventsController {
 		 * @param array $data  Prepared data.
 		 * @param Event $event The event.
 		 */
-		return apply_filters( 'qem_rest_prepare_event', $data, $event );
+		return apply_filters( 'qevm_rest_prepare_event', $data, $event );
 	}
 }

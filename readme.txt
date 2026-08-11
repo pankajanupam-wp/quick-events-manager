@@ -49,9 +49,9 @@ When you want more, you switch it on yourself under **Events > Features**. Anyth
 
 Three blocks — Event List, Event Details and Event Registration — plus the matching shortcodes:
 
-`[qem_event_list limit="10" show="upcoming"]`
-`[qem_event_details id="123"]`
-`[qem_event_registration id="123"]`
+`[qevm_event_list limit="10" show="upcoming"]`
+`[qevm_event_details id="123"]`
+`[qevm_event_registration id="123"]`
 
 The blocks render on the server, so your visitors download no extra JavaScript.
 
@@ -149,14 +149,14 @@ Added:
 * Confirmation and notification emails
 * "Add to calendar" .ics downloads and Google Calendar links
 * schema.org Event markup for search engines
-* A read-only REST API at `/wp-json/qem/v1/`
+* A read-only REST API at `/wp-json/qevm/v1/`
 * A Features screen for switching capability on a level at a time
 * Privacy exporters and erasers for attendee data
 * Translation support
 
 Changed:
 
-* Events moved from the generic `events` post type to `qem_event`, keeping their existing `/events/` addresses. Existing events are migrated automatically.
+* Events moved from the generic `events` post type to `qevm_event`, keeping their existing `/events/` addresses. Existing events are migrated automatically.
 * Event archives now sort by start date instead of publish date.
 * Minimum requirements are WordPress 6.5 and PHP 8.1.
 

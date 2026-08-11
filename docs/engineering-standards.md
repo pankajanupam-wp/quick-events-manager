@@ -74,8 +74,9 @@ translation files from the slug. It must be `quick-events-manager` exactly.
 
 Root namespace: **`QuickEventsManager\`**
 
-Mapped PSR-4 to `src/`. `QuickEventsManager\Domain\Event` lives at
-`src/Domain/Event.php`.
+Mapped PSR-4 to `includes/`. `QuickEventsManager\Domain\Event` lives at
+`includes/Domain/Event.php`. PSR-4 maps a namespace root to whichever directory the
+autoloader is pointed at; it does not mandate `src/`.
 
 Namespace everything that PHP allows to be namespaced: classes, interfaces, traits,
 enums, exceptions. Namespacing is what protects us from the 142 global `qem_*`
@@ -128,7 +129,7 @@ quick-events-manager/
 ├── phpstan.neon.dist            Static analysis
 ├── .distignore                  What does not ship
 │
-├── src/                         All PHP. PSR-4 → QuickEventsManager\
+├── includes/                    All PHP. PSR-4 → QuickEventsManager\
 │   ├── Plugin.php               Wiring. No business logic.
 │   ├── Autoloader.php           Hand-written PSR-4. No Composer at runtime.
 │   │
@@ -154,7 +155,7 @@ quick-events-manager/
 │   └── Privacy/                 Exporters and erasers
 │
 ├── assets/                      Hand-written css/js. Not built.
-├── src-js/                      Block sources. Built to build/.
+├── src/                         Block sources. @wordpress/scripts default.
 ├── build/                       Compiled blocks. Gitignored, ships in the package.
 ├── templates/                   Overridable front-end markup
 ├── languages/                   .pot
@@ -175,10 +176,18 @@ quick-events-manager/
 
 Rules:
 
-- **`includes/` becomes `src/`.** PSR-4 with a real namespace root is the reason;
-  `src/` is where PHP developers look for it.
-- **Block JS sources move to `src-js/`** so `src/` means PHP and only PHP.
-- Maximum three levels of nesting under `src/`. If you need a fourth, the module is
+- **PHP stays in `includes/`.** WordPress core uses `wp-includes/`, the Plugin
+  Handbook and the boilerplate use `includes/`, and it is the directory a WordPress
+  developer opens first. PSR-4 does not require `src/` — it maps a namespace root to
+  whichever directory the autoloader is pointed at, and
+  `QuickEventsManager\Foo\Bar` → `includes/Foo/Bar.php` satisfies it exactly.
+- **Block sources stay in `src/`.** It is the `@wordpress/scripts` default, so the
+  build needs no `--webpack-src-dir` flag, and `src/` is already excluded by
+  `.distignore` because compiled `build/` is what ships.
+- Renaming either of these would be importing a general-PHP convention into a
+  WordPress project for no functional gain, which is the thing this document exists
+  to prevent.
+- Maximum three levels of nesting under `includes/`. If you need a fourth, the module is
   too big — split it.
 - A feature directory (`Registration/`, `Ticketing/`) owns its own admin screens,
   REST controllers and templates *only if* they are not shared. Shared presentation

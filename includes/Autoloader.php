@@ -1,6 +1,6 @@
 <?php
 /**
- * Maps the QEM namespace onto the includes directory.
+ * Maps the QuickEventsManager namespace onto the includes directory.
  *
  * Hand-written rather than Composer's autoloader: the wordpress.org package
  * ships no vendor directory, so the plugin cannot depend on one existing at
@@ -9,19 +9,19 @@
  * @package QuickEventsManager
  */
 
-namespace QEM;
+namespace QuickEventsManager;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * PSR-4 style autoloader for the QEM namespace.
+ * PSR-4 style autoloader for the QuickEventsManager namespace.
  */
 final class Autoloader {
 
 	/**
 	 * Namespace prefix this autoloader answers for.
 	 */
-	const PREFIX = 'QEM\\';
+	const PREFIX = 'QuickEventsManager\\';
 
 	/**
 	 * Register the autoloader with SPL.
@@ -37,7 +37,7 @@ final class Autoloader {
 	/**
 	 * Load the file backing a class name, if it is one of ours.
 	 *
-	 * `QEM\Registration\Repository` resolves to
+	 * `QuickEventsManager\Registration\Repository` resolves to
 	 * `includes/Registration/Repository.php`.
 	 *
 	 * @since 26.0
@@ -51,7 +51,7 @@ final class Autoloader {
 		}
 
 		$relative = substr( $class_name, strlen( self::PREFIX ) );
-		$path     = QEM_PATH . 'includes/' . str_replace( '\\', '/', $relative ) . '.php';
+		$path     = QEVM_PATH . 'includes/' . str_replace( '\\', '/', $relative ) . '.php';
 
 		/*
 		 * A class name arriving here is built from our own source, never from

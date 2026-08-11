@@ -65,7 +65,7 @@ twice as much code.
 | **C0.1** | Commit the working tree as a baseline on `feature/architecture` | XS | 8,800 uncommitted lines are no longer a single point of failure |
 | **C0.2** | Tooling: `phpcs.xml.dist` (WordPress ruleset), `phpstan.neon.dist` (level 6), dev deps, CI jobs | M | `composer lint`, `composer analyse` run and pass |
 | **C0.3** | PHP 8.1 / WP 6.5 bump — headers, `composer.json`, CI matrix, PHPUnit uncapped | S | [ADR-0002](adr/0002-php-and-wordpress-versions.md) signed off first |
-| **C0.4** | **Rename**: `qem`→`qevm`, `QEM\`→`QuickEventsManager\`, `includes/`→`src/`, block sources→`src-js/` | L | [ADR-0001](adr/0001-naming-and-namespace.md). Includes `block.json`, CSS classes, test bootstrap, docs |
+| **C0.4** | **Rename**: `qem`→`qevm`, `QEM\`→`QuickEventsManager\` | L | [ADR-0001](adr/0001-naming-and-namespace.md). Includes `block.json`, CSS classes, capabilities, test bootstrap, docs. Directory names are unchanged — see the note below |
 | **C0.5** | Enums for existing statuses — `RegistrationStatus`, `ModuleLevel` | S | First use of 8.1; proves the toolchain |
 | **C0.6** | PHPCS cleanup — see the measured baseline below | M | Added after C0.2 measured the real number |
 | **C0.7** | Type declarations to reach PHPStan level 6 | L | Added after C0.2 measured the real number |
@@ -121,10 +121,13 @@ away is how standards stop meaning anything. The work is scheduled as C0.7 inste
 `qem` outside the ADR that explains the rename · plugin activates on a real install
 with `WP_DEBUG` on and no notices.
 
-> **Note on the `qem` grep.** `.distignore` currently excludes `src`, which is correct
-> today because `src/` holds block sources. After C0.4 moves block sources to
-> `src-js/` and PHP into `src/`, that line would exclude the entire plugin from the
-> published package. C0.4 must fix `.distignore` in the same change.
+> **Directory layout is deliberately unchanged.** An earlier draft of this plan moved
+> PHP from `includes/` to `src/` and block sources from `src/` to `src-js/`. That was
+> reverted during C0.4: `includes/` is the WordPress convention, PSR-4 does not
+> require `src/`, and `src/` is the `@wordpress/scripts` default for block sources so
+> moving it would need a non-default build flag. The move was churn with no
+> functional gain, and it would have broken `.distignore`, which excludes `src`
+> precisely because block sources do not ship.
 
 ---
 
@@ -136,7 +139,7 @@ in the field to migrate.
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C1.1** | Migration framework — versioned, idempotent, batched, runs on `admin_init` | M | `src/Install/Migrations/`, `docs/migrations.md` |
+| **C1.1** | Migration framework — versioned, idempotent, batched, runs on `admin_init` | M | `includes/Install/Migrations/`, `docs/migrations.md` |
 | **C1.2** | `qevm_occurrences` table + `OccurrenceRepository` | M | [ADR-0003](adr/0003-occurrence-table.md) |
 | **C1.3** | Occurrence sync on `save_post` / delete + `wp qevm occurrence rebuild` | M | The rebuild command ships *with* the table, not after |
 | **C1.4** | `OccurrenceQuery`; repoint archive, upcoming, past, REST; delete every `meta_query` date path | L | The chunk that pays off the whole stage |
@@ -338,7 +341,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 
 | Stage | Chunks | Status |
 | --- | :-: | --- |
-| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓** · C0.4–C0.7 pending |
+| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓** · C0.5–C0.7 pending |
 | 1 · Schema foundation | 11 | not started |
 | 2 · Correctness gaps | 7 | not started |
 | 3 · Records and fields | 6 | not started |

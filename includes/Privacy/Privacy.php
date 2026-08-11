@@ -5,10 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Privacy;
+namespace QuickEventsManager\Privacy;
 
-use QEM\Registration\Registration;
-use QEM\Registration\Repository;
+use QuickEventsManager\Registration\Registration;
+use QuickEventsManager\Registration\Repository;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -93,9 +93,9 @@ final class Privacy {
 
 		foreach ( $slice as $registration ) {
 			$items[] = array(
-				'group_id'    => 'qem_registrations',
+				'group_id'    => 'qevm_registrations',
 				'group_label' => __( 'Event registrations', 'quick-events-manager' ),
-				'item_id'     => 'qem-registration-' . $registration->id(),
+				'item_id'     => 'qevm-registration-' . $registration->id(),
 				'data'        => array(
 					array(
 						'name'  => __( 'Event', 'quick-events-manager' ),

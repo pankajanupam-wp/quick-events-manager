@@ -20,14 +20,14 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
  *
  * @return void
  */
-function quick_events_manager_uninstall_site() {
+function qevm_uninstall_site() {
 	global $wpdb;
 
 	$quick_events_manager_options = array(
-		'qem_settings',
-		'qem_enabled_modules',
-		'qem_db_version',
-		'qem_migrated_legacy_post_type',
+		'qevm_settings',
+		'qevm_enabled_modules',
+		'qevm_db_version',
+		'qevm_migrated_legacy_post_type',
 	);
 
 	foreach ( $quick_events_manager_options as $quick_events_manager_option ) {
@@ -36,18 +36,18 @@ function quick_events_manager_uninstall_site() {
 
 	$quick_events_manager_roles = array( 'administrator', 'editor' );
 	$quick_events_manager_caps  = array(
-		'edit_qem_event',
-		'read_qem_event',
-		'delete_qem_event',
-		'edit_qem_events',
-		'publish_qem_events',
-		'delete_qem_events',
-		'edit_others_qem_events',
-		'delete_others_qem_events',
-		'read_private_qem_events',
-		'edit_published_qem_events',
-		'delete_published_qem_events',
-		'manage_qem_registrations',
+		'edit_qevm_event',
+		'read_qevm_event',
+		'delete_qevm_event',
+		'edit_qevm_events',
+		'publish_qevm_events',
+		'delete_qevm_events',
+		'edit_others_qevm_events',
+		'delete_others_qevm_events',
+		'read_private_qevm_events',
+		'edit_published_qevm_events',
+		'delete_published_qevm_events',
+		'manage_qevm_registrations',
 	);
 
 	foreach ( $quick_events_manager_roles as $quick_events_manager_role_name ) {
@@ -63,7 +63,7 @@ function quick_events_manager_uninstall_site() {
 	}
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Dropping our own table on uninstall; no caching applies.
-	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qem_registrations" );
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_registrations" );
 }
 
 /*
@@ -71,13 +71,13 @@ function quick_events_manager_uninstall_site() {
  * its own registrations table, so each one has to be cleaned in turn.
  */
 if ( is_multisite() ) {
-	$quick_events_manager_sites = get_sites( array( 'fields' => 'ids' ) );
+	$qevm_sites = get_sites( array( 'fields' => 'ids' ) );
 
-	foreach ( $quick_events_manager_sites as $quick_events_manager_site_id ) {
-		switch_to_blog( $quick_events_manager_site_id );
-		quick_events_manager_uninstall_site();
+	foreach ( $qevm_sites as $qevm_site_id ) {
+		switch_to_blog( $qevm_site_id );
+		qevm_uninstall_site();
 		restore_current_blog();
 	}
 } else {
-	quick_events_manager_uninstall_site();
+	qevm_uninstall_site();
 }

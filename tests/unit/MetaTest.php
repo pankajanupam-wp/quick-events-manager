@@ -11,10 +11,10 @@
  */
 
 use PHPUnit\Framework\TestCase;
-use QEM\Events\Meta;
+use QuickEventsManager\Events\Meta;
 
 /**
- * @covers \QEM\Events\Meta
+ * @covers \QuickEventsManager\Events\Meta
  */
 final class MetaTest extends TestCase {
 
@@ -265,7 +265,7 @@ final class MetaTest extends TestCase {
 	 */
 	public function test_all_meta_keys_are_prefixed_and_protected() {
 		foreach ( array_keys( Meta::definitions() ) as $key ) {
-			$this->assertStringStartsWith( '_qem_', $key, "Meta key {$key} is not prefixed." );
+			$this->assertStringStartsWith( '_qevm_', $key, "Meta key {$key} is not prefixed." );
 		}
 	}
 

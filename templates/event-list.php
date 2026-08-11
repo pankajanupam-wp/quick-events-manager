@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 
 if ( ! $query->have_posts() ) {
 	?>
-	<p class="qem-event-list__empty">
+	<p class="qevm-event-list__empty">
 		<?php
 		echo 'past' === $show
 			? esc_html__( 'No past events.', 'quick-events-manager' )
@@ -27,44 +27,44 @@ if ( ! $query->have_posts() ) {
 	return;
 }
 ?>
-<ul class="qem-event-list qem-event-list--cols-<?php echo esc_attr( (string) $columns ); ?>">
+<ul class="qevm-event-list qevm-event-list--cols-<?php echo esc_attr( (string) $columns ); ?>">
 	<?php
 	while ( $query->have_posts() ) :
 		$query->the_post();
 
-		$qem_event = new \QEM\Events\Event( get_post() );
+		$qevm_event = new \QuickEventsManager\Events\Event( get_post() );
 		?>
-		<li class="qem-event-card">
+		<li class="qevm-event-card">
 			<?php if ( has_post_thumbnail() ) : ?>
-				<a class="qem-event-card__image" href="<?php the_permalink(); ?>" tabindex="-1" aria-hidden="true">
+				<a class="qevm-event-card__image" href="<?php the_permalink(); ?>" tabindex="-1" aria-hidden="true">
 					<?php the_post_thumbnail( 'medium_large' ); ?>
 				</a>
 			<?php endif; ?>
 
-			<div class="qem-event-card__body">
-				<?php if ( '' !== $qem_event->format_start() ) : ?>
-					<p class="qem-event-card__date">
-						<time datetime="<?php echo esc_attr( str_replace( ' ', 'T', $qem_event->start_utc() ) . 'Z' ); ?>">
-							<?php echo esc_html( $qem_event->format_start() ); ?>
+			<div class="qevm-event-card__body">
+				<?php if ( '' !== $qevm_event->format_start() ) : ?>
+					<p class="qevm-event-card__date">
+						<time datetime="<?php echo esc_attr( str_replace( ' ', 'T', $qevm_event->start_utc() ) . 'Z' ); ?>">
+							<?php echo esc_html( $qevm_event->format_start() ); ?>
 						</time>
 					</p>
 				<?php endif; ?>
 
-				<h3 class="qem-event-card__title">
+				<h3 class="qevm-event-card__title">
 					<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 				</h3>
 
 				<?php
-				$qem_location = $qem_event->is_online()
+				$qevm_location = $qevm_event->is_online()
 					? __( 'Online', 'quick-events-manager' )
-					: $qem_event->venue_summary();
+					: $qevm_event->venue_summary();
 				?>
-				<?php if ( '' !== $qem_location ) : ?>
-					<p class="qem-event-card__location"><?php echo esc_html( $qem_location ); ?></p>
+				<?php if ( '' !== $qevm_location ) : ?>
+					<p class="qevm-event-card__location"><?php echo esc_html( $qevm_location ); ?></p>
 				<?php endif; ?>
 
 				<?php if ( has_excerpt() ) : ?>
-					<p class="qem-event-card__excerpt"><?php echo esc_html( get_the_excerpt() ); ?></p>
+					<p class="qevm-event-card__excerpt"><?php echo esc_html( get_the_excerpt() ); ?></p>
 				<?php endif; ?>
 			</div>
 		</li>

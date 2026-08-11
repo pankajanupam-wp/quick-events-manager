@@ -31,7 +31,7 @@ A plugin this size is only pleasant to use because most of it is switched off. S
 quick-events-manager.php     Header, constants, autoloader, bootstrap
 uninstall.php                Deletes options, caps and the table — never the events
 includes/
-  Autoloader.php             ~40 lines, QEM\ -> includes/
+  Autoloader.php             ~40 lines, QuickEventsManager\ -> includes/
   Plugin.php                 Wires the registry; activation and upgrade
   Modules/                   Module interface + Registry (the feature gate)
   Install/                   Installer (schema, caps), Migrator (1.0 -> 26.0)
@@ -39,7 +39,7 @@ includes/
   Registration/              Module, Service, Repository, FormHandler, emails, CSV
   Frontend/                  Templates, Renderer, Shortcodes, SingleEvent, Schema, Ics
   Blocks/                    Registers the three dynamic blocks
-  Rest/                      Read-only qem/v1 controller
+  Rest/                      Read-only qevm/v1 controller
   Admin/                     Settings, FeaturesScreen
   Privacy/                   GDPR exporter and eraser
 templates/                   Overridable by themes
@@ -52,8 +52,8 @@ Namespaced classes with a hand-written autoloader — Composer's is a dev depend
 
 | Entity | Where | Why |
 | --- | --- | --- |
-| Event | CPT `qem_event` + post meta | Needs the editor, blocks, media, taxonomies, permalinks, revisions |
-| Registration | Custom table `{prefix}qem_registrations` | See below |
+| Event | CPT `qevm_event` + post meta | Needs the editor, blocks, media, taxonomies, permalinks, revisions |
+| Registration | Custom table `{prefix}qevm_registrations` | See below |
 | Settings | Three options | Small, and read on every request |
 
 Registrations are the one thing that must not be posts. The question asked most often is "how many confirmed registrations does this event have", which in a custom table is one indexed `COUNT`. As a post type it is a `meta_query` join, and a 500-person event would add thousands of rows to `wp_postmeta` that every unrelated `WP_Query` then walks past.
@@ -64,7 +64,7 @@ The table is created when the Registration module is first switched on, not at a
 
 The bug that ruins event plugins is storing local time and nothing else: every event silently moves the day somebody changes the site timezone, and nobody notices until attendees turn up an hour late.
 
-Each event stores three things — the wall-clock time the organiser typed (`_qem_start_local`), the timezone they meant it in (`_qem_timezone`), and the equivalent UTC instant (`_qem_start_utc`). **UTC is the only value ever sorted or queried on**; display always uses the event's own zone.
+Each event stores three things — the wall-clock time the organiser typed (`_qevm_start_local`), the timezone they meant it in (`_qevm_timezone`), and the equivalent UTC instant (`_qevm_start_utc`). **UTC is the only value ever sorted or queried on**; display always uses the event's own zone.
 
 `Y-m-d H:i:s` is zero-padded and big-endian, so lexical order is chronological order — which is why the archive can `orderby => meta_value` with no `CAST`. `MetaTest` asserts that property rather than assuming it.
 
@@ -83,7 +83,7 @@ Verified with eight parallel processes against a capacity-1 event: one confirmed
 ## Front end
 
 - Templates resolve from `your-theme/quick-events-manager/` before the plugin's `templates/`. That is the whole theming system — no template hierarchy of our own, no layout settings.
-- Event details are injected through `the_content`, not a `single-qem_event.php` takeover. A template takeover only works in classic themes; a block theme renders singles through its own block template and never looks at the plugin's file. Filtering the content works in both.
+- Event details are injected through `the_content`, not a `single-qevm_event.php` takeover. A template takeover only works in classic themes; a block theme renders singles through its own block template and never looks at the plugin's file. Filtering the content works in both.
 - The three blocks are **dynamic** — they render in PHP, so the front end downloads no block JavaScript. The shortcodes call the same render functions, so there is one implementation and one security review per feature.
 - The stylesheet loads only on pages that actually show an event.
 
@@ -136,14 +136,14 @@ npm run build     # or npm start to watch
 
 ## REST API
 
-Read-only, at `/wp-json/qem/v1/`:
+Read-only, at `/wp-json/qevm/v1/`:
 
 ```
-GET /qem/v1/events?show=upcoming&per_page=10&category=&search=
-GET /qem/v1/events/{id}
+GET /qevm/v1/events?show=upcoming&per_page=10&category=&search=
+GET /qevm/v1/events/{id}
 ```
 
-Write endpoints are deliberately absent. The post type is registered with `show_in_rest`, so core already serves authenticated CRUD at `/wp/v2/qem_event` with the permission handling the block editor relies on. A second write path would mean a second permission surface to audit for no benefit.
+Write endpoints are deliberately absent. The post type is registered with `show_in_rest`, so core already serves authenticated CRUD at `/wp/v2/qevm_event` with the permission handling the block editor relies on. A second write path would mean a second permission surface to audit for no benefit.
 
 The joining link of an online event is only included for a user who can edit that event — a public meeting URL is an open door into the meeting.
 
@@ -151,7 +151,7 @@ The joining link of an online event is only included for a user who can edit tha
 
 Version 1.0 (2012) was 34 lines that registered one post type, `events`, and did nothing else. That is the entire legacy surface.
 
-The key moves to `qem_event`, because `events` is generic enough that any other event plugin or theme registering it silently collides. Public URLs are unaffected — the new post type pins its rewrite slug and archive back to `events`, so `/events/` and `/events/{slug}` resolve exactly as before. The migration is version-gated, idempotent, and touches only `post_type`.
+The key moves to `qevm_event`, because `events` is generic enough that any other event plugin or theme registering it silently collides. Public URLs are unaffected — the new post type pins its rewrite slug and archive back to `events`, so `/events/` and `/events/{slug}` resolve exactly as before. The migration is version-gated, idempotent, and touches only `post_type`.
 
 ## Requirements
 

@@ -2,78 +2,78 @@
  * Quick Events Manager — admin.
  */
 
-.qem-fields {
+.qevm-fields {
 	display: grid;
 	gap: 1rem;
 	max-width: 42rem;
 }
 
-.qem-field-row {
+.qevm-field-row {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
 	gap: 1rem;
 }
 
-.qem-field {
+.qevm-field {
 	display: grid;
 	gap: 0.25rem;
 }
 
-.qem-field label {
+.qevm-field label {
 	font-weight: 600;
 }
 
-.qem-field input[type="datetime-local"],
-.qem-field select {
+.qevm-field input[type="datetime-local"],
+.qevm-field select {
 	max-width: 100%;
 }
 
-.qem-checkbox {
+.qevm-checkbox {
 	margin: 0;
 }
 
-.qem-more {
+.qevm-more {
 	padding-top: 0.5rem;
 	border-top: 1px solid #dcdcde;
 }
 
-.qem-more > summary {
+.qevm-more > summary {
 	padding: 0.5rem 0;
 	font-weight: 600;
 	cursor: pointer;
 }
 
-.qem-more[open] > summary {
+.qevm-more[open] > summary {
 	margin-bottom: 0.5rem;
 }
 
-.qem-tz,
-.qem-past {
+.qevm-tz,
+.qevm-past {
 	color: #646970;
 }
 
-.qem-now {
+.qevm-now {
 	color: #007017;
 }
 
 /* Features screen
    ------------------------------------------------------------------------ */
 
-.qem-features .qem-intro {
+.qevm-features .qevm-intro {
 	max-width: 46rem;
 	font-size: 1rem;
 }
 
-.qem-features .qem-level-heading {
+.qevm-features .qevm-level-heading {
 	margin-bottom: 0.25rem;
 }
 
-.qem-features .qem-level-description {
+.qevm-features .qevm-level-description {
 	margin-top: 0;
 	color: #646970;
 }
 
-.qem-module-list {
+.qevm-module-list {
 	display: grid;
 	gap: 0.75rem;
 	max-width: 46rem;
@@ -82,24 +82,24 @@
 	list-style: none;
 }
 
-.qem-module {
+.qevm-module {
 	padding: 1rem;
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
 	background: #fff;
 }
 
-.qem-module.is-enabled {
+.qevm-module.is-enabled {
 	border-color: #2271b1;
 }
 
-.qem-module-title {
+.qevm-module-title {
 	font-size: 1.05rem;
 	font-weight: 600;
 }
 
-.qem-module-description,
-.qem-module-note {
+.qevm-module-description,
+.qevm-module-note {
 	margin: 0.35rem 0 0 1.9rem;
 	color: #646970;
 }
@@ -107,16 +107,16 @@
 /* Attendees screen
    ------------------------------------------------------------------------ */
 
-.qem-attendees-event {
+.qevm-attendees-event {
 	margin-bottom: 0.25rem;
 }
 
-.qem-attendees-summary {
+.qevm-attendees-summary {
 	margin-top: 0;
 	color: #646970;
 }
 
-.qem-attendees-filters {
+.qevm-attendees-filters {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
@@ -124,7 +124,7 @@
 	margin: 1rem 0;
 }
 
-.qem-status-form {
+.qevm-status-form {
 	display: flex;
 	gap: 0.25rem;
 	align-items: center;

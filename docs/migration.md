@@ -10,7 +10,7 @@ At the time of writing the wordpress.org listing reports fewer than 10 active in
 
 ## What changes
 
-The post type key moves from `events` to `qem_event`.
+The post type key moves from `events` to `qevm_event`.
 
 `events` is generic enough that any other event plugin or theme registering the same key silently collides — whichever registers last wins, and the loser's events become unreachable. Prefixing removes that permanently.
 
@@ -29,12 +29,12 @@ So `/events/` and `/events/my-meetup/` resolve exactly as they did in 2012. Exis
 
 ## How it runs
 
-`QEM\Install\Migrator::maybe_migrate()` runs on activation and on `admin_init`.
+`QuickEventsManager\Install\Migrator::maybe_migrate()` runs on activation and on `admin_init`.
 
 Both, because a plugin updated in place through the dashboard or WP-CLI never fires its activation hook — relying on activation alone is how a migration quietly fails to run on the majority of sites.
 
 ```php
-UPDATE wp_posts SET post_type = 'qem_event' WHERE post_type = 'events';
+UPDATE wp_posts SET post_type = 'qevm_event' WHERE post_type = 'events';
 ```
 
 A single `UPDATE` rather than a loop over `WP_Query`: there is no meta to transform and no hook that needs to fire, so this stays constant-time on a site with any number of events.
@@ -43,7 +43,7 @@ The affected IDs are collected first, purely so `clean_post_cache()` can be call
 
 ## Safety
 
-- **Version-gated.** Guarded by the `qem_migrated_legacy_post_type` option, not by a row count, so a post of type `events` legitimately created by something else years later is not silently absorbed.
+- **Version-gated.** Guarded by the `qevm_migrated_legacy_post_type` option, not by a row count, so a post of type `events` legitimately created by something else years later is not silently absorbed.
 - **Idempotent.** Running it twice changes nothing the second time.
 - **Non-destructive.** Only the `post_type` column is written. Nothing is deleted, and no other table is touched.
 
@@ -52,7 +52,7 @@ The affected IDs are collected first, purely so `clean_post_cache()` can be call
 After updating, check **Events** in the admin — your old events should be listed. Or:
 
 ```sh
-wp post list --post_type=qem_event --fields=ID,post_title,post_name
+wp post list --post_type=qevm_event --fields=ID,post_title,post_name
 wp post list --post_type=events    # should be empty
 ```
 
@@ -63,8 +63,8 @@ Then open one of the old URLs and confirm it still loads.
 The migration is reversible with one statement:
 
 ```sh
-wp db query "UPDATE wp_posts SET post_type = 'events' WHERE post_type = 'qem_event';"
-wp option delete qem_migrated_legacy_post_type
+wp db query "UPDATE wp_posts SET post_type = 'events' WHERE post_type = 'qevm_event';"
+wp option delete qevm_migrated_legacy_post_type
 ```
 
 Then deactivate the plugin. Your events are back exactly as they were, because nothing else was ever changed.
@@ -73,4 +73,4 @@ Please also open an issue — a migration that needs reverting is a bug.
 
 ## What is not migrated
 
-Nothing, because there is nothing else. If you added event dates or locations to 1.0 events using a custom fields plugin, those meta values are still on the posts, but this plugin will not recognise them — it expects its own `_qem_*` keys. See [data-model.md](data-model.md) for the key names if you want to script a conversion.
+Nothing, because there is nothing else. If you added event dates or locations to 1.0 events using a custom fields plugin, those meta values are still on the posts, but this plugin will not recognise them — it expects its own `_qevm_*` keys. See [data-model.md](data-model.md) for the key names if you want to script a conversion.

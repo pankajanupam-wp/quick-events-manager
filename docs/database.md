@@ -537,7 +537,7 @@ aggregated by key. It is also the reason we do not add core features that read f
 ## Migrations
 
 `QEVM_DB_VERSION` is an integer. Every schema change increments it and adds one
-numbered migration class under `src/Install/Migrations/`.
+numbered migration class under `includes/Install/Migrations/`.
 
 Rules:
 

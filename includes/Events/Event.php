@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -53,7 +53,7 @@ final class Event {
 	 * @return bool
 	 */
 	public function is_valid() {
-		return $this->post instanceof \WP_Post && QEM_POST_TYPE === $this->post->post_type;
+		return $this->post instanceof \WP_Post && QEVM_POST_TYPE === $this->post->post_type;
 	}
 
 	/**

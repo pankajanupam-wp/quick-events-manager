@@ -21,7 +21,7 @@ It ships as one release. Nothing is published until the whole of [docs/roadmap.m
 - Event List, Event Details and Event Registration blocks, with matching shortcodes
 - "Add to calendar" `.ics` downloads and Google Calendar links
 - `schema.org/Event` JSON-LD for search engines
-- A read-only REST API at `/wp-json/qem/v1/`
+- A read-only REST API at `/wp-json/qevm/v1/`
 - GDPR exporters and erasers for attendee data
 - Translation support
 
@@ -31,7 +31,7 @@ Calendar view, custom registration fields, email templates, reusable venues and 
 
 ### Changed
 
-- Events moved from the generic `events` post type to `qem_event`, keeping their existing `/events/` URLs. Existing events are migrated automatically on first admin load.
+- Events moved from the generic `events` post type to `qevm_event`, keeping their existing `/events/` URLs. Existing events are migrated automatically on first admin load.
 - Event archives sort by start date rather than publish date.
 - Minimum requirements raised to WordPress 6.5 and PHP 8.1.
 

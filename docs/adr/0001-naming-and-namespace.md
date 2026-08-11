@@ -40,7 +40,9 @@ characters. `qem` is three.
 ## Decision
 
 The prefix is **`qevm`** / **`QEVM_`**. The PHP namespace root is
-**`QuickEventsManager\`**, mapped PSR-4 to `src/`.
+**`QuickEventsManager\`**, mapped PSR-4 to `includes/` — the WordPress
+convention. PSR-4 maps a namespace root to whichever directory the autoloader is
+pointed at, and does not require `src/`.
 
 Full matrix in [engineering-standards.md §1](../engineering-standards.md#the-naming-matrix).
 

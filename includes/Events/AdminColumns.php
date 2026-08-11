@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,9 +27,9 @@ final class AdminColumns {
 	 * @return void
 	 */
 	public function register() {
-		add_filter( 'manage_' . QEM_POST_TYPE . '_posts_columns', array( $this, 'columns' ) );
-		add_action( 'manage_' . QEM_POST_TYPE . '_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
-		add_filter( 'manage_edit-' . QEM_POST_TYPE . '_sortable_columns', array( $this, 'sortable' ) );
+		add_filter( 'manage_' . QEVM_POST_TYPE . '_posts_columns', array( $this, 'columns' ) );
+		add_action( 'manage_' . QEVM_POST_TYPE . '_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
+		add_filter( 'manage_edit-' . QEVM_POST_TYPE . '_sortable_columns', array( $this, 'sortable' ) );
 		add_action( 'pre_get_posts', array( $this, 'sort' ) );
 	}
 
@@ -46,8 +46,8 @@ final class AdminColumns {
 
 		foreach ( $columns as $key => $label ) {
 			if ( 'date' === $key ) {
-				$reordered['qem_start']    = __( 'Starts', 'quick-events-manager' );
-				$reordered['qem_location'] = __( 'Location', 'quick-events-manager' );
+				$reordered['qevm_start']    = __( 'Starts', 'quick-events-manager' );
+				$reordered['qevm_location'] = __( 'Location', 'quick-events-manager' );
 			}
 
 			$reordered[ $key ] = $label;
@@ -68,7 +68,7 @@ final class AdminColumns {
 	public function render_column( $column, $post_id ) {
 		$event = new Event( $post_id );
 
-		if ( 'qem_start' === $column ) {
+		if ( 'qevm_start' === $column ) {
 			$start = $event->format_start();
 
 			if ( '' === $start ) {
@@ -83,19 +83,19 @@ final class AdminColumns {
 			$label = $event->timezone_label();
 
 			if ( '' !== $label ) {
-				echo ' <span class="qem-tz">' . esc_html( $label ) . '</span>';
+				echo ' <span class="qevm-tz">' . esc_html( $label ) . '</span>';
 			}
 
 			if ( $event->is_happening_now() ) {
-				echo '<br /><strong class="qem-now">' . esc_html__( 'Happening now', 'quick-events-manager' ) . '</strong>';
+				echo '<br /><strong class="qevm-now">' . esc_html__( 'Happening now', 'quick-events-manager' ) . '</strong>';
 			} elseif ( $event->has_ended() ) {
-				echo '<br /><span class="qem-past">' . esc_html__( 'Finished', 'quick-events-manager' ) . '</span>';
+				echo '<br /><span class="qevm-past">' . esc_html__( 'Finished', 'quick-events-manager' ) . '</span>';
 			}
 
 			return;
 		}
 
-		if ( 'qem_location' === $column ) {
+		if ( 'qevm_location' === $column ) {
 			if ( $event->is_online() ) {
 				echo esc_html__( 'Online', 'quick-events-manager' );
 
@@ -119,7 +119,7 @@ final class AdminColumns {
 	 * @return array
 	 */
 	public function sortable( $columns ) {
-		$columns['qem_start'] = 'qem_start';
+		$columns['qevm_start'] = 'qevm_start';
 
 		return $columns;
 	}
@@ -137,7 +137,7 @@ final class AdminColumns {
 			return;
 		}
 
-		if ( 'qem_start' !== $query->get( 'orderby' ) ) {
+		if ( 'qevm_start' !== $query->get( 'orderby' ) ) {
 			return;
 		}
 

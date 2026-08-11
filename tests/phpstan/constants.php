@@ -13,15 +13,15 @@
  * @package QuickEventsManager
  */
 
-define( 'QEM_VERSION', '26.0' );
-define( 'QEM_DB_VERSION', '1' );
-define( 'QEM_FILE', '' );
-define( 'QEM_PATH', '' );
-define( 'QEM_URL', '' );
-define( 'QEM_BASENAME', '' );
-define( 'QEM_POST_TYPE', 'qem_event' );
-define( 'QEM_TAX_CATEGORY', 'qem_event_category' );
-define( 'QEM_TAX_TAG', 'qem_event_tag' );
-define( 'QEM_OPTION_MODULES', 'qem_enabled_modules' );
-define( 'QEM_OPTION_SETTINGS', 'qem_settings' );
-define( 'QEM_OPTION_DB_VERSION', 'qem_db_version' );
+define( 'QEVM_VERSION', '26.0' );
+define( 'QEVM_DB_VERSION', '1' );
+define( 'QEVM_FILE', '' );
+define( 'QEVM_PATH', '' );
+define( 'QEVM_URL', '' );
+define( 'QEVM_BASENAME', '' );
+define( 'QEVM_POST_TYPE', 'qevm_event' );
+define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );
+define( 'QEVM_TAX_TAG', 'qevm_event_tag' );
+define( 'QEVM_OPTION_MODULES', 'qevm_enabled_modules' );
+define( 'QEVM_OPTION_SETTINGS', 'qevm_settings' );
+define( 'QEVM_OPTION_DB_VERSION', 'qevm_db_version' );

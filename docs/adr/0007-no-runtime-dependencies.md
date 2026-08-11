@@ -21,7 +21,7 @@ reasonable, and remain human-readable source.
 **Zero runtime dependencies.** The shipped package contains no `vendor/` directory.
 
 Autoloading is a hand-written PSR-4 autoloader — roughly fifteen lines — mapping
-`QuickEventsManager\Foo\Bar` to `src/Foo/Bar.php`.
+`QuickEventsManager\Foo\Bar` to `includes/Foo/Bar.php`.
 
 Composer is used for **development only**: PHPUnit, PHPCS with the WordPress ruleset,
 PHPStan. `vendor/` is in both `.gitignore` and `.distignore`. No `composer.lock` is
@@ -64,5 +64,5 @@ a future need is genuinely large — a PDF renderer, for instance — this ADR s
 revisited and superseded rather than quietly worked around.
 
 **Bad.** Contributors must run `composer install` to get the dev tools, and remember
-that nothing they add there may be referenced from `src/`. PHPStan configuration
+that nothing they add there may be referenced from `includes/`. PHPStan configuration
 enforces this by treating `vendor/` as unavailable to production code.

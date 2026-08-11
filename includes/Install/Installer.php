@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Install;
+namespace QuickEventsManager\Install;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -36,7 +36,7 @@ final class Installer {
 	public static function install() {
 		self::add_capabilities();
 
-		update_option( QEM_OPTION_DB_VERSION, QEM_DB_VERSION );
+		update_option( QEVM_OPTION_DB_VERSION, QEVM_DB_VERSION );
 	}
 
 	/**
@@ -50,13 +50,13 @@ final class Installer {
 	 * @return void
 	 */
 	public static function maybe_upgrade() {
-		if ( (string) get_option( QEM_OPTION_DB_VERSION ) === (string) QEM_DB_VERSION ) {
+		if ( (string) get_option( QEVM_OPTION_DB_VERSION ) === (string) QEVM_DB_VERSION ) {
 			return;
 		}
 
 		self::add_capabilities();
 
-		$registry = \QEM\Plugin::instance()->registry();
+		$registry = \QuickEventsManager\Plugin::instance()->registry();
 
 		foreach ( $registry->enabled_ids() as $id ) {
 			$module = $registry->get( $id );
@@ -66,7 +66,7 @@ final class Installer {
 			}
 		}
 
-		update_option( QEM_OPTION_DB_VERSION, QEM_DB_VERSION );
+		update_option( QEVM_OPTION_DB_VERSION, QEVM_DB_VERSION );
 	}
 
 	/**
@@ -112,7 +112,7 @@ final class Installer {
 	public static function table( $name ) {
 		global $wpdb;
 
-		return $wpdb->prefix . 'qem_' . $name;
+		return $wpdb->prefix . 'qevm_' . $name;
 	}
 
 	/**
@@ -174,24 +174,24 @@ final class Installer {
 	 */
 	public static function capabilities( $include_others = true ) {
 		$caps = array(
-			'edit_qem_event',
-			'read_qem_event',
-			'delete_qem_event',
-			'edit_qem_events',
-			'publish_qem_events',
-			'delete_qem_events',
+			'edit_qevm_event',
+			'read_qevm_event',
+			'delete_qevm_event',
+			'edit_qevm_events',
+			'publish_qevm_events',
+			'delete_qevm_events',
 		);
 
 		if ( $include_others ) {
 			$caps = array_merge(
 				$caps,
 				array(
-					'edit_others_qem_events',
-					'delete_others_qem_events',
-					'read_private_qem_events',
-					'edit_published_qem_events',
-					'delete_published_qem_events',
-					'manage_qem_registrations',
+					'edit_others_qevm_events',
+					'delete_others_qevm_events',
+					'read_private_qevm_events',
+					'edit_published_qevm_events',
+					'delete_published_qevm_events',
+					'manage_qevm_registrations',
 				)
 			);
 		}
