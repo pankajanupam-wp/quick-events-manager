@@ -91,6 +91,14 @@ final class Migrator {
 	public static function migrate() {
 		global $wpdb;
 
+		/*
+		 * Direct queries, uncached, deliberately. The rows being read have a
+		 * post_type no longer registered, so get_posts() and WP_Query filter
+		 * them out entirely and there is no core API that can see them. Caching
+		 * a migration that runs once and then finds nothing would be worse than
+		 * useless: the cache entry would outlive the only moment it mattered.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- See above.
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
@@ -109,6 +117,7 @@ final class Migrator {
 			array( '%s' ),
 			array( '%s' )
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 		if ( ! $updated ) {
 			return 0;
@@ -133,11 +142,15 @@ final class Migrator {
 	public static function pending_count() {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Counting posts of an unregistered type, which WP_Query cannot see; the answer changes the moment migrate() runs, so caching it would be wrong.
+		$pending = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s",
 				self::LEGACY_POST_TYPE
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		return $pending;
 	}
 }

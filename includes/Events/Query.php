@@ -9,6 +9,27 @@ namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
+/*
+ * The slow-query warnings in this file are correct, and are suppressed rather
+ * than answered because the answer is a schema change, not an annotation.
+ *
+ * Dates live in wp_postmeta, which indexes post_id and meta_key but not
+ * meta_value — it is an unindexed longtext column. Worse, `'type' => 'DATETIME'`
+ * makes WP_Meta_Query emit CAST( meta_value AS DATETIME ), and a cast around a
+ * column defeats an index even where one exists. Every date comparison here is
+ * therefore a full scan of the plugin's meta rows, and the archive gets slower
+ * in proportion to the number of events on the site.
+ *
+ * docs/database.md sets out the fix: a qevm_occurrences table with real DATETIME
+ * columns and a composite index, which is also what recurring events need. Until
+ * that lands, meta is the only place the dates are, and these queries are the
+ * correct way to read it.
+ *
+ * Remove these lines with the occurrence table (C1.2-C1.4). If the sniff then
+ * reports nothing, the migration is complete.
+ */
+// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Known; removed by the occurrence table. See above.
+
 /**
  * Makes WordPress order events by when they happen, not when they were posted.
  *

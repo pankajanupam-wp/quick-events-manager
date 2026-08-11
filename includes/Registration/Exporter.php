@@ -71,7 +71,17 @@ final class Exporter {
 		 * A UTF-8 byte order mark. Excel on Windows assumes the system code
 		 * page without it and mangles every non-ASCII name in the file, which
 		 * is exactly the case an event organiser hits first.
+		 *
+		 * WP_Filesystem is not an alternative here, and the sniff suggesting it
+		 * is reading the call rather than the stream. This writes to
+		 * php://output — the response body being streamed to the browser, not a
+		 * file on disk. WP_Filesystem abstracts over FTP and SSH transports for
+		 * writing files into the WordPress install; it has no concept of the
+		 * current response, and routing a download through it would mean
+		 * buffering the whole export in memory first, which is the one thing
+		 * paging through 500 rows at a time exists to avoid.
 		 */
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Streaming a download to php://output; see above.
 		fwrite( $out, "\xEF\xBB\xBF" );
 
 		fputcsv(
@@ -87,18 +97,21 @@ final class Exporter {
 			)
 		);
 
-		$page = 1;
+		$page      = 1;
+		$page_size = 500;
 
 		do {
 			$rows = Repository::for_event(
 				$event_id,
 				array(
-					'per_page' => 500,
+					'per_page' => $page_size,
 					'page'     => $page,
 					'orderby'  => 'created_at',
 					'order'    => 'ASC',
 				)
 			);
+
+			$fetched = count( $rows );
 
 			foreach ( $rows as $registration ) {
 				fputcsv(
@@ -116,8 +129,9 @@ final class Exporter {
 			}
 
 			++$page;
-		} while ( count( $rows ) === 500 );
+		} while ( $fetched === $page_size );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closing the php://output handle opened above.
 		fclose( $out );
 
 		exit;

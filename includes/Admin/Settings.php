@@ -142,11 +142,11 @@ final class Settings {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $key     Setting key.
-	 * @param mixed  $default Fallback when unset.
+	 * @param string $key      Setting key.
+	 * @param mixed  $fallback Returned when the setting is unset.
 	 * @return mixed
 	 */
-	public static function get( $key, $default = null ) {
+	public static function get( $key, $fallback = null ) {
 		$settings = get_option( QEVM_OPTION_SETTINGS, array() );
 		$defaults = self::defaults();
 
@@ -154,8 +154,8 @@ final class Settings {
 			return $settings[ $key ];
 		}
 
-		if ( null !== $default ) {
-			return $default;
+		if ( null !== $fallback ) {
+			return $fallback;
 		}
 
 		return isset( $defaults[ $key ] ) ? $defaults[ $key ] : null;

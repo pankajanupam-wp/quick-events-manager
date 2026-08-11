@@ -47,10 +47,11 @@ final class Blocks {
 	/**
 	 * Register each block from its block.json.
 	 *
-	 * register_block_type() with a directory path reads block.json, which is
-	 * what gives the editor the block's attributes, title and category without
-	 * duplicating them in PHP. It arrived in WordPress 5.8; on anything older
-	 * the blocks are simply absent and the shortcodes still work.
+	 * Passing a directory path to register_block_type() makes it read
+	 * block.json, which is what gives the editor the block's attributes, title
+	 * and category without duplicating them in PHP. It arrived in WordPress 5.8;
+	 * on anything older the blocks are simply absent and the shortcodes still
+	 * work.
 	 *
 	 * @since 26.0
 	 *

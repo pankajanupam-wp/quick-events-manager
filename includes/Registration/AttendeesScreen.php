@@ -134,6 +134,7 @@ final class AttendeesScreen {
 				'post_type'      => QEVM_POST_TYPE,
 				'post_status'    => array( 'publish', 'draft', 'future', 'private' ),
 				'posts_per_page' => 100,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Sorting by a meta value; the occurrence table replaces this. See the note in Events/Query.php.
 				'meta_key'       => \QuickEventsManager\Events\Meta::START_UTC,
 				'orderby'        => 'meta_value',
 				'order'          => 'DESC',

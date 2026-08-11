@@ -294,6 +294,31 @@ Use the platform. Do not rebuild it.
 request is on. It says nothing about who is asking. Every admin action needs
 `current_user_can()` *and* a nonce.
 
+### Suppressing a sniff
+
+A standard nobody can suppress gets excluded wholesale the first time it is
+inconvenient, so suppression is allowed — under conditions.
+
+- **Narrowest scope that works.** An inline `phpcs:ignore` before one line, or a
+  `phpcs:disable` / `phpcs:enable` pair around one statement. A file-scoped disable
+  needs the file to *be* the exception — `Registration/Repository.php` is the data
+  access layer, so `DirectDatabaseQuery` there is the point of the file.
+- **Never in `phpcs.xml.dist`** for a sniff that is right about production code. An
+  exclusion there silences every file, including the one that gets it wrong next year.
+  The `/tests/*` exclusions are the exception, and each says why.
+- **Always name the sniff.** A bare `phpcs:ignore` disables everything on that line,
+  including the sniff that catches tomorrow's mistake on the same line.
+- **Always give a reason after `--`,** and make it a reason, not a restatement. "Custom
+  table" explains nothing; "custom table, no core API reads it" explains it.
+- **Say which of the three it is.** The sniff is *wrong* here (explain why), or the
+  sniff is *right and the fix is scheduled* (name the chunk), or the sniff is *right
+  and we are accepting it* (say what would change our mind). The middle case needs a
+  line in `docs/development-plan.md` too: PHPCS never reports a stale ignore, so an
+  annotation nobody wrote down is one nobody will remove.
+
+Check first whether the finding is simply fixable. Most of the custom-table pile in
+C0.6 looked like it needed annotating and turned out to need `%i`.
+
 ---
 
 ## 7. Security rules
@@ -301,25 +326,33 @@ request is on. It says nothing about who is asking. Every admin action needs
 Non-negotiable. A PR that violates any of these does not merge.
 
 1. **Every** `$wpdb` call that includes a variable uses `prepare()`.
-2. `ORDER BY` columns and directions are matched against a hard-coded allowlist.
-   `prepare()` quotes an identifier into a string literal, which silently sorts every
-   row by the same constant. This is not a hypothetical *(already handled)*.
-3. **Every** output is escaped at the point of output, not at the point of storage.
-4. **Every** admin action checks a capability *and* verifies a nonce.
-5. **Every** REST route declares an explicit `permission_callback`. `__return_true`
+2. **Table and column names use the `%i` placeholder, never interpolation.** WordPress
+   6.2 added `%i` for identifiers and the floor here is 6.5, so `"FROM {$table}"` has
+   no remaining excuse — `prepare( 'FROM %i', $table )` lets `$wpdb` do the escaping.
+   The value is a prefixed constant today, but the rule is about not having to check
+   that again on every future edit.
+3. `ORDER BY` **directions** are matched against a hard-coded allowlist, because a sort
+   direction is a keyword rather than an identifier and `%i` would backtick it into a
+   column name. Columns take `%i` **and** keep their allowlist; the allowlist is what
+   makes a mistyped column an ignored request rather than a SQL error shown to a user.
+   `prepare()` alone quotes an identifier into a string literal, which silently sorts
+   every row by the same constant. This is not a hypothetical *(already handled)*.
+4. **Every** output is escaped at the point of output, not at the point of storage.
+5. **Every** admin action checks a capability *and* verifies a nonce.
+6. **Every** REST route declares an explicit `permission_callback`. `__return_true`
    is permitted only for genuinely public reads, and each use carries a comment
    saying why. A test counts routes against permission callbacks *(already true)*.
-6. **Every** AJAX action verifies a nonce and a capability. Both.
-7. Public forms are nonce-protected, rate-limited, honeypotted, and use
+7. **Every** AJAX action verifies a nonce and a capability. Both.
+8. Public forms are nonce-protected, rate-limited, honeypotted, and use
    POST-redirect-GET *(already true)*.
-8. Rate limiting keys on a **salted hash**, never a stored IP address.
-9. CSV cells beginning `=`, `+`, `-`, `@` are prefixed with a tab, so an attendee's
-   name cannot execute on the organiser's machine *(already true)*.
-10. Signed public links (cancellation, check-in) use `hash_hmac()` with `wp_salt()`,
+9. Rate limiting keys on a **salted hash**, never a stored IP address.
+10. CSV cells beginning `=`, `+`, `-`, `@` are prefixed with a tab, so an attendee's
+    name cannot execute on the organiser's machine *(already true)*.
+11. Signed public links (cancellation, check-in) use `hash_hmac()` with `wp_salt()`,
     carry an expiry, and are compared with `hash_equals()`.
-11. Webhooks verify the provider's signature before touching the database, and are
+12. Webhooks verify the provider's signature before touching the database, and are
     idempotent on the provider's event id.
-12. No card details ever touch this plugin. Every gateway takes that off-site.
+13. No card details ever touch this plugin. Every gateway takes that off-site.
 13. Uploaded files are validated with `wp_check_filetype_and_ext()`, stored through
     `wp_handle_upload()`, and never executed.
 14. Never log passwords, tokens, gateway credentials, or full personal records.

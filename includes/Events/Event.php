@@ -87,13 +87,13 @@ final class Event {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $key     Meta key.
-	 * @param mixed  $default Value to return when the key is absent.
+	 * @param string $key      Meta key.
+	 * @param mixed  $fallback Returned when the key is absent.
 	 * @return mixed
 	 */
-	public function meta( $key, $default = '' ) {
+	public function meta( $key, $fallback = '' ) {
 		if ( ! $this->is_valid() ) {
-			return $default;
+			return $fallback;
 		}
 
 		if ( null === $this->meta ) {
@@ -101,7 +101,7 @@ final class Event {
 		}
 
 		if ( ! isset( $this->meta[ $key ][0] ) ) {
-			return $default;
+			return $fallback;
 		}
 
 		return $this->meta[ $key ][0];

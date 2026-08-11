@@ -81,6 +81,7 @@ final class EventsController {
 							'minimum'           => 1,
 							'sanitize_callback' => 'absint',
 						),
+
 						/*
 						 * Wrapped rather than passed as the bare function name.
 						 * WordPress invokes a sanitize_callback as
@@ -160,6 +161,7 @@ final class EventsController {
 		}
 
 		if ( '' !== $category ) {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- A single-term slug lookup against wp_term_relationships, which is indexed on both columns it joins.
 			$args['tax_query'] = array(
 				array(
 					'taxonomy' => QEVM_TAX_CATEGORY,
@@ -178,6 +180,7 @@ final class EventsController {
 				array(
 					'post_type'   => QEVM_POST_TYPE,
 					'post_status' => 'publish',
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Sorting by a meta value; the occurrence table replaces this. See the note in Events/Query.php.
 					'meta_key'    => Meta::START_UTC,
 					'orderby'     => 'meta_value',
 					'order'       => 'ASC',
@@ -233,18 +236,18 @@ final class EventsController {
 	 */
 	private function prepare( Event $event ) {
 		$data = array(
-			'id'        => $event->id(),
-			'title'     => get_the_title( $event->id() ),
-			'excerpt'   => wp_strip_all_tags( get_the_excerpt( $event->id() ) ),
-			'url'       => get_permalink( $event->id() ),
-			'image'     => get_the_post_thumbnail_url( $event->id(), 'large' ) ?: '',
-			'start_utc' => $event->start_utc(),
-			'end_utc'   => $event->end_utc(),
-			'timezone'  => $event->timezone(),
-			'all_day'   => $event->is_all_day(),
-			'is_online' => $event->is_online(),
-			'has_ended' => $event->has_ended(),
-			'venue'     => array(
+			'id'         => $event->id(),
+			'title'      => get_the_title( $event->id() ),
+			'excerpt'    => wp_strip_all_tags( get_the_excerpt( $event->id() ) ),
+			'url'        => get_permalink( $event->id() ),
+			'image'      => (string) get_the_post_thumbnail_url( $event->id(), 'large' ),
+			'start_utc'  => $event->start_utc(),
+			'end_utc'    => $event->end_utc(),
+			'timezone'   => $event->timezone(),
+			'all_day'    => $event->is_all_day(),
+			'is_online'  => $event->is_online(),
+			'has_ended'  => $event->has_ended(),
+			'venue'      => array(
 				'name'    => (string) $event->meta( Meta::VENUE_NAME ),
 				'address' => (string) $event->meta( Meta::VENUE_ADDRESS ),
 				'city'    => (string) $event->meta( Meta::VENUE_CITY ),
@@ -252,7 +255,7 @@ final class EventsController {
 				'postal'  => (string) $event->meta( Meta::VENUE_POSTAL ),
 				'country' => (string) $event->meta( Meta::VENUE_COUNTRY ),
 			),
-			'organizer' => array(
+			'organizer'  => array(
 				'name' => (string) $event->meta( Meta::ORGANIZER_NAME ),
 				'url'  => (string) $event->meta( Meta::ORGANIZER_URL ),
 			),

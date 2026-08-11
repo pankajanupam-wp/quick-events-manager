@@ -179,10 +179,10 @@ final class MetaBox {
 	 * @since 26.0
 	 *
 	 * @param int      $post_id Event id.
-	 * @param \WP_Post $post    Event.
+	 * @param \WP_Post $post    Event. Unused; part of the save_post signature.
 	 * @return void
 	 */
-	public function save( $post_id, $post ) {
+	public function save( $post_id, $post ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by the save_post hook signature.
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}

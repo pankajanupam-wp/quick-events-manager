@@ -144,28 +144,116 @@ final class Meta {
 		$boolean = array( __CLASS__, 'sanitize_boolean' );
 
 		return array(
-			self::START_UTC            => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::END_UTC              => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::START_LOCAL          => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::END_LOCAL            => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::TIMEZONE             => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_timezone' ) ),
-			self::ALL_DAY              => array( 'type' => 'boolean', 'default' => false, 'sanitize' => $boolean ),
-			self::IS_ONLINE            => array( 'type' => 'boolean', 'default' => false, 'sanitize' => $boolean ),
-			self::ONLINE_URL           => array( 'type' => 'string', 'default' => '', 'sanitize' => 'esc_url_raw' ),
-			self::VENUE_NAME           => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_ADDRESS        => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_CITY           => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_REGION         => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_POSTAL         => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_COUNTRY        => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_ID             => array( 'type' => 'integer', 'default' => 0, 'sanitize' => 'absint' ),
-			self::ORGANIZER_NAME       => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::ORGANIZER_EMAIL      => array( 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_email' ),
-			self::ORGANIZER_PHONE      => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::ORGANIZER_URL        => array( 'type' => 'string', 'default' => '', 'sanitize' => 'esc_url_raw' ),
-			self::CAPACITY             => array( 'type' => 'integer', 'default' => 0, 'sanitize' => 'absint' ),
-			self::REGISTRATION_CLOSES  => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::REGISTRATION_ENABLED => array( 'type' => 'boolean', 'default' => false, 'sanitize' => $boolean ),
+			self::START_UTC            => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::END_UTC              => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::START_LOCAL          => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::END_LOCAL            => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::TIMEZONE             => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_timezone' ),
+			),
+			self::ALL_DAY              => array(
+				'type'     => 'boolean',
+				'default'  => false,
+				'sanitize' => $boolean,
+			),
+			self::IS_ONLINE            => array(
+				'type'     => 'boolean',
+				'default'  => false,
+				'sanitize' => $boolean,
+			),
+			self::ONLINE_URL           => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'esc_url_raw',
+			),
+			self::VENUE_NAME           => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_ADDRESS        => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_CITY           => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_REGION         => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_POSTAL         => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_COUNTRY        => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_ID             => array(
+				'type'     => 'integer',
+				'default'  => 0,
+				'sanitize' => 'absint',
+			),
+			self::ORGANIZER_NAME       => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::ORGANIZER_EMAIL      => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'sanitize_email',
+			),
+			self::ORGANIZER_PHONE      => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::ORGANIZER_URL        => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'esc_url_raw',
+			),
+			self::CAPACITY             => array(
+				'type'     => 'integer',
+				'default'  => 0,
+				'sanitize' => 'absint',
+			),
+			self::REGISTRATION_CLOSES  => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::REGISTRATION_ENABLED => array(
+				'type'     => 'boolean',
+				'default'  => false,
+				'sanitize' => $boolean,
+			),
 		);
 	}
 

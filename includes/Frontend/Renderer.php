@@ -51,6 +51,7 @@ final class Renderer {
 		);
 
 		if ( '' !== $atts['category'] ) {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- A slug lookup against wp_term_relationships, which is indexed on both columns it joins.
 			$args['tax_query'] = array(
 				array(
 					'taxonomy' => QEVM_TAX_CATEGORY,

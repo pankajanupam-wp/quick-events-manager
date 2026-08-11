@@ -148,13 +148,19 @@ final class Privacy {
 	 * the personal details stripped is just a row nobody can act on, and
 	 * keeping it would mean the erasure was not really an erasure.
 	 *
+	 * $page is part of the eraser callback signature and is deliberately not
+	 * used. Unlike the exporter, which reads rows and needs an offset to walk
+	 * past what it has already seen, this deletes them: the next call re-queries
+	 * and finds only what is left, so offsetting into the result would skip
+	 * exactly the rows the previous call was supposed to have removed.
+	 *
 	 * @since 26.0
 	 *
 	 * @param string $email_address Address being erased.
-	 * @param int    $page          One-based page number.
+	 * @param int    $page          One-based page number. Unused; see above.
 	 * @return array
 	 */
-	public function erase( $email_address, $page = 1 ) {
+	public function erase( $email_address, $page = 1 ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by the wp_privacy_personal_data_erasers signature; see above.
 		$registrations = Repository::find_by_email( $email_address );
 		$removed       = 0;
 

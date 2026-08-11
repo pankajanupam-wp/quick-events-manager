@@ -74,7 +74,7 @@ final class RegressionTest extends TestCase {
 	}
 
 	/**
-	 * sanitize_title() must never be used as a bare sanitize_callback.
+	 * A bare sanitize_title() must never be used as a sanitize_callback.
 	 *
 	 * WordPress calls a sanitize_callback as ( $value, $request, $param ).
 	 * sanitize_title()'s second parameter is $fallback_title, which it returns
@@ -98,18 +98,18 @@ final class RegressionTest extends TestCase {
 	 *
 	 * @dataProvider single_argument_callback_provider
 	 *
-	 * @param string $function Core function used as a sanitize_callback.
+	 * @param string $callback Core function used as a sanitize_callback.
 	 * @return void
 	 */
-	public function test_only_single_argument_callbacks_are_passed_by_name( $function ) {
-		$reflection = new ReflectionFunction( $function );
+	public function test_only_single_argument_callbacks_are_passed_by_name( $callback ) {
+		$reflection = new ReflectionFunction( $callback );
 
 		$this->assertSame(
 			1,
 			$reflection->getNumberOfParameters(),
 			sprintf(
 				'%s() takes more than one parameter, so WordPress passing ( $value, $request, $param ) changes its behaviour. Wrap it.',
-				$function
+				$callback
 			)
 		);
 	}
@@ -197,12 +197,12 @@ final class RegressionTest extends TestCase {
 	 */
 	public static function formula_provider() {
 		return array(
-			'equals'      => array( '=1+1' ),
-			'plus'        => array( '+1' ),
-			'minus'       => array( '-1' ),
-			'at'          => array( '@SUM(A1)' ),
-			'command'     => array( '=cmd|\' /C calc\'!A0' ),
-			'hyperlink'   => array( '=HYPERLINK("http://evil.test","click")' ),
+			'equals'    => array( '=1+1' ),
+			'plus'      => array( '+1' ),
+			'minus'     => array( '-1' ),
+			'at'        => array( '@SUM(A1)' ),
+			'command'   => array( '=cmd|\' /C calc\'!A0' ),
+			'hyperlink' => array( '=HYPERLINK("http://evil.test","click")' ),
 		);
 	}
 

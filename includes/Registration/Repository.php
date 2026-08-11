@@ -13,12 +13,35 @@ use QuickEventsManager\Domain\RegistrationStatus;
 
 defined( 'ABSPATH' ) || exit;
 
+/*
+ * This file is the registration module's data access layer, and direct queries
+ * are the whole reason it exists. `{prefix}qevm_registrations` is a custom
+ * table: there is no core API that reads it, so WP_Query, get_posts() and the
+ * meta functions have nothing to offer.
+ *
+ * The two sniffs disabled here are scoped to this one file on purpose rather
+ * than excluded in phpcs.xml.dist. Project-wide they are worth keeping: a
+ * $wpdb->get_results() appearing in a renderer or a REST controller is a real
+ * finding, and silencing it globally to quiet this file would hide that.
+ *
+ * NoCaching is disabled rather than answered because the object cache is the
+ * wrong tool here. Registration counts back capacity decisions, and a stale
+ * count oversells an event — the same failure insert-then-rank exists to
+ * prevent. The one query worth memoising, table_exists(), does so below.
+ */
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table; see the note above.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching -- Capacity must not read a stale count; see the note above.
+
 /**
  * The only class that talks to $wpdb about registrations.
  *
  * Keeping the SQL in one place means the escaping story is auditable: every
  * value reaching a query passes through $wpdb->prepare() here, and no caller
  * elsewhere has the opportunity to build a statement by hand.
+ *
+ * Table names go through the `%i` identifier placeholder that WordPress 6.2
+ * added, so even the table name is escaped by $wpdb rather than interpolated.
+ * The plugin's floor is 6.5, so it is always available.
  *
  * @since 26.0
  */
@@ -42,6 +65,13 @@ final class Repository {
 	 * just enabled it mid-request could otherwise query a table that is not
 	 * there yet.
 	 *
+	 * Almost every method below calls this first, so without memoising it a
+	 * single registration costs four or five SHOW TABLES round trips. Only a
+	 * positive answer is remembered: the table can appear during a request, when
+	 * the module is switched on, but nothing drops it again except uninstall,
+	 * which does not go on to query it. A test that drops the table and keeps
+	 * the same process alive is the one case this would answer wrongly.
+	 *
 	 * @since 26.0
 	 *
 	 * @return bool
@@ -49,11 +79,17 @@ final class Repository {
 	public static function table_exists() {
 		global $wpdb;
 
-		$table = self::table();
+		static $exists = false;
 
-		return (bool) $wpdb->get_var(
-			$wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) )
+		if ( $exists ) {
+			return true;
+		}
+
+		$exists = (bool) $wpdb->get_var(
+			$wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( self::table() ) )
 		);
+
+		return $exists;
 	}
 
 	/**
@@ -139,7 +175,7 @@ final class Repository {
 	 * @param int $id       Registration id.
 	 * @param int $event_id Event id.
 	 * @param int $capacity Places available, 0 for unlimited.
-	 * @return string Status key.
+	 * @return RegistrationStatus
 	 */
 	private static function resolve_status( $id, $event_id, $capacity ) {
 		global $wpdb;
@@ -148,14 +184,14 @@ final class Repository {
 			return RegistrationStatus::Confirmed;
 		}
 
-		$table    = self::table();
 		$statuses = RegistrationStatus::occupying_values();
 
 		// Two fixed placeholders: the occupying statuses are a constant, not user input.
 		$taken = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COALESCE( SUM( quantity ), 0 ) FROM {$table}
-				 WHERE event_id = %d AND id <= %d AND status IN ( %s, %s )",
+				'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+				 WHERE event_id = %d AND id <= %d AND status IN ( %s, %s )',
+				self::table(),
 				$event_id,
 				$id,
 				$statuses[0],
@@ -183,13 +219,13 @@ final class Repository {
 			return 0;
 		}
 
-		$table    = self::table();
 		$statuses = RegistrationStatus::occupying_values();
 
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COALESCE( SUM( quantity ), 0 ) FROM {$table}
-				 WHERE event_id = %d AND status IN ( %s, %s )",
+				'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+				 WHERE event_id = %d AND status IN ( %s, %s )',
+				self::table(),
 				$event_id,
 				$statuses[0],
 				$statuses[1]
@@ -216,12 +252,11 @@ final class Repository {
 			return false;
 		}
 
-		$table = self::table();
-
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table}
-				 WHERE event_id = %d AND email = %s AND status != %s",
+				'SELECT COUNT(*) FROM %i
+				 WHERE event_id = %d AND email = %s AND status != %s',
+				self::table(),
 				$event_id,
 				$email,
 				RegistrationStatus::Cancelled->value
@@ -244,10 +279,8 @@ final class Repository {
 			return null;
 		}
 
-		$table = self::table();
-
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", (int) $id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', self::table(), (int) $id ),
 			ARRAY_A
 		);
 
@@ -269,10 +302,8 @@ final class Repository {
 			return null;
 		}
 
-		$table = self::table();
-
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE code = %s", (string) $code ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE code = %s', self::table(), (string) $code ),
 			ARRAY_A
 		);
 
@@ -307,45 +338,42 @@ final class Repository {
 			)
 		);
 
-		$table = self::table();
-		$where = array( 'event_id = %d' );
-		$params = array( (int) $event_id );
-
-		if ( '' !== $args['status'] && in_array( $args['status'], RegistrationStatus::values(), true ) ) {
-			$where[]  = 'status = %s';
-			$params[] = $args['status'];
-		}
-
-		if ( '' !== $args['search'] ) {
-			$like     = '%' . $wpdb->esc_like( $args['search'] ) . '%';
-			$where[]  = '( name LIKE %s OR email LIKE %s OR code LIKE %s )';
-			$params[] = $like;
-			$params[] = $like;
-			$params[] = $like;
-		}
-
+		$filter   = self::build_filter( $event_id, $args );
+		$clause   = $filter['clause'];
 		$orderby  = self::safe_orderby( $args['orderby'] );
-		$order    = 'ASC' === strtoupper( $args['order'] ) ? 'ASC' : 'DESC';
+		$order    = 'ASC' === strtoupper( (string) $args['order'] ) ? 'ASC' : 'DESC';
 		$per_page = max( 1, min( 500, (int) $args['per_page'] ) );
 		$offset   = max( 0, ( (int) $args['page'] - 1 ) * $per_page );
 
-		$params[] = $per_page;
-		$params[] = $offset;
-
-		$clause = implode( ' AND ', $where );
+		$params = array_merge(
+			array( self::table() ),
+			$filter['params'],
+			array( $orderby, $per_page, $offset )
+		);
 
 		/*
-		 * $orderby and $order are whitelisted above rather than passed as
-		 * placeholders, because $wpdb->prepare() would quote them into string
-		 * literals and MySQL would then sort every row by the same constant.
+		 * $clause carries the placeholders its values are bound to, so it has to
+		 * be part of the query string before prepare() sees it. It is assembled
+		 * from string literals in build_filter() and never from caller input.
+		 *
+		 * $order is the result of a comparison, so it is the literal 'ASC' or
+		 * the literal 'DESC' and cannot be anything else. It is not a %i because
+		 * a sort direction is a keyword, not an identifier, and %i would
+		 * backtick it into a column name.
+		 *
+		 * The placeholder count cannot be checked statically either: $params is
+		 * assembled at runtime and passed as one array, which wpdb::prepare()
+		 * unwraps itself when it is the only argument.
 		 */
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- See above.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE {$clause} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
+				"SELECT * FROM %i WHERE {$clause} ORDER BY %i {$order} LIMIT %d OFFSET %d",
 				$params
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return array_map(
 			static function ( $row ) {
@@ -371,27 +399,66 @@ final class Repository {
 			return 0;
 		}
 
-		$table  = self::table();
+		$filter = self::build_filter( $event_id, $args );
+		$clause = $filter['clause'];
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $clause is built from literals in build_filter(); its values are bound through the params below.
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM %i WHERE {$clause}",
+				array_merge( array( self::table() ), $filter['params'] )
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return $count;
+	}
+
+	/**
+	 * Build the shared WHERE clause for the event, status and search filters.
+	 *
+	 * The list and its count have to agree exactly: twenty rows displayed above
+	 * a count that says nineteen is a bug report nobody can reproduce. They had
+	 * already diverged — for_event() tested the status with `'' !== $status`
+	 * and count_for_event() with `! empty( $status )`, which disagree on the
+	 * string '0'. Building the clause in one place makes that impossible
+	 * rather than merely unlikely.
+	 *
+	 * The returned clause contains placeholders, not values. Every value is in
+	 * the params array and is bound by $wpdb->prepare() at the call site.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int   $event_id Event id.
+	 * @param array $args     Query arguments: status, search.
+	 * @return array{clause: string, params: array} SQL fragment and its bindings, in order.
+	 */
+	private static function build_filter( $event_id, array $args ) {
+		global $wpdb;
+
 		$where  = array( 'event_id = %d' );
 		$params = array( (int) $event_id );
 
-		if ( ! empty( $args['status'] ) && in_array( $args['status'], RegistrationStatus::values(), true ) ) {
+		$status = isset( $args['status'] ) ? (string) $args['status'] : '';
+
+		if ( '' !== $status && in_array( $status, RegistrationStatus::values(), true ) ) {
 			$where[]  = 'status = %s';
-			$params[] = $args['status'];
+			$params[] = $status;
 		}
 
-		if ( ! empty( $args['search'] ) ) {
-			$like     = '%' . $wpdb->esc_like( $args['search'] ) . '%';
+		$search = isset( $args['search'] ) ? (string) $args['search'] : '';
+
+		if ( '' !== $search ) {
+			$like     = '%' . $wpdb->esc_like( $search ) . '%';
 			$where[]  = '( name LIKE %s OR email LIKE %s OR code LIKE %s )';
 			$params[] = $like;
 			$params[] = $like;
 			$params[] = $like;
 		}
 
-		$clause = implode( ' AND ', $where );
-
-		return (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$clause}", $params )
+		return array(
+			'clause' => implode( ' AND ', $where ),
+			'params' => $params,
 		);
 	}
 
@@ -400,8 +467,8 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int    $id     Registration id.
-	 * @param string $status New status.
+	 * @param int                $id     Registration id.
+	 * @param RegistrationStatus $status New status.
 	 * @return bool
 	 */
 	public static function update_status( $id, RegistrationStatus $status ) {
@@ -471,10 +538,8 @@ final class Repository {
 			return array();
 		}
 
-		$table = self::table();
-
 		$rows = $wpdb->get_results(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s ORDER BY id ASC", (string) $email ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE email = %s ORDER BY id ASC', self::table(), (string) $email ),
 			ARRAY_A
 		);
 

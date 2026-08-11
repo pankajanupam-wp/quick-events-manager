@@ -125,13 +125,47 @@
 		</properties>
 	</rule>
 
-	<!-- Test scaffolding is not production code. -->
+	<!--
+		Test scaffolding is not production code.
+
+		tests/unit/bootstrap.php is a hand-written stub of the slice of WordPress
+		the unit suite touches. Its whole job is to declare core's functions with
+		core's signatures, so most of what follows is the standard objecting to
+		it being what it is: it declares global functions (PrefixAllGlobals),
+		mixes them with helper classes in one file (SeparateFunctionsFromOO,
+		OneObjectStructurePerFile), and keeps parameters it never reads because
+		the real function has them (UnusedFunctionParameter).
+
+		The AlternativeFunctions exclusions are the same story from the other
+		direction: a stub cannot call wp_json_encode() or wp_strip_all_tags() to
+		implement json_encode() and strip_tags(), because those are the very
+		functions it is standing in for. Tests reading a fixture off disk with
+		file_get_contents() are told to use wp_remote_get(), which is for HTTP.
+
+		None of these are excluded for production code, where each is a real
+		finding.
+	-->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
-		<!-- The unit bootstrap declares stubs of WordPress core functions by design. -->
 		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>
 
 	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Universal.Files.SeparateFunctionsFromOO">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
 		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>
 

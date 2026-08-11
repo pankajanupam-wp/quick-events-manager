@@ -1,6 +1,6 @@
 <?php
 /**
- * schema.org Event markup.
+ * JSON-LD markup describing an event as a schema.org Event.
  *
  * @package QuickEventsManager
  */

@@ -69,12 +69,27 @@ final class FormHandler {
 			$this->redirect( $event_id, 'success', '' );
 		}
 
+		/*
+		 * Unslashed but not sanitised here, on purpose. RegistrationService is
+		 * the single point where a registration is validated, and it sanitises
+		 * each field as it validates it: sanitize_text_field() for the name and
+		 * phone, sanitize_email() plus is_email() for the address, absint() for
+		 * the quantity. The REST controller hands the service the same raw
+		 * shape, so both transports get identical treatment.
+		 *
+		 * Sanitising a second time here would be the more obviously safe thing
+		 * to do, and is exactly what makes validation drift: two places would
+		 * then define what a valid name is, and only one of them would be
+		 * updated the next time that changes.
+		 */
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitised in RegistrationService::create(); see above.
 		$input = array(
 			'name'     => isset( $_POST['qevm_name'] ) ? wp_unslash( $_POST['qevm_name'] ) : '',
 			'email'    => isset( $_POST['qevm_email'] ) ? wp_unslash( $_POST['qevm_email'] ) : '',
 			'phone'    => isset( $_POST['qevm_phone'] ) ? wp_unslash( $_POST['qevm_phone'] ) : '',
 			'quantity' => isset( $_POST['qevm_quantity'] ) ? wp_unslash( $_POST['qevm_quantity'] ) : 1,
 		);
+		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$result = ( new RegistrationService() )->create( $event_id, $input );
 
@@ -135,10 +150,17 @@ final class FormHandler {
 			return null;
 		}
 
-		$status  = sanitize_key( wp_unslash( $_GET[ self::RESULT_ARG ] ) );
-		$message = isset( $_GET['qevm_message'] )
-			? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qevm_message'] ) ) )
-			: '';
+		$status = sanitize_key( wp_unslash( $_GET[ self::RESULT_ARG ] ) );
+
+		/*
+		 * The decode has to happen before the sanitise, not after: the value was
+		 * rawurlencode()d into the redirect, so sanitising first would strip
+		 * nothing useful and then hand percent-escapes back to the caller. The
+		 * sniff only looks at the function wrapping the superglobal directly and
+		 * cannot see that sanitize_text_field() encloses the whole expression.
+		 */
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_text_field() wraps the decode; see above.
+		$message = isset( $_GET['qevm_message'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qevm_message'] ) ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! in_array( $status, array( 'success', 'waitlisted', 'error' ), true ) ) {

@@ -84,8 +84,8 @@ function do_action( $hook ) {}
 
 function add_shortcode( $tag, $callback ) {}
 
-function get_option( $name, $default = false ) {
-	return array_key_exists( $name, WP_Stub_State::$options ) ? WP_Stub_State::$options[ $name ] : $default;
+function get_option( $name, $default_value = false ) {
+	return array_key_exists( $name, WP_Stub_State::$options ) ? WP_Stub_State::$options[ $name ] : $default_value;
 }
 
 function update_option( $name, $value ) {

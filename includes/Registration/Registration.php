@@ -41,12 +41,12 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $key     Column name.
-	 * @param mixed  $default Fallback.
+	 * @param string $key      Column name.
+	 * @param mixed  $fallback Returned when the column is absent.
 	 * @return mixed
 	 */
-	public function get( $key, $default = '' ) {
-		return isset( $this->data[ $key ] ) ? $this->data[ $key ] : $default;
+	public function get( $key, $fallback = '' ) {
+		return isset( $this->data[ $key ] ) ? $this->data[ $key ] : $fallback;
 	}
 
 	/**

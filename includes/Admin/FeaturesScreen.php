@@ -199,10 +199,11 @@ final class FeaturesScreen {
 
 		check_admin_referer( self::NONCE );
 
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitised on the next line; sanitize_key() cannot be applied to the array itself.
 		$submitted = isset( $_POST['qevm_modules'] ) ? (array) wp_unslash( $_POST['qevm_modules'] ) : array();
 		$submitted = array_map( 'sanitize_key', $submitted );
 
-		foreach ( $this->registry->all() as $id => $module ) {
+		foreach ( array_keys( $this->registry->all() ) as $id ) {
 			if ( in_array( $id, $submitted, true ) ) {
 				$this->registry->enable( $id );
 			} else {
@@ -223,6 +224,4 @@ final class FeaturesScreen {
 
 		exit;
 	}
-
-
 }

@@ -68,7 +68,7 @@ twice as much code.
 | **C0.4** | **Rename**: `qem`→`qevm`, `QEM\`→`QuickEventsManager\` | L | [ADR-0001](adr/0001-naming-and-namespace.md). Includes `block.json`, CSS classes, capabilities, test bootstrap, docs. Directory names are unchanged — see the note below |
 | **C0.5** | Enums for existing statuses — `RegistrationStatus`, `ModuleLevel` | S | First use of 8.1; proves the toolchain |
 | **C0.6** | PHPCS cleanup — see the measured baseline below | M | Added after C0.2 measured the real number |
-| **C0.7** | Type declarations to reach PHPStan level 6 | L | Added after C0.2 measured the real number |
+| **C0.7** | Type declarations to reach PHPStan level 6 — 162 findings | L | Added after C0.2 measured the real number; count corrected at C0.6 |
 
 ### Measured baseline, from C0.2
 
@@ -82,9 +82,15 @@ down into four very different piles:
 | Pile | Count | Handled by |
 | --- | ---: | --- |
 | Prefix and capability sniffs — code still says `qem`, config says `qevm` | 75 | **C0.4.** Going quiet is the proof the rename was complete |
-| Formatting, auto-fixable by `phpcbf` | 45 | **C0.6** |
+| Formatting, auto-fixable by `phpcbf` | 45 | **C0.6** — 46 by the time it ran |
 | Custom-table queries: `DirectQuery`, `NoCaching`, `InterpolatedNotPrepared` | 44 | **C0.6** — annotate with reasons, do not blanket-exclude |
 | Genuine small cleanups: unused parameters, doc comments, reserved-word parameter names, `AlternativeFunctions` | ~44 | **C0.6** |
+
+**C0.6 closed all four piles: PHPCS now reports zero.** The table below is kept as the
+record of what the code looked like before, not as outstanding work. The custom-table
+pile came out smaller than 44 because most of it was fixable rather than annotatable —
+WordPress 6.2's `%i` identifier placeholder removes the table-name interpolation
+outright, and the plugin's floor is 6.5.
 
 Two findings were investigated and confirmed **false positives**, and must be
 annotated rather than "fixed":
@@ -103,10 +109,22 @@ One finding is **independent confirmation of [ADR-0003](adr/0003-occurrence-tabl
 date lookups the occurrence table replaces. WPCS reached the same conclusion from a
 different direction.
 
+Those 8 are the one group C0.6 silenced while agreeing with them. They are not false
+positives and the annotations say so, each pointing at the note in `Events/Query.php`.
+**C1.4 is not done until they are deleted** — PHPCS does not report a stale
+`phpcs:ignore`, so nothing else will remind anyone. If removing them produces no new
+findings, the migration off meta is complete.
+
 **PHPStan — level 6.** Of 539 local errors, ~356 are missing WordPress symbols that
-`szepeviktor/phpstan-wordpress` resolves in CI. The real signal is **~151 missing
-type declarations** (`missingType.parameter` 66, `missingType.iterableValue` 48,
-`missingType.return` 37), which is expected for code written against PHP 7.4.
+`szepeviktor/phpstan-wordpress` resolves in CI. The real signal is **missing type
+declarations**, which is expected for code written against PHP 7.4.
+
+> **Corrected at C0.6.** This originally read "~151 (`missingType.parameter` 66,
+> `missingType.iterableValue` 48, `missingType.return` 37)". Re-measuring against
+> the same commit gives `missingType.return` **46**, not 37, so the real total was
+> **160**. The 37 was a misread, not a change in the code. C0.6 then took it to
+> **162** — `build_filter()` adds an `array` parameter and an inner untyped `array`
+> in its return shape, both of which C0.7 types properly.
 
 Level 6 is kept rather than lowered: `docs/engineering-standards.md` says typed
 properties and return types are expected, and lowering the bar to make a number go
@@ -341,7 +359,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 
 | Stage | Chunks | Status |
 | --- | :-: | --- |
-| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓** · C0.6–C0.7 pending |
+| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓** · C0.7 pending |
 | 1 · Schema foundation | 11 | not started |
 | 2 · Correctness gaps | 7 | not started |
 | 3 · Records and fields | 6 | not started |

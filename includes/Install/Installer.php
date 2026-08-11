@@ -72,10 +72,10 @@ final class Installer {
 	/**
 	 * Run a CREATE TABLE statement through dbDelta().
 	 *
-	 * dbDelta() lives in an admin include that is not loaded on front-end
-	 * requests, so it has to be required explicitly. It is also famously
-	 * picky: two spaces after PRIMARY KEY, no backticks around the table
-	 * name, and one field per line.
+	 * The dbDelta() function lives in an admin include that is not loaded on
+	 * front-end requests, so it has to be required explicitly. It is also
+	 * famously picky: two spaces after PRIMARY KEY, no backticks around the
+	 * table name, and one field per line.
 	 *
 	 * @since 26.0
 	 *

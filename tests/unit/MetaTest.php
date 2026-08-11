@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
 use QuickEventsManager\Events\Meta;
 
 /**
+ * Meta key registration, sanitisation and UTC conversion.
+ *
  * @covers \QuickEventsManager\Events\Meta
  */
 final class MetaTest extends TestCase {
@@ -94,10 +96,10 @@ final class MetaTest extends TestCase {
 	 */
 	public function test_utc_is_independent_of_the_site_timezone() {
 		WP_Stub_State::$options['timezone_string'] = 'America/New_York';
-		$first = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
+		$first                                     = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
 
 		WP_Stub_State::$options['timezone_string'] = 'Australia/Sydney';
-		$second = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
+		$second                                    = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
 
 		$this->assertSame( $first, $second, 'Changing the site timezone must not move an event.' );
 	}
