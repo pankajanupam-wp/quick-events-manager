@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<ruleset name="Quick Events Manager">
+
+	<description>
+		WordPress Coding Standards for Quick Events Manager.
+
+		Rules that govern this project live in docs/engineering-standards.md;
+		this file is the machine-checkable subset of them. Every exclusion below
+		names the decision that justifies it — an exclusion without a reason is a
+		rule someone found inconvenient, and should be removed rather than kept.
+	</description>
+
+	<file>.</file>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/build/*</exclude-pattern>
+	<exclude-pattern>/languages/*</exclude-pattern>
+
+	<arg name="basepath" value="."/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg name="colors"/>
+	<arg value="ps"/>
+
+	<!-- Minimum supported platform. See docs/adr/0002-php-and-wordpress-versions.md -->
+	<config name="minimum_wp_version" value="6.5"/>
+	<config name="testVersion" value="8.1-"/>
+
+	<rule ref="WordPress">
+		<!--
+			PSR-4 requires Foo.php, not class-foo.php. The autoloader maps
+			QuickEventsManager\Foo\Bar directly to src/Foo/Bar.php with one
+			str_replace, which is only possible with PSR-4 file naming.
+			See docs/adr/0007-no-runtime-dependencies.md.
+		-->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!--
+		Everything global carries the plugin prefix. Namespaces protect classes
+		and functions; nothing protects options, hooks, constants, transients,
+		post types, shortcodes, script handles or table names.
+
+		These are the TARGET prefixes. Until chunk C0.4 completes the rename the
+		codebase still uses `qem`, so this sniff is expected to report violations.
+		That is deliberate: when C0.4 is finished this sniff going quiet is the
+		proof the rename was complete, which is a better check than grepping.
+
+		See docs/adr/0001-naming-and-namespace.md.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="qevm"/>
+				<element value="QEVM"/>
+				<element value="QuickEventsManager"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		The text domain is the plugin slug, unabbreviated, because WordPress.org
+		generates translation packages from the slug. It is the one name in the
+		project that is not `qevm`.
+	-->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="quick-events-manager"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		The plugin uses a custom capability type rather than mapping onto `post`,
+		so a check-in role can exist without granting the right to edit blog
+		posts. WPCS cannot know these exist, and flags them as typos otherwise.
+
+		These are the TARGET names, for the same reason as the prefixes above:
+		until C0.4 the code still says `qem`, and this sniff going quiet
+		afterwards proves the rename covered capabilities too — which are
+		otherwise one of the easiest things to miss.
+
+		`manage_qevm_checkins` is added by C1.9 and listed here in advance.
+	-->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="edit_qevm_event"/>
+				<element value="read_qevm_event"/>
+				<element value="delete_qevm_event"/>
+				<element value="edit_qevm_events"/>
+				<element value="publish_qevm_events"/>
+				<element value="delete_qevm_events"/>
+				<element value="edit_others_qevm_events"/>
+				<element value="delete_others_qevm_events"/>
+				<element value="read_private_qevm_events"/>
+				<element value="edit_published_qevm_events"/>
+				<element value="delete_published_qevm_events"/>
+				<element value="manage_qevm_registrations"/>
+				<element value="manage_qevm_checkins"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Test scaffolding is not production code. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<!-- The unit bootstrap declares stubs of WordPress core functions by design. -->
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Squiz.Commenting.ClassComment.Missing">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Squiz.Commenting.FileComment.Missing">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+</ruleset>

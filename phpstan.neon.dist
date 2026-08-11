@@ -1,0 +1,37 @@
+# Static analysis for Quick Events Manager.
+#
+# WordPress function and class signatures come from szepeviktor/phpstan-wordpress,
+# which is a dev dependency. Nothing here is shipped: see
+# docs/adr/0007-no-runtime-dependencies.md.
+
+parameters:
+	level: 6
+
+	# The accepted minimum platform.
+	# See docs/adr/0002-php-and-wordpress-versions.md
+	phpVersion: 80100
+
+	paths:
+		- includes
+		- tests
+		- quick-events-manager.php
+		- uninstall.php
+
+	# Marked optional with (?) because none of these exist in a clean checkout,
+	# and PHPStan treats a missing excludePath as a configuration error.
+	excludePaths:
+		- vendor (?)
+		- node_modules (?)
+		- build (?)
+
+	# Constants defined in the main plugin file before the autoloader runs.
+	# Listed rather than inferred so a typo in a constant name is an error
+	# rather than a silently untyped mixed.
+	bootstrapFiles:
+		- tests/phpstan/constants.php
+
+	# No ignoreErrors and no baseline, deliberately. A baseline is a list of
+	# problems nobody intends to fix, and it hides the next one behind them.
+	# Anything genuinely unfixable gets an inline @phpstan-ignore-line with a
+	# reason on the line above it, where a reviewer will actually read it.
+	reportUnmatchedIgnoredErrors: true

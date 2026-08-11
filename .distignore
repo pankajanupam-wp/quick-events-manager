@@ -18,6 +18,9 @@ package.json
 package-lock.json
 phpunit.xml.dist
 phpunit-integration.xml.dist
+phpcs.xml.dist
+phpstan.neon.dist
+phpstan-baseline.neon
 .phpunit.result.cache
 .phpunit.cache
 README.md

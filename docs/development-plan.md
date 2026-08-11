@@ -67,6 +67,50 @@ twice as much code.
 | **C0.3** | PHP 8.1 / WP 6.5 bump — headers, `composer.json`, CI matrix, PHPUnit uncapped | S | [ADR-0002](adr/0002-php-and-wordpress-versions.md) signed off first |
 | **C0.4** | **Rename**: `qem`→`qevm`, `QEM\`→`QuickEventsManager\`, `includes/`→`src/`, block sources→`src-js/` | L | [ADR-0001](adr/0001-naming-and-namespace.md). Includes `block.json`, CSS classes, test bootstrap, docs |
 | **C0.5** | Enums for existing statuses — `RegistrationStatus`, `ModuleLevel` | S | First use of 8.1; proves the toolchain |
+| **C0.6** | PHPCS cleanup — see the measured baseline below | M | Added after C0.2 measured the real number |
+| **C0.7** | Type declarations to reach PHPStan level 6 | L | Added after C0.2 measured the real number |
+
+### Measured baseline, from C0.2
+
+Real numbers, not estimates. PHPCS run locally against the committed code; PHPStan
+run without the WordPress stubs that CI installs, so only its type findings are
+meaningful here.
+
+**PHPCS — 216 violations in 42 files.** For 8,800 lines that is low, and it breaks
+down into four very different piles:
+
+| Pile | Count | Handled by |
+| --- | ---: | --- |
+| Prefix and capability sniffs — code still says `qem`, config says `qevm` | 75 | **C0.4.** Going quiet is the proof the rename was complete |
+| Formatting, auto-fixable by `phpcbf` | 45 | **C0.6** |
+| Custom-table queries: `DirectQuery`, `NoCaching`, `InterpolatedNotPrepared` | 44 | **C0.6** — annotate with reasons, do not blanket-exclude |
+| Genuine small cleanups: unused parameters, doc comments, reserved-word parameter names, `AlternativeFunctions` | ~44 | **C0.6** |
+
+Two findings were investigated and confirmed **false positives**, and must be
+annotated rather than "fixed":
+
+- `PreparedSQLPlaceholders` ×2 in `Repository.php` — the query is assembled from a
+  dynamic `$clause`, so PHPCS cannot see the placeholders and cannot know `$params`
+  is an array whose count matches. `$wpdb->prepare()` accepts a single array argument.
+- `ValidatedSanitizedInput` ×6 in `FormHandler.php` and `FeaturesScreen.php` —
+  sanitisation happens one layer down in `RegistrationService::validate()`
+  (`sanitize_text_field`, `sanitize_email`, `absint` clamped 1–20). That is
+  deliberate: the form handler and the REST route share one validation path, which
+  is the entire reason the service exists. Sanitising twice would be theatre.
+
+One finding is **independent confirmation of [ADR-0003](adr/0003-occurrence-table.md)**:
+`WordPress.DB.SlowDBQuery` fires 8 times on exactly the `meta_key` / `meta_query`
+date lookups the occurrence table replaces. WPCS reached the same conclusion from a
+different direction.
+
+**PHPStan — level 6.** Of 539 local errors, ~356 are missing WordPress symbols that
+`szepeviktor/phpstan-wordpress` resolves in CI. The real signal is **~151 missing
+type declarations** (`missingType.parameter` 66, `missingType.iterableValue` 48,
+`missingType.return` 37), which is expected for code written against PHP 7.4.
+
+Level 6 is kept rather than lowered: `docs/engineering-standards.md` says typed
+properties and return types are expected, and lowering the bar to make a number go
+away is how standards stop meaning anything. The work is scheduled as C0.7 instead.
 
 > **C0.4 is the highest-risk mechanical change in the plan.** A naive replace over
 > `*.php` misses `block.json` names, CSS class names, script handles, the `.pot`
@@ -76,6 +120,11 @@ twice as much code.
 **Gate:** 73 unit tests still green · PHPCS and PHPStan clean · no occurrence of
 `qem` outside the ADR that explains the rename · plugin activates on a real install
 with `WP_DEBUG` on and no notices.
+
+> **Note on the `qem` grep.** `.distignore` currently excludes `src`, which is correct
+> today because `src/` holds block sources. After C0.4 moves block sources to
+> `src-js/` and PHP into `src/`, that line would exclude the entire plugin from the
+> published package. C0.4 must fix `.distignore` in the same change.
 
 ---
 
@@ -289,7 +338,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 
 | Stage | Chunks | Status |
 | --- | :-: | --- |
-| 0 · Groundwork | 5 | not started |
+| 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓** · C0.3–C0.7 pending |
 | 1 · Schema foundation | 11 | not started |
 | 2 · Correctness gaps | 7 | not started |
 | 3 · Records and fields | 6 | not started |
@@ -300,7 +349,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | 8 · Event operations | 6 | not started |
 | 9 · Commerce | 7 | not started |
 | 10 · Release readiness | 9 | not started |
-| | **68** | |
+| | **70** | |
 
 ---
 

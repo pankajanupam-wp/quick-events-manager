@@ -7,6 +7,33 @@ on:
   pull_request:
 
 jobs:
+  quality:
+    name: Coding standards and static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Pinned rather than matrixed: the standards a file must meet do not
+      # depend on which PHP is running the checker. PHPCompatibility is what
+      # verifies the supported range, and it is configured in phpcs.xml.dist.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: WordPress Coding Standards
+        run: composer lint
+
+      - name: Static analysis
+        run: composer analyse
+
   test:
     name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
