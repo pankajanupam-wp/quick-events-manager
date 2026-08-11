@@ -41,7 +41,7 @@ Four. Dependencies point **downward only**.
 
 | Layer | Rule |
 | --- | --- |
-| `Domain/` | Calls **nothing**. No `$wpdb`, no `get_option()`, no `apply_filters()`. Pure PHP, unit-testable with no WordPress present at all |
+| `Domain/` | Calls **nothing but i18n**. No `$wpdb`, no `get_option()`, no `apply_filters()`, no I/O. Unit-testable with no WordPress present. `__()` is the single exception, because an enum case's label belongs with the case — see [engineering-standards.md §5](engineering-standards.md#5-architecture-rules) |
 | `Repository/` | The only place `$wpdb` appears. One file per aggregate — this is what keeps the SQL audit finite |
 | `Service/` | Never emits HTML, never reads `$_POST`. Typed input, typed output or `WP_Error` |
 | Integration | Never contains business rules. Translates a request into a service call and a result into output |

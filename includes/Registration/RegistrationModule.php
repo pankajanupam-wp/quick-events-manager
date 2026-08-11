@@ -10,6 +10,8 @@ namespace QuickEventsManager\Registration;
 use QuickEventsManager\Install\Installer;
 use QuickEventsManager\Modules\Module;
 
+use QuickEventsManager\Domain\ModuleLevel;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -67,8 +69,8 @@ final class RegistrationModule implements Module {
 	 *
 	 * @return int
 	 */
-	public function level() {
-		return 1;
+	public function level(): ModuleLevel {
+		return ModuleLevel::Standard;
 	}
 
 	/**

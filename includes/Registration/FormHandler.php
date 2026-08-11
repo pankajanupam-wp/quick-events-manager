@@ -7,6 +7,8 @@
 
 namespace QuickEventsManager\Registration;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -82,7 +84,7 @@ final class FormHandler {
 
 		$this->redirect(
 			$event_id,
-			Registration::STATUS_WAITLISTED === $result->status() ? 'waitlisted' : 'success',
+			RegistrationStatus::Waitlisted === $result->status() ? 'waitlisted' : 'success',
 			''
 		);
 	}

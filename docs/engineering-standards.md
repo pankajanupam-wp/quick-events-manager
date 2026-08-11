@@ -133,7 +133,7 @@ quick-events-manager/
 │   ├── Plugin.php               Wiring. No business logic.
 │   ├── Autoloader.php           Hand-written PSR-4. No Composer at runtime.
 │   │
-│   ├── Domain/                  Entities, value objects, enums. No WordPress calls.
+│   ├── Domain/                  Entities, value objects, enums. i18n only — see §5.
 │   ├── Repository/              All $wpdb access. One repository per aggregate.
 │   ├── Service/                 Use cases that coordinate repositories + domain
 │   │
@@ -217,13 +217,29 @@ Read the arrows as "may call". Concretely:
 
 | Rule | Meaning |
 | --- | --- |
-| `Domain/` calls **nothing** | No `$wpdb`, no `get_option()`, no `apply_filters()`. Pure PHP, unit-testable with no WordPress at all |
+| `Domain/` calls **nothing but i18n** | No `$wpdb`, no `get_option()`, no `apply_filters()`, no HTTP, no cache. Unit-testable with no WordPress at all. The single exception is `__()` and friends — see below |
 | `Repository/` is the only place `$wpdb` appears | One file per aggregate. This is what makes the SQL audit finite *(already true for registrations)* |
 | `Service/` never emits HTML and never reads `$_POST` | It takes typed input and returns typed output or `WP_Error` |
 | `Admin/`, `Frontend/`, `Rest/`, `Cli/` never contain business rules | They translate a request into a service call and a result into output |
 | Nothing above `Repository/` writes SQL | Not one query. Not "just this once" |
 | One query layer owns dates | Every date query goes through `Events\OccurrenceQuery`. No feature invents its own |
 | One renderer per feature | Block and shortcode call the same function, so a fix cannot land in one and miss the other *(already true)* |
+
+#### Why i18n is the one exception in `Domain/`
+
+An enum that models a state machine is the right place for that state's label,
+and there is exactly one correct label per case. Pushing labels out to a
+presentation helper splits one concept across two files so that a rule can stay
+absolute, and the rule is not worth that.
+
+`__()`, `_n()` and `esc_html__()` touch no database, read no option, fire no
+hook and perform no I/O. They map a string through a locale. The unit suite
+stubs them in three lines, so the layer stays testable with no WordPress
+present, which is what the rule was actually protecting.
+
+Nothing else is exempt. A domain object that reaches for `get_option()`,
+`$wpdb`, `apply_filters()`, the object cache or the network is in the wrong
+layer, and no amount of convenience changes that.
 
 ### Things we deliberately do not build
 

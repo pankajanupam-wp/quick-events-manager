@@ -10,6 +10,8 @@ namespace QuickEventsManager\Registration;
 use QuickEventsManager\Admin\Settings;
 use QuickEventsManager\Events\Event;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -45,7 +47,7 @@ final class Emails {
 	 * @return void
 	 */
 	public function send_attendee_confirmation( Registration $registration, Event $event ) {
-		$waitlisted = Registration::STATUS_WAITLISTED === $registration->status();
+		$waitlisted = RegistrationStatus::Waitlisted === $registration->status();
 
 		$subject = $waitlisted
 			/* translators: %s: Event title. */
@@ -129,7 +131,7 @@ final class Emails {
 		}
 
 		/* translators: %s: Registration status. */
-		$lines[] = sprintf( __( 'Status: %s', 'quick-events-manager' ), Registration::status_label( $registration->status() ) );
+		$lines[] = sprintf( __( 'Status: %s', 'quick-events-manager' ), $registration->status()->label() );
 		/* translators: %s: Registration reference code. */
 		$lines[] = sprintf( __( 'Reference: %s', 'quick-events-manager' ), $registration->code() );
 		$lines[] = '';

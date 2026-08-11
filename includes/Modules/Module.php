@@ -7,6 +7,8 @@
 
 namespace QuickEventsManager\Modules;
 
+use QuickEventsManager\Domain\ModuleLevel;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -63,7 +65,7 @@ interface Module {
 	 *
 	 * @return int
 	 */
-	public function level();
+	public function level(): ModuleLevel;
 
 	/**
 	 * Whether this module can be switched off.

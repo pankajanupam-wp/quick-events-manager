@@ -9,6 +9,8 @@ namespace QuickEventsManager\Events;
 
 use QuickEventsManager\Modules\Module;
 
+use QuickEventsManager\Domain\ModuleLevel;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -59,8 +61,8 @@ final class EventsModule implements Module {
 	 *
 	 * @return int
 	 */
-	public function level() {
-		return 0;
+	public function level(): ModuleLevel {
+		return ModuleLevel::Core;
 	}
 
 	/**

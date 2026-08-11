@@ -10,6 +10,8 @@ namespace QuickEventsManager\Privacy;
 use QuickEventsManager\Registration\Registration;
 use QuickEventsManager\Registration\Repository;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -123,7 +125,7 @@ final class Privacy {
 					),
 					array(
 						'name'  => __( 'Status', 'quick-events-manager' ),
-						'value' => Registration::status_label( $registration->status() ),
+						'value' => $registration->status()->label(),
 					),
 					array(
 						'name'  => __( 'Registered', 'quick-events-manager' ),

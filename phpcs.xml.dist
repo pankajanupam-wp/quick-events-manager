@@ -37,7 +37,28 @@
 		<exclude name="WordPress.Files.FileName"/>
 	</rule>
 
-	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="PHPCompatibilityWP">
+		<!--
+			PHPCompatibility's latest stable is 9.3.5, from 2019 — four years
+			before PHP 8.1 shipped enums. It does not recognise an enum body as
+			a class scope, so every sniff that reasons about class context
+			misfires inside one. Both exclusions below are the same bug wearing
+			two names, and further enums will not add new kinds of it.
+
+			Excluding them costs nothing real. Both guard against changes
+			introduced in PHP 7.0 and 7.1, and this plugin's floor is 8.1 — they
+			are checking for things that cannot apply here.
+
+			Syntax-level compatibility is covered regardless: CI runs `php -l`
+			over every shipped file on each supported version, which is what
+			would actually catch an 8.2-only construct in an 8.1 codebase.
+
+			Remove both once PHPCompatibility 10.0 is stable. As of August 2026
+			it is at 10.0.0-alpha2 and not safe to depend on.
+		-->
+		<exclude name="PHPCompatibility.Variables.ForbiddenThisUseContexts"/>
+		<exclude name="PHPCompatibility.FunctionDeclarations.NewParamTypeDeclarations.SelfOutsideClassScopeFound"/>
+	</rule>
 
 	<!--
 		Everything global carries the plugin prefix. Namespaces protect classes

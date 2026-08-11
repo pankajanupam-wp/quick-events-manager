@@ -9,6 +9,8 @@ namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\Install\Installer;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -90,7 +92,7 @@ final class Repository {
 			'event_id'   => (int) $data['event_id'],
 			'user_id'    => isset( $data['user_id'] ) ? (int) $data['user_id'] : 0,
 			'code'       => self::generate_code(),
-			'status'     => Registration::STATUS_PENDING,
+			'status'     => RegistrationStatus::Pending->value,
 			'name'       => (string) $data['name'],
 			'email'      => (string) $data['email'],
 			'phone'      => isset( $data['phone'] ) ? (string) $data['phone'] : '',
@@ -120,7 +122,7 @@ final class Repository {
 		self::update_status( $id, $status );
 
 		$row['id']     = $id;
-		$row['status'] = $status;
+		$row['status'] = $status->value;
 
 		return new Registration( $row );
 	}
@@ -143,11 +145,11 @@ final class Repository {
 		global $wpdb;
 
 		if ( $capacity <= 0 ) {
-			return Registration::STATUS_CONFIRMED;
+			return RegistrationStatus::Confirmed;
 		}
 
 		$table    = self::table();
-		$statuses = Registration::occupying_statuses();
+		$statuses = RegistrationStatus::occupying_values();
 
 		// Two fixed placeholders: the occupying statuses are a constant, not user input.
 		$taken = (int) $wpdb->get_var(
@@ -162,8 +164,8 @@ final class Repository {
 		);
 
 		return $taken <= $capacity
-			? Registration::STATUS_CONFIRMED
-			: Registration::STATUS_WAITLISTED;
+			? RegistrationStatus::Confirmed
+			: RegistrationStatus::Waitlisted;
 	}
 
 	/**
@@ -182,7 +184,7 @@ final class Repository {
 		}
 
 		$table    = self::table();
-		$statuses = Registration::occupying_statuses();
+		$statuses = RegistrationStatus::occupying_values();
 
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
@@ -222,7 +224,7 @@ final class Repository {
 				 WHERE event_id = %d AND email = %s AND status != %s",
 				$event_id,
 				$email,
-				Registration::STATUS_CANCELLED
+				RegistrationStatus::Cancelled->value
 			)
 		);
 	}
@@ -309,7 +311,7 @@ final class Repository {
 		$where = array( 'event_id = %d' );
 		$params = array( (int) $event_id );
 
-		if ( '' !== $args['status'] && in_array( $args['status'], Registration::statuses(), true ) ) {
+		if ( '' !== $args['status'] && in_array( $args['status'], RegistrationStatus::values(), true ) ) {
 			$where[]  = 'status = %s';
 			$params[] = $args['status'];
 		}
@@ -373,7 +375,7 @@ final class Repository {
 		$where  = array( 'event_id = %d' );
 		$params = array( (int) $event_id );
 
-		if ( ! empty( $args['status'] ) && in_array( $args['status'], Registration::statuses(), true ) ) {
+		if ( ! empty( $args['status'] ) && in_array( $args['status'], RegistrationStatus::values(), true ) ) {
 			$where[]  = 'status = %s';
 			$params[] = $args['status'];
 		}
@@ -402,17 +404,13 @@ final class Repository {
 	 * @param string $status New status.
 	 * @return bool
 	 */
-	public static function update_status( $id, $status ) {
+	public static function update_status( $id, RegistrationStatus $status ) {
 		global $wpdb;
-
-		if ( ! in_array( $status, Registration::statuses(), true ) ) {
-			return false;
-		}
 
 		return (bool) $wpdb->update(
 			self::table(),
 			array(
-				'status'     => $status,
+				'status'     => $status->value,
 				'updated_at' => gmdate( 'Y-m-d H:i:s' ),
 			),
 			array( 'id' => (int) $id ),

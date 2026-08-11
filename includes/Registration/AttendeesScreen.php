@@ -9,6 +9,8 @@ namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\Events\Event;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -222,9 +224,9 @@ final class AttendeesScreen {
 			<label class="screen-reader-text" for="qevm-status"><?php esc_html_e( 'Filter by status', 'quick-events-manager' ); ?></label>
 			<select name="status" id="qevm-status">
 				<option value=""><?php esc_html_e( 'All statuses', 'quick-events-manager' ); ?></option>
-				<?php foreach ( Registration::statuses() as $key ) : ?>
-					<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $status, $key ); ?>>
-						<?php echo esc_html( Registration::status_label( $key ) ); ?>
+				<?php foreach ( RegistrationStatus::all() as $option ) : ?>
+					<option value="<?php echo esc_attr( $option->value ); ?>" <?php selected( $status, $option->value ); ?>>
+						<?php echo esc_html( $option->label() ); ?>
 					</option>
 				<?php endforeach; ?>
 			</select>
@@ -296,9 +298,9 @@ final class AttendeesScreen {
 									<?php esc_html_e( 'Change status', 'quick-events-manager' ); ?>
 								</label>
 								<select name="status" id="qevm-status-<?php echo esc_attr( (string) $registration->id() ); ?>">
-									<?php foreach ( Registration::statuses() as $key ) : ?>
-										<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $registration->status(), $key ); ?>>
-											<?php echo esc_html( Registration::status_label( $key ) ); ?>
+									<?php foreach ( RegistrationStatus::all() as $option ) : ?>
+										<option value="<?php echo esc_attr( $option->value ); ?>" <?php selected( $registration->status_value(), $option->value ); ?>>
+											<?php echo esc_html( $option->label() ); ?>
 										</option>
 									<?php endforeach; ?>
 								</select>
@@ -375,8 +377,10 @@ final class AttendeesScreen {
 		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
 		$status   = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
 
-		if ( $id > 0 && in_array( $status, Registration::statuses(), true ) ) {
-			Repository::update_status( $id, $status );
+		$new_status = RegistrationStatus::coerce( $status );
+
+		if ( $id > 0 && $new_status instanceof RegistrationStatus ) {
+			Repository::update_status( $id, $new_status );
 
 			/**
 			 * Fires after an administrator changes a registration's status.

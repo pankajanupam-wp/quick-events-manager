@@ -9,6 +9,8 @@ namespace QuickEventsManager\Admin;
 
 use QuickEventsManager\Modules\Registry;
 
+use QuickEventsManager\Domain\ModuleLevel;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -115,13 +117,6 @@ final class FeaturesScreen {
 
 		$modules = $this->registry->all();
 		$enabled = $this->registry->enabled_ids();
-		$levels  = array();
-
-		foreach ( $modules as $module ) {
-			$levels[ $module->level() ][] = $module;
-		}
-
-		ksort( $levels );
 		?>
 		<div class="wrap qevm-features">
 			<h1><?php esc_html_e( 'Features', 'quick-events-manager' ); ?></h1>
@@ -140,9 +135,21 @@ final class FeaturesScreen {
 				<input type="hidden" name="action" value="qevm_save_features" />
 				<?php wp_nonce_field( self::NONCE ); ?>
 
-				<?php foreach ( $levels as $level => $level_modules ) : ?>
-					<h2 class="qevm-level-heading"><?php echo esc_html( self::level_title( $level ) ); ?></h2>
-					<p class="qevm-level-description"><?php echo esc_html( self::level_description( $level ) ); ?></p>
+				<?php
+				// Iterating the enum rather than grouping into an array gives a
+				// deterministic order without a sort, and skips empty levels.
+				foreach ( ModuleLevel::all() as $level ) :
+					$level_modules = array_filter(
+						$modules,
+						static fn( $module ): bool => $level === $module->level()
+					);
+
+					if ( empty( $level_modules ) ) {
+						continue;
+					}
+					?>
+					<h2 class="qevm-level-heading"><?php echo esc_html( $level->title() ); ?></h2>
+					<p class="qevm-level-description"><?php echo esc_html( $level->description() ); ?></p>
 
 					<ul class="qevm-module-list">
 						<?php foreach ( $level_modules as $module ) : ?>
@@ -217,45 +224,5 @@ final class FeaturesScreen {
 		exit;
 	}
 
-	/**
-	 * Heading for a disclosure level.
-	 *
-	 * @since 26.0
-	 *
-	 * @param int $level Level number.
-	 * @return string
-	 */
-	private static function level_title( $level ) {
-		switch ( (int) $level ) {
-			case 0:
-				return __( 'The basics', 'quick-events-manager' );
-			case 1:
-				return __( 'Taking registrations', 'quick-events-manager' );
-			case 2:
-				return __( 'Going further', 'quick-events-manager' );
-			default:
-				return __( 'Advanced', 'quick-events-manager' );
-		}
-	}
 
-	/**
-	 * Explanatory line under a level heading.
-	 *
-	 * @since 26.0
-	 *
-	 * @param int $level Level number.
-	 * @return string
-	 */
-	private static function level_description( $level ) {
-		switch ( (int) $level ) {
-			case 0:
-				return __( 'Everything you need to publish events. This is always on.', 'quick-events-manager' );
-			case 1:
-				return __( 'Let people sign up, and keep track of who is coming.', 'quick-events-manager' );
-			case 2:
-				return __( 'More control over how registration works and how your events look.', 'quick-events-manager' );
-			default:
-				return __( 'For larger or more complex events.', 'quick-events-manager' );
-		}
-	}
 }

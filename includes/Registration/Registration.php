@@ -7,6 +7,8 @@
 
 namespace QuickEventsManager\Registration;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -15,26 +17,6 @@ defined( 'ABSPATH' ) || exit;
  * @since 26.0
  */
 final class Registration {
-
-	/**
-	 * Confirmed: counted against capacity, has a place.
-	 */
-	const STATUS_CONFIRMED = 'confirmed';
-
-	/**
-	 * Pending: counted against capacity, awaiting something.
-	 */
-	const STATUS_PENDING = 'pending';
-
-	/**
-	 * Waitlisted: not counted, will be offered a place if one frees up.
-	 */
-	const STATUS_WAITLISTED = 'waitlisted';
-
-	/**
-	 * Cancelled: not counted, frees the place.
-	 */
-	const STATUS_CANCELLED = 'cancelled';
 
 	/**
 	 * Row data.
@@ -52,52 +34,6 @@ final class Registration {
 	 */
 	public function __construct( $row ) {
 		$this->data = (array) $row;
-	}
-
-	/**
-	 * Statuses that occupy a place.
-	 *
-	 * @since 26.0
-	 *
-	 * @return string[]
-	 */
-	public static function occupying_statuses() {
-		return array( self::STATUS_CONFIRMED, self::STATUS_PENDING );
-	}
-
-	/**
-	 * Every valid status.
-	 *
-	 * @since 26.0
-	 *
-	 * @return string[]
-	 */
-	public static function statuses() {
-		return array(
-			self::STATUS_CONFIRMED,
-			self::STATUS_PENDING,
-			self::STATUS_WAITLISTED,
-			self::STATUS_CANCELLED,
-		);
-	}
-
-	/**
-	 * Human-readable label for a status.
-	 *
-	 * @since 26.0
-	 *
-	 * @param string $status Status key.
-	 * @return string
-	 */
-	public static function status_label( $status ) {
-		$labels = array(
-			self::STATUS_CONFIRMED  => __( 'Confirmed', 'quick-events-manager' ),
-			self::STATUS_PENDING    => __( 'Pending', 'quick-events-manager' ),
-			self::STATUS_WAITLISTED => __( 'Waitlisted', 'quick-events-manager' ),
-			self::STATUS_CANCELLED  => __( 'Cancelled', 'quick-events-manager' ),
-		);
-
-		return isset( $labels[ $status ] ) ? $labels[ $status ] : $status;
 	}
 
 	/**
@@ -147,14 +83,25 @@ final class Registration {
 	}
 
 	/**
-	 * Status key.
+	 * Where this registration stands.
+	 *
+	 * An unrecognised column value falls back to Confirmed rather than
+	 * throwing. The row exists and somebody is expecting a place; refusing to
+	 * render the attendee list because one status is corrupt helps nobody.
 	 *
 	 * @since 26.0
-	 *
-	 * @return string
 	 */
-	public function status() {
-		return (string) $this->get( 'status' );
+	public function status(): RegistrationStatus {
+		return RegistrationStatus::coerce( $this->get( 'status' ), RegistrationStatus::Confirmed );
+	}
+
+	/**
+	 * The status as stored, for queries, REST payloads and CSV.
+	 *
+	 * @since 26.0
+	 */
+	public function status_value(): string {
+		return $this->status()->value;
 	}
 
 	/**
@@ -235,11 +182,9 @@ final class Registration {
 	 * Whether this registration occupies a place.
 	 *
 	 * @since 26.0
-	 *
-	 * @return bool
 	 */
-	public function occupies_place() {
-		return in_array( $this->status(), self::occupying_statuses(), true );
+	public function occupies_place(): bool {
+		return $this->status()->occupies_place();
 	}
 
 	/**
@@ -254,7 +199,7 @@ final class Registration {
 			'id'         => $this->id(),
 			'event_id'   => $this->event_id(),
 			'code'       => $this->code(),
-			'status'     => $this->status(),
+			'status'     => $this->status_value(),
 			'name'       => $this->name(),
 			'email'      => $this->email(),
 			'phone'      => $this->phone(),

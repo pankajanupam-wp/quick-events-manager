@@ -9,6 +9,8 @@ namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\Events\Event;
 
+use QuickEventsManager\Domain\RegistrationStatus;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -107,7 +109,7 @@ final class Exporter {
 						self::defuse( $registration->phone() ),
 						$registration->quantity(),
 						$registration->code(),
-						Registration::status_label( $registration->status() ),
+						$registration->status()->label(),
 						$registration->created_at(),
 					)
 				);
