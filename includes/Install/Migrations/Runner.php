@@ -76,17 +76,16 @@ final class Runner {
 	}
 
 	/**
-	 * The highest version this codebase knows how to migrate to.
+	 * The highest migration version this codebase contains.
 	 *
 	 * Derived from the migrations themselves rather than read from a constant,
-	 * so adding a migration cannot be half-done. QEVM_DB_VERSION is asserted
-	 * against this by a test.
+	 * so adding a migration cannot be half-done.
 	 *
 	 * @since 26.0
 	 *
 	 * @return int
 	 */
-	public static function target_version(): int {
+	public static function highest_migration_version(): int {
 		$migrations = self::migrations();
 
 		if ( empty( $migrations ) ) {
@@ -94,6 +93,28 @@ final class Runner {
 		}
 
 		return end( $migrations )->version();
+	}
+
+	/**
+	 * The version a fully upgraded site ends up holding.
+	 *
+	 * The larger of the schema version and the highest migration, because the
+	 * two move for different reasons. A release can change the schema without
+	 * needing any data transformed — C1.2 adds the occurrences table, which
+	 * dbDelta creates and which has no existing data to convert. That still has
+	 * to advance the stored version, or the upgrade path never runs and the
+	 * table is never created on an existing install.
+	 *
+	 * Taking the maximum rather than trusting either one alone means neither
+	 * can be forgotten: a migration above the constant still runs, and a
+	 * constant above the migrations still triggers the schema pass.
+	 *
+	 * @since 26.0
+	 *
+	 * @return int
+	 */
+	public static function target_version(): int {
+		return max( (int) QEVM_DB_VERSION, self::highest_migration_version() );
 	}
 
 	/**
@@ -157,12 +178,14 @@ final class Runner {
 		}
 
 		$completed = 0;
+		$finished  = true;
 		$deadline  = microtime( true ) + self::TIME_BUDGET;
 
 		try {
 			foreach ( self::pending() as $migration ) {
 				if ( ! self::apply( $migration, $deadline ) ) {
 					// Out of time. The rest waits for the next request.
+					$finished = false;
 					break;
 				}
 
@@ -178,6 +201,20 @@ final class Runner {
 				 * @param string $description What the migration did.
 				 */
 				do_action( 'qevm_migration_completed', $migration->version(), $migration->description() );
+			}
+
+			/*
+			 * Advance to the schema version once every migration is through.
+			 *
+			 * Without this a release that changed the schema but needed no data
+			 * migration would leave the stored version at the highest migration
+			 * — below the target — so needs_upgrade() would stay true and the
+			 * schema pass would run again on every single admin request,
+			 * forever. The tables would be correct and the site would be slow
+			 * for the rest of its life.
+			 */
+			if ( $finished ) {
+				update_option( QEVM_OPTION_DB_VERSION, self::target_version(), false );
 			}
 		} finally {
 			self::unlock();

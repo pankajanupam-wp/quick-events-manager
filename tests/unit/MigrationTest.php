@@ -33,20 +33,52 @@ final class MigrationTest extends TestCase {
 	}
 
 	/**
-	 * The constant and the migrations must agree.
+	 * The constant must never be behind the migrations.
 	 *
 	 * A migration added without bumping QEVM_DB_VERSION never runs, because the
 	 * runner would already consider the site up to date. This is the check that
 	 * makes step 4 of the checklist in docs/migrations.md enforceable.
 	 *
+	 * The relationship is "at least", not "equal": a release can change the
+	 * schema without needing a data migration behind it. C1.2 is exactly that —
+	 * it adds the occurrences table, which dbDelta creates, and there is no
+	 * existing data to transform because nothing has been published yet. The
+	 * version still has to move, or `needs_upgrade()` stays false and the table
+	 * is never created on an existing install.
+	 *
 	 * @return void
 	 */
-	public function test_db_version_constant_matches_the_highest_migration() {
-		$this->assertSame(
-			Runner::target_version(),
+	public function test_db_version_constant_is_never_behind_the_migrations() {
+		$this->assertGreaterThanOrEqual(
+			Runner::highest_migration_version(),
 			QEVM_DB_VERSION,
-			'QEVM_DB_VERSION must equal the highest migration version.'
+			'QEVM_DB_VERSION is behind a registered migration, so that migration would never run.'
 		);
+	}
+
+	/**
+	 * A schema bump with no migration behind it still triggers an upgrade.
+	 *
+	 * This is the case that broke in C1.2 and was caught only against a real
+	 * database. The occurrences table needs no data migration, so the highest
+	 * migration stayed at 1 while QEVM_DB_VERSION moved to 2 — and
+	 * needs_upgrade() was comparing against the migrations, so it answered
+	 * false and the table was never created on an existing install.
+	 *
+	 * @return void
+	 */
+	public function test_a_schema_bump_without_a_migration_still_needs_an_upgrade() {
+		$this->assertGreaterThanOrEqual(
+			QEVM_DB_VERSION,
+			Runner::target_version(),
+			'target_version() must never be below the schema version.'
+		);
+
+		update_option( QEVM_OPTION_DB_VERSION, QEVM_DB_VERSION - 1 );
+		$this->assertTrue( Runner::needs_upgrade() );
+
+		update_option( QEVM_OPTION_DB_VERSION, QEVM_DB_VERSION );
+		$this->assertFalse( Runner::needs_upgrade() );
 	}
 
 	/**

@@ -116,7 +116,7 @@ Removal is always a deliberate, named operation.
 
 Stage numbers refer to [development-plan.md](development-plan.md).
 
-### `qevm_occurrences` — stage 1
+### `qevm_occurrences` — stage 1 *(built in C1.2)*
 
 Every date the plugin knows about. A one-off event has exactly one row.
 

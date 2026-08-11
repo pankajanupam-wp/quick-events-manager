@@ -62,13 +62,15 @@ function qevm_uninstall_site() {
 		}
 	}
 
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Dropping our own table on uninstall; no caching applies.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Dropping our own tables on uninstall; no caching applies.
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_registrations" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_occurrences" );
 }
 
 /*
  * On a network install every site has its own options table, its own roles and
- * its own registrations table, so each one has to be cleaned in turn.
+ * its own plugin tables, so each one has to be cleaned in turn.
  */
 if ( is_multisite() ) {
 	$qevm_sites = get_sites( array( 'fields' => 'ids' ) );

@@ -14,6 +14,29 @@ what each existing migration does.
 `QEVM_DB_VERSION` is an integer. A site stores the version it has completed in the
 `qevm_db_version` option. Everything follows from comparing the two.
 
+### Two reasons the version moves
+
+`QEVM_DB_VERSION` is the **schema** version. Migration numbers are a separate sequence
+that happens to share it, and the two do not always move together:
+
+| Change | Migration? | Bump? |
+| --- | --- | --- |
+| A new table, created by `dbDelta`, with no existing data to convert | No | **Yes** |
+| Existing rows have to be transformed | Yes | Yes |
+| A column added that nothing has to backfill | No | **Yes** |
+
+So `Runner::target_version()` is `max( QEVM_DB_VERSION, highest migration )`. Taking
+the larger of the two means neither can be forgotten: a migration above the constant
+still runs, and a constant above the migrations still triggers the schema pass.
+
+Once every pending migration is through, the runner writes `target_version()` rather
+than the last migration's number. Without that step a release which changed the schema
+but needed no migration would leave the stored version permanently below the target —
+`needs_upgrade()` would stay true and the schema pass would re-run on every admin
+request for the life of the site. That was a real bug in C1.2, caught against a
+database and not by the unit suite, which had been asserting the two numbers were
+equal.
+
 ```
 admin_init
    └─ Runner::needs_upgrade()        one option read; returns immediately if equal
@@ -86,8 +109,8 @@ the site forever.
    field are already holding those values.
 3. Register it in `Runner::migrations()`. The list is explicit rather than a directory
    scan, so a migration cannot silently stop running because a file was renamed.
-4. Bump `QEVM_DB_VERSION` to match. A test asserts the two agree, because a migration
-   added without the bump would never run.
+4. Bump `QEVM_DB_VERSION` to at least that number. A test asserts it is never behind,
+   because a migration added without the bump would never run.
 5. Write it up in the table below.
 6. Add an integration test that runs it against populated data **twice**, asserting the
    second run changes nothing.
@@ -113,6 +136,12 @@ expand-never-replace sequence in [database.md](database.md#expand-never-replace)
 | # | What it does | Notes |
 | --: | --- | --- |
 | 1 | Moves version 1.0's `events` posts onto the `qevm_event` post type | `LegacyPostType`. Batched by id. URLs are unaffected — the post type sets its rewrite slug and archive back to `events` |
+
+Schema versions with no migration behind them:
+
+| Version | What changed |
+| --: | --- |
+| 2 | Adds the `qevm_occurrences` table (C1.2). Created by `dbDelta`; there is no data to convert, because occurrences are derived from post meta and get populated by the sync in C1.3 |
 
 ### 1 — Legacy post type
 
