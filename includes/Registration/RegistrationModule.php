@@ -114,6 +114,7 @@ final class RegistrationModule implements Module {
 	 */
 	public function activate() {
 		Installer::run_schema( self::schema() );
+		Installer::run_schema( self::attendees_schema() );
 	}
 
 	/**
@@ -168,6 +169,54 @@ final class RegistrationModule implements Module {
 			KEY event_status (event_id, status),
 			KEY event_email (event_id, email),
 			KEY user_id (user_id)
+		) {$collate};";
+	}
+
+	/**
+	 * The attendees table definition.
+	 *
+	 * One row per place, always, including when only one place was booked. A
+	 * registration is the booking; an attendee is a person. Storing a quantity
+	 * and one name breaks on the first person who books for someone else, which
+	 * in practice is the first week of real use — and check-in, QR codes,
+	 * per-person ticket types and per-person custom fields all need a person
+	 * rather than a booking. See
+	 * docs/adr/0004-registration-attendee-split.md.
+	 *
+	 * `ticket_code` is unique because it is what a QR code resolves to, and one
+	 * code admits one person. `occurrence_id` and `ticket_type_id` are reserved
+	 * now and used in stages 6 and 7; adding them later would mean altering a
+	 * table that by then holds a row for every place ever booked.
+	 *
+	 * `name` may be empty. Somebody booking three places for their team may not
+	 * know who is coming yet, and that is a known state rather than an error.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string CREATE TABLE statement for dbDelta().
+	 */
+	public static function attendees_schema() {
+		$table   = Installer::table( 'attendees' );
+		$collate = Installer::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			registration_id bigint(20) unsigned NOT NULL,
+			occurrence_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			ticket_type_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			ticket_code varchar(32) NOT NULL,
+			position smallint(5) unsigned NOT NULL DEFAULT 1,
+			name varchar(190) NOT NULL DEFAULT '',
+			email varchar(190) NOT NULL DEFAULT '',
+			status varchar(20) NOT NULL DEFAULT 'active',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY ticket_code (ticket_code),
+			KEY registration (registration_id),
+			KEY occ_status (occurrence_id, status),
+			KEY ticket_type (ticket_type_id),
+			KEY email (email)
 		) {$collate};";
 	}
 }

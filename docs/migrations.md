@@ -142,6 +142,7 @@ Schema versions with no migration behind them:
 | Version | What changed |
 | --: | --- |
 | 2 | Adds the `qevm_occurrences` table (C1.2). Created by `dbDelta`; there is no data to convert, because occurrences are derived from post meta and get populated by the sync in C1.3 |
+| 3 | Adds the `qevm_attendees` table (C1.5). Created by `dbDelta` when the registration module is on. Nothing to convert: no site has taken a booking yet, and rows for existing registrations are created by C1.7 |
 
 ### 1 — Legacy post type
 

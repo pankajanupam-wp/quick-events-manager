@@ -695,7 +695,7 @@ function is_wp_error( $thing ) {
  * the whole plugin, which a unit test of a date helper has no business doing.
  */
 define( 'QEVM_VERSION', '26.0' );
-define( 'QEVM_DB_VERSION', 2 );
+define( 'QEVM_DB_VERSION', 3 );
 define( 'QEVM_FILE', ABSPATH . 'quick-events-manager.php' );
 define( 'QEVM_PATH', ABSPATH );
 define( 'QEVM_URL', 'https://example.test/wp-content/plugins/quick-events-manager/' );

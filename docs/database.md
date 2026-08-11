@@ -205,7 +205,7 @@ transient. It keeps the privacy disclosure short and honest.
 
 `order_id` is reserved in stage 1, used in stage 9.
 
-### `qevm_attendees` — stage 1
+### `qevm_attendees` — stage 1 *(built in C1.5)*
 
 One person. What a QR code resolves to and what check-in marks.
 
