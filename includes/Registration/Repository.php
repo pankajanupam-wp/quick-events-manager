@@ -125,24 +125,31 @@ final class Repository {
 		$now = gmdate( 'Y-m-d H:i:s' );
 
 		$row = array(
-			'event_id'   => (int) $data['event_id'],
-			'user_id'    => isset( $data['user_id'] ) ? (int) $data['user_id'] : 0,
-			'code'       => self::generate_code(),
-			'status'     => RegistrationStatus::Pending->value,
-			'name'       => (string) $data['name'],
-			'email'      => (string) $data['email'],
-			'phone'      => isset( $data['phone'] ) ? (string) $data['phone'] : '',
-			'quantity'   => isset( $data['quantity'] ) ? max( 1, (int) $data['quantity'] ) : 1,
-			'fields'     => isset( $data['fields'] ) && ! empty( $data['fields'] ) ? wp_json_encode( $data['fields'] ) : null,
-			'created_at' => $now,
-			'updated_at' => $now,
+			'event_id'      => (int) $data['event_id'],
+			'occurrence_id' => isset( $data['occurrence_id'] ) ? (int) $data['occurrence_id'] : 0,
+			'user_id'       => isset( $data['user_id'] ) ? (int) $data['user_id'] : 0,
+			'code'          => self::generate_code(),
+			'status'        => RegistrationStatus::Pending->value,
+			'booker_name'   => (string) $data['name'],
+			'booker_email'  => (string) $data['email'],
+			'booker_phone'  => isset( $data['phone'] ) ? (string) $data['phone'] : '',
+			'quantity'      => isset( $data['quantity'] ) ? max( 1, (int) $data['quantity'] ) : 1,
+			'fields'        => isset( $data['fields'] ) && ! empty( $data['fields'] ) ? wp_json_encode( $data['fields'] ) : null,
+			'created_at'    => $now,
+			'updated_at'    => $now,
 		);
 
-		$inserted = $wpdb->insert(
-			self::table(),
-			$row,
-			array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
-		);
+		/*
+		 * Consent is written only when it was actually given. An empty version
+		 * with a timestamp beside it would read as "consented to nothing at a
+		 * specific moment", which is worse than no record at all.
+		 */
+		if ( isset( $data['consent_version'] ) && '' !== (string) $data['consent_version'] ) {
+			$row['consent_version'] = (string) $data['consent_version'];
+			$row['consent_at']      = $now;
+		}
+
+		$inserted = $wpdb->insert( self::table(), $row, self::formats( $row ) );
 
 		if ( ! $inserted ) {
 			return new \WP_Error(
@@ -255,7 +262,7 @@ final class Repository {
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i
-				 WHERE event_id = %d AND email = %s AND status != %s',
+				 WHERE event_id = %d AND booker_email = %s AND status != %s',
 				self::table(),
 				$event_id,
 				$email,
@@ -450,7 +457,7 @@ final class Repository {
 
 		if ( '' !== $search ) {
 			$like     = '%' . $wpdb->esc_like( $search ) . '%';
-			$where[]  = '( name LIKE %s OR email LIKE %s OR code LIKE %s )';
+			$where[]  = '( booker_name LIKE %s OR booker_email LIKE %s OR code LIKE %s )';
 			$params[] = $like;
 			$params[] = $like;
 			$params[] = $like;
@@ -539,7 +546,7 @@ final class Repository {
 		}
 
 		$rows = $wpdb->get_results(
-			$wpdb->prepare( 'SELECT * FROM %i WHERE email = %s ORDER BY id ASC', self::table(), (string) $email ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE booker_email = %s ORDER BY id ASC', self::table(), (string) $email ),
 			ARRAY_A
 		);
 
@@ -552,6 +559,27 @@ final class Repository {
 	}
 
 	/**
+	 * $wpdb format specifiers matching a row's columns, in order.
+	 *
+	 * Derived rather than written out, because the previous positional list had
+	 * to be counted by hand against the row above it and would have been wrong
+	 * the moment a column was inserted anywhere but the end.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $row Row about to be written.
+	 * @return string[]
+	 */
+	private static function formats( array $row ) {
+		$integers = array( 'event_id', 'occurrence_id', 'order_id', 'user_id', 'quantity' );
+
+		return array_map(
+			static fn( string $column ): string => in_array( $column, $integers, true ) ? '%d' : '%s',
+			array_keys( $row )
+		);
+	}
+
+	/**
 	 * Restrict ordering to real columns.
 	 *
 	 * @since 26.0
@@ -560,7 +588,7 @@ final class Repository {
 	 * @return string A column name that is safe to interpolate.
 	 */
 	private static function safe_orderby( $orderby ) {
-		$allowed = array( 'id', 'name', 'email', 'status', 'created_at', 'quantity' );
+		$allowed = array( 'id', 'booker_name', 'booker_email', 'status', 'created_at', 'quantity' );
 
 		return in_array( $orderby, $allowed, true ) ? $orderby : 'created_at';
 	}

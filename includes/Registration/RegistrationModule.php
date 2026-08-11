@@ -154,21 +154,28 @@ final class RegistrationModule implements Module {
 		return "CREATE TABLE {$table} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			event_id bigint(20) unsigned NOT NULL,
+			occurrence_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			order_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			code varchar(32) NOT NULL,
 			status varchar(20) NOT NULL DEFAULT 'confirmed',
-			name varchar(190) NOT NULL,
-			email varchar(190) NOT NULL,
-			phone varchar(50) DEFAULT NULL,
 			quantity smallint(5) unsigned NOT NULL DEFAULT 1,
+			booker_name varchar(190) NOT NULL,
+			booker_email varchar(190) NOT NULL,
+			booker_phone varchar(50) DEFAULT NULL,
+			consent_version varchar(64) NOT NULL DEFAULT '',
+			consent_at datetime DEFAULT NULL,
 			fields longtext DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
+			cancelled_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY code (code),
+			KEY occ_status (occurrence_id, status),
 			KEY event_status (event_id, status),
-			KEY event_email (event_id, email),
-			KEY user_id (user_id)
+			KEY event_email (event_id, booker_email),
+			KEY user_id (user_id),
+			KEY order_id (order_id)
 		) {$collate};";
 	}
 

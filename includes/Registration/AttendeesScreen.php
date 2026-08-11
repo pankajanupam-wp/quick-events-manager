@@ -272,9 +272,9 @@ final class AttendeesScreen {
 			<?php else : ?>
 				<?php foreach ( $registrations as $registration ) : ?>
 					<tr>
-						<td><strong><?php echo esc_html( $registration->name() ); ?></strong></td>
-						<td><a href="mailto:<?php echo esc_attr( $registration->email() ); ?>"><?php echo esc_html( $registration->email() ); ?></a></td>
-						<td><?php echo esc_html( $registration->phone() ); ?></td>
+						<td><strong><?php echo esc_html( $registration->booker_name() ); ?></strong></td>
+						<td><a href="mailto:<?php echo esc_attr( $registration->booker_email() ); ?>"><?php echo esc_html( $registration->booker_email() ); ?></a></td>
+						<td><?php echo esc_html( $registration->booker_phone() ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( $registration->quantity() ) ); ?></td>
 						<td><code><?php echo esc_html( $registration->code() ); ?></code></td>
 						<td>

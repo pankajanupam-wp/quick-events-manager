@@ -158,7 +158,7 @@ without a rebuild path is a table that eventually drifts with no way back.
 `series_uuid` and `is_exception` are created empty in stage 1 and used in stage 6.
 They cost nothing now and avoid altering a large table later.
 
-### `qevm_registrations` — stage 1 *(alters the existing table)*
+### `qevm_registrations` — stage 1 *(altered in C1.6)*
 
 One booking. May cover several people.
 

@@ -117,9 +117,9 @@ final class Exporter {
 				fputcsv(
 					$out,
 					array(
-						self::defuse( $registration->name() ),
-						self::defuse( $registration->email() ),
-						self::defuse( $registration->phone() ),
+						self::defuse( $registration->booker_name() ),
+						self::defuse( $registration->booker_email() ),
+						self::defuse( $registration->booker_phone() ),
 						$registration->quantity(),
 						$registration->code(),
 						$registration->status()->label(),

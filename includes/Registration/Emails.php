@@ -58,7 +58,7 @@ final class Emails {
 		$lines = array();
 
 		/* translators: %s: Attendee name. */
-		$lines[] = sprintf( __( 'Hi %s,', 'quick-events-manager' ), $registration->name() );
+		$lines[] = sprintf( __( 'Hi %s,', 'quick-events-manager' ), $registration->booker_name() );
 		$lines[] = '';
 
 		if ( $waitlisted ) {
@@ -91,7 +91,7 @@ final class Emails {
 		$email = apply_filters(
 			'qevm_attendee_email',
 			array(
-				'to'      => $registration->email(),
+				'to'      => $registration->booker_email(),
 				'subject' => $subject,
 				'body'    => $body,
 				'headers' => array(),
@@ -120,14 +120,14 @@ final class Emails {
 		$lines = array();
 
 		/* translators: 1: Attendee name, 2: Event title. */
-		$lines[] = sprintf( __( '%1$s has registered for %2$s.', 'quick-events-manager' ), $registration->name(), get_the_title( $event->id() ) );
+		$lines[] = sprintf( __( '%1$s has registered for %2$s.', 'quick-events-manager' ), $registration->booker_name(), get_the_title( $event->id() ) );
 		$lines[] = '';
 		/* translators: %s: Attendee email address. */
-		$lines[] = sprintf( __( 'Email: %s', 'quick-events-manager' ), $registration->email() );
+		$lines[] = sprintf( __( 'Email: %s', 'quick-events-manager' ), $registration->booker_email() );
 
-		if ( '' !== $registration->phone() ) {
+		if ( '' !== $registration->booker_phone() ) {
 			/* translators: %s: Attendee phone number. */
-			$lines[] = sprintf( __( 'Phone: %s', 'quick-events-manager' ), $registration->phone() );
+			$lines[] = sprintf( __( 'Phone: %s', 'quick-events-manager' ), $registration->booker_phone() );
 		}
 
 		/* translators: %s: Registration status. */

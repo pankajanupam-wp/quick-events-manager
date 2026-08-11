@@ -65,6 +65,7 @@ final class Runner {
 	public static function migrations(): array {
 		$migrations = array(
 			new LegacyPostType(),
+			new BookerColumns(),
 		);
 
 		usort(

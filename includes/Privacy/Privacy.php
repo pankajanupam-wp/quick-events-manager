@@ -105,15 +105,15 @@ final class Privacy {
 					),
 					array(
 						'name'  => __( 'Name', 'quick-events-manager' ),
-						'value' => $registration->name(),
+						'value' => $registration->booker_name(),
 					),
 					array(
 						'name'  => __( 'Email', 'quick-events-manager' ),
-						'value' => $registration->email(),
+						'value' => $registration->booker_email(),
 					),
 					array(
 						'name'  => __( 'Phone', 'quick-events-manager' ),
-						'value' => $registration->phone(),
+						'value' => $registration->booker_phone(),
 					),
 					array(
 						// Cast, because every other value in this report is a

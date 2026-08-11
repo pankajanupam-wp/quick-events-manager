@@ -105,36 +105,40 @@ final class Registration {
 	}
 
 	/**
-	 * Attendee name.
+	 * The name of the person who made the booking.
+	 *
+	 * Not "the attendee": a booking may cover several people, and each of them
+	 * has a name of their own on the attendees table. See
+	 * docs/adr/0004-registration-attendee-split.md.
 	 *
 	 * @since 26.0
 	 *
 	 * @return string
 	 */
-	public function name() {
-		return (string) $this->get( 'name' );
+	public function booker_name() {
+		return (string) $this->get( 'booker_name' );
 	}
 
 	/**
-	 * Attendee email.
+	 * The booker's email address, where the confirmation goes.
 	 *
 	 * @since 26.0
 	 *
 	 * @return string
 	 */
-	public function email() {
-		return (string) $this->get( 'email' );
+	public function booker_email() {
+		return (string) $this->get( 'booker_email' );
 	}
 
 	/**
-	 * Attendee phone.
+	 * The booker's phone number, if they gave one.
 	 *
 	 * @since 26.0
 	 *
 	 * @return string
 	 */
-	public function phone() {
-		return (string) $this->get( 'phone' );
+	public function booker_phone() {
+		return (string) $this->get( 'booker_phone' );
 	}
 
 	/**
@@ -196,16 +200,16 @@ final class Registration {
 	 */
 	public function to_array() {
 		return array(
-			'id'         => $this->id(),
-			'event_id'   => $this->event_id(),
-			'code'       => $this->code(),
-			'status'     => $this->status_value(),
-			'name'       => $this->name(),
-			'email'      => $this->email(),
-			'phone'      => $this->phone(),
-			'quantity'   => $this->quantity(),
-			'fields'     => $this->fields(),
-			'created_at' => $this->created_at(),
+			'id'           => $this->id(),
+			'event_id'     => $this->event_id(),
+			'code'         => $this->code(),
+			'status'       => $this->status_value(),
+			'booker_name'  => $this->booker_name(),
+			'booker_email' => $this->booker_email(),
+			'booker_phone' => $this->booker_phone(),
+			'quantity'     => $this->quantity(),
+			'fields'       => $this->fields(),
+			'created_at'   => $this->created_at(),
 		);
 	}
 }

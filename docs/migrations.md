@@ -136,6 +136,7 @@ expand-never-replace sequence in [database.md](database.md#expand-never-replace)
 | # | What it does | Notes |
 | --: | --- | --- |
 | 1 | Moves version 1.0's `events` posts onto the `qevm_event` post type | `LegacyPostType`. Batched by id. URLs are unaffected — the post type sets its rewrite slug and archive back to `events` |
+| 4 | Renames registration `name`/`email`/`phone` to `booker_*` | `BookerColumns`. Copies in batches, then drops the old columns and rebuilds the `event_email` index. See below |
 
 Schema versions with no migration behind them:
 
@@ -171,6 +172,33 @@ Running exactly once matters here beyond the usual reasons. A site could legitim
 create a post of type `events` with some other plugin years from now, and it must not
 be absorbed. The stored version is the guarantee: once migration 1 has completed,
 nothing re-enters it.
+
+### 4 — Booker columns
+
+`name`, `email` and `phone` become `booker_name`, `booker_email`, `booker_phone`.
+
+Once attendees exist, an unqualified `name` on a registration is ambiguous: the
+booking has a name and so does every person on it, and a reader has no way to tell
+which one a column means.
+
+**This is the migration that shows why `dbDelta` is not enough.** Given the new schema
+it adds `booker_name` and leaves `name` sitting beside it — the old one full, the new
+one empty. It cannot rename, and it will not drop. The copy and the drop are done
+here, after `dbDelta` has created the destination.
+
+It is also the only migration so far that drops anything, so it is worth being precise
+about why that is safe: nothing is dropped until it exists twice. The copy runs in
+batches until no row has anything left to move, and only then are the old columns
+removed.
+
+One trap worth recording. `dbDelta` compares indexes **by name** and leaves an
+existing one alone, so `event_email` would have gone on claiming to cover `email`
+after that column was dropped — MySQL resolves that by dropping the index silently.
+Duplicate-email detection would have become a table scan and nothing would have said
+so. The migration rebuilds the index explicitly.
+
+Verified against a real pre-C1.6 table with rows in it, including a booking with no
+phone number and a booking that was entirely blank.
 
 ---
 
