@@ -179,8 +179,10 @@ The plugin owns its schema, including repair. Derived data can be rebuilt from i
 source rather than restored from a backup:
 
 ```sh
-wp qevm occurrence rebuild
+wp qevm occurrence status    # has it drifted?
+wp qevm occurrence rebuild   # put it back
 ```
 
-That command ships alongside the occurrence table rather than after it, precisely so
-that a site whose derived table has drifted has a documented way back.
+Those ship alongside the occurrence table rather than after it, precisely so that a
+site whose derived table has drifted has a documented way back. See
+[cli.md](cli.md).

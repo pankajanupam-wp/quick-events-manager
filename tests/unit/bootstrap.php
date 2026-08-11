@@ -576,14 +576,35 @@ class WP_Post {
 	public $post_title = '';
 
 	/**
+	 * Post status.
+	 *
+	 * A real WP_Post property, and its absence here was a stub narrower than
+	 * the class it stands in for — the same gap that made do_action() look
+	 * fixed-arity. Code branching on a draft or an auto-draft could not be
+	 * analysed, or tested, without it.
+	 *
+	 * @var string
+	 */
+	public $post_status = 'publish';
+
+	/**
+	 * Post slug.
+	 *
+	 * @var string
+	 */
+	public $post_name = '';
+
+	/**
 	 * Constructor.
 	 *
-	 * @param int    $id        Post id.
-	 * @param string $post_type Post type.
+	 * @param int    $id          Post id.
+	 * @param string $post_type   Post type.
+	 * @param string $post_status Post status.
 	 */
-	public function __construct( $id = 0, $post_type = '' ) {
-		$this->ID        = $id;
-		$this->post_type = $post_type;
+	public function __construct( $id = 0, $post_type = '', $post_status = 'publish' ) {
+		$this->ID          = $id;
+		$this->post_type   = $post_type;
+		$this->post_status = $post_status;
 	}
 }
 

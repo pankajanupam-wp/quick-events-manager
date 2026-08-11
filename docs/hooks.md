@@ -163,3 +163,28 @@ Be careful what you add. The response is public, so anything included here is re
 | --- | --- | --- |
 | `$data` | `array` | Prepared data |
 | `$event` | `QuickEventsManager\Events\Event` | The event |
+
+## `qevm_occurrences_synced`
+
+Fires after an event's occurrence rows have been regenerated from its post meta.
+
+```php
+add_action(
+	'qevm_occurrences_synced',
+	function ( $event_id, $result ) {
+		// $result: array{inserted: int, updated: int, deleted: int, unchanged: int}
+		error_log( sprintf( 'Event %d: %d occurrence(s) inserted.', $event_id, $result['inserted'] ) );
+	},
+	10,
+	2
+);
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$event_id` | `int` | The event whose dates were rebuilt |
+| `$result` | `array` | What changed: `inserted`, `updated`, `deleted`, `unchanged` |
+
+Fires on every save of an event, including saves that changed nothing — in which case
+every count is zero except `unchanged`. It also fires during
+`wp qevm occurrence rebuild`.

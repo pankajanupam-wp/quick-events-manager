@@ -423,7 +423,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | Stage | Chunks | Status |
 | --- | :-: | --- |
 | 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓ · C0.7 ✓** — stage complete |
-| 1 · Schema foundation | 11 | not started |
+| 1 · Schema foundation | 11 | **C1.1 ✓ · C1.2 ✓ · C1.3 ✓** · C1.4–C1.11 pending |
 | 2 · Correctness gaps | 7 | not started |
 | 3 · Records and fields | 6 | not started |
 | 4 · Calendar | 4 | not started |

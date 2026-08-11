@@ -30,6 +30,14 @@ parameters:
 	bootstrapFiles:
 		- tests/phpstan/constants.php
 
+	# WP-CLI is not a dependency and is absent when PHPStan runs, so the commands
+	# in includes/Cli/ would otherwise reference unresolvable classes. Scanned
+	# rather than bootstrapped: PHPStan only needs the signatures, not the code.
+	scanFiles:
+		- tests/phpstan/wp-cli.php
+		- tests/phpstan/wp-cli-noop.php
+		- tests/phpstan/wp-cli-utils.php
+
 	# No ignoreErrors and no baseline, deliberately. A baseline is a list of
 	# problems nobody intends to fix, and it hides the next one behind them.
 	# Anything genuinely unfixable gets an inline @phpstan-ignore-line with a

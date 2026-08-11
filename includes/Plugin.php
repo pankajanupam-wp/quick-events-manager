@@ -84,6 +84,14 @@ final class Plugin {
 		add_action( 'plugins_loaded', array( $this, 'load_modules' ) );
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'admin_init', array( $this, 'maybe_upgrade' ) );
+
+		/*
+		 * Registered outside the module system on purpose. A rebuild command is
+		 * a recovery tool, and the moment it is most needed is the moment
+		 * something is wrong — possibly the very module that would have
+		 * registered it. It costs nothing when WP_CLI is undefined.
+		 */
+		Cli\OccurrenceCommand::register();
 	}
 
 	/**
