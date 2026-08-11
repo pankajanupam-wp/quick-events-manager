@@ -8,7 +8,7 @@
 namespace QuickEventsManager;
 
 use QuickEventsManager\Install\Installer;
-use QuickEventsManager\Install\Migrator;
+use QuickEventsManager\Install\Migrations\Runner;
 use QuickEventsManager\Modules\Registry;
 
 defined( 'ABSPATH' ) || exit;
@@ -120,26 +120,38 @@ final class Plugin {
 	/**
 	 * Run pending schema and data upgrades.
 	 *
-	 * On `admin_init` rather than activation, because a plugin updated in
-	 * place through the dashboard or WP-CLI never fires its activation hook.
-	 * Both routines compare a stored version first and cost one option read
-	 * when there is nothing to do.
+	 * On `admin_init` rather than activation, because a plugin updated in place
+	 * through the dashboard or WP-CLI never fires its activation hook. The
+	 * version check costs one option read when there is nothing to do, which is
+	 * every request but a handful in the plugin's lifetime.
+	 *
+	 * Structure before data: a migration may well depend on a column that
+	 * dbDelta has just added, so tables are brought up to date first and the
+	 * numbered migrations run against the shape they expect.
 	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
 	public function maybe_upgrade() {
-		Installer::maybe_upgrade();
-		Migrator::maybe_migrate();
+		if ( ! Runner::needs_upgrade() ) {
+			return;
+		}
+
+		Installer::upgrade_schema();
+		Runner::run();
 	}
 
 	/**
 	 * Plugin activation.
 	 *
-	 * Deliberately minimal: it adds capabilities, records the version, and
-	 * flushes rewrites so `/events/` resolves immediately. Tables belong to
-	 * the modules that need them and are created when those are switched on.
+	 * Deliberately minimal: it adds capabilities and flushes rewrites so
+	 * `/events/` resolves immediately. Tables belong to the modules that need
+	 * them and are created when those are switched on.
+	 *
+	 * Migrations run here too, and the version is recorded by the runner rather
+	 * than by activation. A site still on 1.0 that deactivates it and activates
+	 * 26.0 reaches this path, and it has legacy posts to move.
 	 *
 	 * @since 26.0
 	 *
@@ -147,7 +159,7 @@ final class Plugin {
 	 */
 	public static function activate() {
 		Installer::install();
-		Migrator::maybe_migrate();
+		Runner::run();
 
 		/*
 		 * The post type is registered on `init`, which has already run by the

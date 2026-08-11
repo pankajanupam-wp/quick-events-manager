@@ -70,16 +70,19 @@ quick-events-manager.php
         │                       ├─ reads qevm_enabled_modules
         │                       └─ register() on enabled modules only
         ├─ init            ─► textdomain, post types, taxonomies
-        └─ admin_init      ─► Installer::maybe_upgrade()
-                              Migrator::maybe_migrate()
+        └─ admin_init      ─► Plugin::maybe_upgrade()
+                              ├─ Installer::upgrade_schema()
+                              └─ Migrations\Runner::run()
 ```
 
 Modules boot on `plugins_loaded` rather than immediately, so another plugin can add
 its own through the `qevm_modules` filter before the registry is first built.
 
 Upgrades run on `admin_init`, not activation, because a plugin updated in place
-through the dashboard or WP-CLI never fires its activation hook. Both routines compare
-a stored version first, so the no-op path costs one option read.
+through the dashboard or WP-CLI never fires its activation hook. A single stored
+integer is compared first, so the no-op path costs one option read. Structure is
+brought up to date before data, because a migration may depend on a column dbDelta
+has just added. See [migrations.md](migrations.md).
 
 ## Naming
 

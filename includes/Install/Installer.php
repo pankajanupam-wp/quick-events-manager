@@ -29,31 +29,39 @@ final class Installer {
 	/**
 	 * Run the full install.
 	 *
+	 * Deliberately does not record the schema version. That is the migration
+	 * runner's job, and only once it has actually applied everything.
+	 *
+	 * Stamping here would be wrong in a case that is easy to miss: a site still
+	 * running 1.0 that deactivates it and activates 26.0 fires this hook, and if
+	 * activation declared the schema current, the legacy post-type migration
+	 * would be skipped and those events would stay invisible. On a genuinely
+	 * fresh install nothing is lost by leaving it to the runner — every
+	 * migration finds no work and completes immediately.
+	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
 	public static function install() {
 		self::add_capabilities();
-
-		update_option( QEVM_OPTION_DB_VERSION, QEVM_DB_VERSION );
 	}
 
 	/**
-	 * Create or update the tables if the stored schema version is behind.
+	 * Create or update the tables belonging to enabled modules.
 	 *
 	 * Only tables belonging to modules that are switched on are touched, so a
 	 * site that never enables registration never grows a registrations table.
+	 *
+	 * dbDelta is idempotent, so this is safe to call whenever the stored version
+	 * is behind — including on each request of a migration that is taking more
+	 * than one request to finish.
 	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
-	public static function maybe_upgrade() {
-		if ( (string) get_option( QEVM_OPTION_DB_VERSION ) === (string) QEVM_DB_VERSION ) {
-			return;
-		}
-
+	public static function upgrade_schema() {
 		self::add_capabilities();
 
 		$registry = \QuickEventsManager\Plugin::instance()->registry();
@@ -65,8 +73,6 @@ final class Installer {
 				$module->activate();
 			}
 		}
-
-		update_option( QEVM_OPTION_DB_VERSION, QEVM_DB_VERSION );
 	}
 
 	/**

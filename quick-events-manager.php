@@ -98,12 +98,15 @@ define( 'QEVM_VERSION', '26.0' );
 /**
  * Schema version for the custom tables.
  *
- * Bumped only when a table changes, which is far less often than the plugin
- * version. The installer compares this against the stored qevm_db_version and
- * runs dbDelta() when they differ, so an upgrade that touches no table costs
- * nothing on the front end.
+ * An integer, bumped once per migration, and far less often than the plugin
+ * version. The runner compares it against the stored qevm_db_version to decide
+ * what is outstanding, so an upgrade with no migration behind it costs a single
+ * option read.
+ *
+ * This must equal the highest version in includes/Install/Migrations/. A test
+ * asserts it, because a migration added without bumping this would never run.
  */
-define( 'QEVM_DB_VERSION', '1' );
+define( 'QEVM_DB_VERSION', 1 );
 
 /**
  * Absolute path to this file.
@@ -131,8 +134,8 @@ define( 'QEVM_BASENAME', plugin_basename( __FILE__ ) );
  * Version 1.0 registered the bare key `events`, which is generic enough that
  * any other event plugin or theme registering the same key silently wins.
  * The prefixed key is namespaced to this plugin; the public `/events/` URLs
- * are preserved by the rewrite slug instead, and Migrator moves existing rows
- * across. Never change this value again — it is written into wp_posts.
+ * are preserved by the rewrite slug instead, and migration 1 moves existing
+ * rows across. Never change this value again — it is written into wp_posts.
  */
 define( 'QEVM_POST_TYPE', 'qevm_event' );
 

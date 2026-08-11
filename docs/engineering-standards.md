@@ -37,7 +37,7 @@ it is not here, add a row before you write the code.
 | Namespaced function | `snake_case`, no prefix needed | `QuickEventsManager\format_money()` |
 | Global function | `qevm_` prefix — **avoid; namespace instead** | `qevm_get_event()` |
 | Constant | `QEVM_` | `QEVM_VERSION`, `QEVM_PATH` |
-| Option | `qevm_` | `qevm_settings` |
+| Option | `qevm_` | `qevm_settings`, `qevm_db_version`, `qevm_migration_lock` |
 | Transient | `qevm_` | `qevm_capacity_{event_id}` |
 | Post type | `qevm_` | `qevm_event`, `qevm_venue` |
 | Taxonomy | `qevm_` | `qevm_event_category` |
@@ -138,7 +138,7 @@ quick-events-manager/
 │   ├── Service/                 Use cases that coordinate repositories + domain
 │   │
 │   ├── Modules/                 Module contract and registry
-│   ├── Install/                 Installer, Migrator, schema versions
+│   ├── Install/                 Installer, schema versions, Migrations/ runner
 │   │
 │   ├── Events/                  Post type, meta, occurrence sync, queries
 │   ├── Registration/            Registration + attendee feature

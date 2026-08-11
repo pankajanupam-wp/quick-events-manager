@@ -539,6 +539,9 @@ aggregated by key. It is also the reason we do not add core features that read f
 `QEVM_DB_VERSION` is an integer. Every schema change increments it and adds one
 numbered migration class under `includes/Install/Migrations/`.
 
+The runner, the batching, the lock and the checklist for adding one are in
+[migrations.md](migrations.md). What follows is the policy it implements.
+
 Rules:
 
 1. **Forward-only.** No down migrations. A failed migration is fixed by a new one.
@@ -575,7 +578,7 @@ from post meta if it ever drifts.
 
 | # | From | To | Notes |
 | --- | --- | --- | --- |
-| 1 | `post_type = 'events'` (1.0) | `qevm_event` | Version-gated, idempotent, URLs preserved via `rewrite` slug. Fewer than 10 installs affected |
+| 1 | `post_type = 'events'` (1.0) | `qevm_event` | **Built in C1.1** as `Migrations\LegacyPostType`. Version-gated, idempotent, batched by id, URLs preserved via `rewrite` slug. Fewer than 10 installs affected |
 | 2 | `qem_*` names | `qevm_*` | **Not a migration.** The rewrite was never published, so there is nothing in the field to migrate. This is why the rename is free today and impossible after 26.0 |
 
 ---
