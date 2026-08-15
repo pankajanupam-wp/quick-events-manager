@@ -100,6 +100,7 @@ final class VenuesModule implements Module {
 		if ( is_admin() ) {
 			( new VenueMetaBox() )->register();
 			( new EventVenueBox() )->register();
+			( new Promoter() )->register();
 		}
 	}
 
@@ -146,7 +147,7 @@ final class VenuesModule implements Module {
 	}
 
 	/**
-	 * Switching on needs no setup.
+	 * Queue the promotion sweep, and nothing else.
 	 *
 	 * There is no table, no option to seed and no capability to grant here.
 	 * The venue capabilities are granted by `Installer` on activation rather
@@ -158,11 +159,19 @@ final class VenuesModule implements Module {
 	 * runs from an admin request where `init` has already fired. The post type
 	 * registers none, deliberately; see `PostType::register_post_type()`.
 	 *
+	 * Promotion is queued rather than run. This is called inside the request
+	 * that pressed the button, and a site with ten thousand events would spend
+	 * it timing out. `Promoter::schedule()` is also called far more often than
+	 * promotion should happen — every schema upgrade re-runs `activate()` on
+	 * every enabled module — so it only ever acts once.
+	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
-	public function activate() {}
+	public function activate() {
+		Promoter::schedule();
+	}
 
 	/**
 	 * Switching off leaves every venue in place.

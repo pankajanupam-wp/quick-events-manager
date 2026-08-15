@@ -74,6 +74,10 @@ If you keep typing the same address, turn venues on: **Events → Features → R
 
 You then get **Events → Venues**, where a venue is a name, an address, and optionally a description and a photo. On any event there is a **Venue** box in the sidebar — pick one and its address is used instead of the fields under **Location and organiser**.
 
+Switching it on also tidies up what you already have. The next few admin pages you load will work through your existing events in the background and turn the addresses on them into venues, matching events that share an address so twelve monthly meetups at one hall end up sharing one venue rather than making twelve. You will see a notice when it has finished. Events with no venue *name* are left alone — there is nothing sensible to call a venue made from a street and a postcode — as are online events.
+
+This happens once. Afterwards, whether an event uses a venue record is your choice per event, and nothing goes back and changes it.
+
 Two things worth knowing, because they are the questions people ask:
 
 **You do not have to use it.** Leaving the box on **Address on this event** is a normal, permanent choice, not something half-finished. A church hall booked one afternoon does not need a record; type the address on the event and move on. Venues are for the places you use again.

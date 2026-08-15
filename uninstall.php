@@ -28,6 +28,7 @@ function qevm_uninstall_site() {
 		'qevm_enabled_modules',
 		'qevm_db_version',
 		'qevm_migration_lock',
+		'qevm_venue_promotion',
 	);
 
 	foreach ( $quick_events_manager_options as $quick_events_manager_option ) {

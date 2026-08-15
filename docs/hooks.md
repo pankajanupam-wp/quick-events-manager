@@ -66,6 +66,50 @@ Visit **Settings → Permalinks** once after adding that, or the new URLs return
 | --- | --- | --- |
 | `$args` | `array` | Post type arguments |
 
+### `qevm_promote_event_venue` (filter)
+
+Whether an event's existing address becomes a venue record during the one-off promotion sweep that runs when the venues module is first switched on.
+
+Events are skipped already when they are online, when they already point at a venue, or when the address has no venue *name* — there is nothing to title a record built from a street and a postcode. This filter is for the rest. Returning `false` leaves the address exactly where it is, which costs the event nothing.
+
+```php
+// Do not promote addresses from events that finished years ago.
+add_filter(
+	'qevm_promote_event_venue',
+	function ( $promote, $event_id ) {
+		$end = get_post_meta( $event_id, '_qevm_end_utc', true );
+
+		return $end && $end < gmdate( 'Y-m-d H:i:s', strtotime( '-2 years' ) ) ? false : $promote;
+	},
+	10,
+	2
+);
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$promote` | `bool` | Whether to promote |
+| `$event_id` | `int` | Event being examined |
+| `$parts` | `array` | Address parts, keyed by meta key |
+
+### `qevm_venue_created_from_event` (action)
+
+Fires when the promotion sweep creates a venue record. Once per distinct address, not once per event — twelve events at one address fire this once.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$venue_id` | `int` | The new venue |
+| `$parts` | `array` | Address it was built from |
+
+### `qevm_venue_promotion_finished` (action)
+
+Fires once, when the sweep has been through every event. It does not fire again if the module is switched off and on: promotion is for the backlog that predates the module, and afterwards the choice of whether an event uses a record belongs to the site owner.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$events` | `int` | Events given a venue record |
+| `$venues` | `int` | Venue records created |
+
 ### `qevm_event_duplicated` (action)
 
 Fires after an event has been copied. The copy already has the original's meta, terms and occurrence rows; it does **not** have its registrations or attendees, and it never will — those belong to the original.
