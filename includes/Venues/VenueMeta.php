@@ -66,13 +66,6 @@ final class VenueMeta {
 	 * @return string[]
 	 */
 	public static function keys() {
-		return array_values(
-			array_filter(
-				Venue::address_keys(),
-				static function ( $key ) {
-					return Meta::VENUE_NAME !== $key;
-				}
-			)
-		);
+		return Venue::meta_keys();
 	}
 }

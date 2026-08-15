@@ -333,7 +333,7 @@ final class VenuePromotionTest extends TestCase {
 		$event_id = $this->make_event();
 		$this->set_address( $event_id, self::ADDRESS );
 
-		add_filter( 'qevm_promote_event_venue', '__return_false' );
+		add_filter( 'qevm_promote_event_record', '__return_false' );
 
 		$this->sweep();
 
