@@ -7,6 +7,8 @@
 
 namespace QuickEventsManager\Admin;
 
+use QuickEventsManager\Privacy\Consent;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -120,6 +122,33 @@ final class Settings {
 			self::SLUG,
 			'qevm_notifications'
 		);
+
+		/*
+		 * Consent is only a question if the site takes registrations at all. A
+		 * site publishing a calendar collects nothing from anybody, and a box
+		 * asking it to word its consent notice would be a setting for a thing
+		 * that never happens.
+		 */
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\Registration\RegistrationModule::ID ) ) {
+			return;
+		}
+
+		add_settings_section(
+			'qevm_privacy',
+			__( 'Privacy', 'quick-events-manager' ),
+			static function () {
+				echo '<p>' . esc_html__( 'What people agree to when they register, and what is recorded about it.', 'quick-events-manager' ) . '</p>';
+			},
+			self::SLUG
+		);
+
+		add_settings_field(
+			'consent_text',
+			__( 'Consent wording', 'quick-events-manager' ),
+			array( $this, 'render_consent_text' ),
+			self::SLUG,
+			'qevm_privacy'
+		);
 	}
 
 	/**
@@ -134,6 +163,7 @@ final class Settings {
 			'auto_details'       => true,
 			'archive_per_page'   => 10,
 			'notification_email' => '',
+			'consent_text'       => __( 'I agree to my details being stored so the organiser can contact me about this event.', 'quick-events-manager' ),
 		);
 	}
 
@@ -200,7 +230,31 @@ final class Settings {
 			'auto_details'       => ! empty( $input['auto_details'] ),
 			'archive_per_page'   => $per_page,
 			'notification_email' => is_email( $email ) ? $email : '',
+			'consent_text'       => $this->sanitize_consent_text( $input ),
 		);
+	}
+
+	/**
+	 * Sanitise the consent wording, or keep the one already stored.
+	 *
+	 * The absent case is the one that matters. This screen only renders the
+	 * consent field when the registration module is on, and the settings API
+	 * hands the sanitiser exactly what the form submitted — so treating a
+	 * missing key as an empty string would quietly erase a site's consent
+	 * wording the next time somebody saved the page with registration switched
+	 * off. Absent means "not asked about", not "cleared".
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $input Submitted settings.
+	 * @return string
+	 */
+	private function sanitize_consent_text( array $input ) {
+		if ( ! isset( $input['consent_text'] ) ) {
+			return (string) self::get( 'consent_text', '' );
+		}
+
+		return trim( wp_kses( (string) $input['consent_text'], Consent::allowed_html() ) );
 	}
 
 	/**
@@ -254,6 +308,39 @@ final class Settings {
 		<p class="description">
 			<?php esc_html_e( 'Leave empty to use the site administration email.', 'quick-events-manager' ); ?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Render the consent wording field.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function render_consent_text() {
+		$version = Consent::version();
+		?>
+		<textarea class="large-text" rows="3"
+			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[consent_text]"
+		><?php echo esc_textarea( (string) self::get( 'consent_text', '' ) ); ?></textarea>
+		<p class="description">
+			<?php esc_html_e( 'Shown beside a checkbox people have to tick before they can register. Links and simple emphasis are allowed — link your privacy policy here.', 'quick-events-manager' ); ?>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'Leave this empty to stop asking for consent at all.', 'quick-events-manager' ); ?>
+		</p>
+		<?php if ( '' !== $version ) : ?>
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: Short fingerprint identifying the current consent wording. */
+					esc_html__( 'Current version: %s. Registrations record this alongside the time consent was given, so you can tell which wording somebody agreed to. Editing the wording gives it a new version; earlier wordings are not kept.', 'quick-events-manager' ),
+					esc_html( $version )
+				);
+				?>
+			</p>
+		<?php endif; ?>
 		<?php
 	}
 

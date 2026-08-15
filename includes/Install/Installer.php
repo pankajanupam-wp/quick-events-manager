@@ -171,7 +171,7 @@ final class Installer {
 	}
 
 	/**
-	 * The capability names for the event post type.
+	 * Every capability the plugin grants.
 	 *
 	 * @since 26.0
 	 *
@@ -179,6 +179,21 @@ final class Installer {
 	 * @return string[]
 	 */
 	public static function capabilities( $include_others = true ) {
+		return array_merge(
+			self::post_type_capabilities( $include_others ),
+			self::management_capabilities()
+		);
+	}
+
+	/**
+	 * The capability names WordPress maps onto the event post type.
+	 *
+	 * @since 26.0
+	 *
+	 * @param bool $include_others Whether to include the manage-others caps.
+	 * @return string[]
+	 */
+	public static function post_type_capabilities( $include_others = true ) {
 		$caps = array(
 			'edit_qevm_event',
 			'read_qevm_event',
@@ -188,20 +203,52 @@ final class Installer {
 			'delete_qevm_events',
 		);
 
-		if ( $include_others ) {
-			$caps = array_merge(
-				$caps,
-				array(
-					'edit_others_qevm_events',
-					'delete_others_qevm_events',
-					'read_private_qevm_events',
-					'edit_published_qevm_events',
-					'delete_published_qevm_events',
-					'manage_qevm_registrations',
-				)
-			);
+		if ( ! $include_others ) {
+			return $caps;
 		}
 
-		return $caps;
+		return array_merge(
+			$caps,
+			array(
+				'edit_others_qevm_events',
+				'delete_others_qevm_events',
+				'read_private_qevm_events',
+				'edit_published_qevm_events',
+				'delete_published_qevm_events',
+			)
+		);
+	}
+
+	/**
+	 * The capabilities that govern the plugin rather than the posts.
+	 *
+	 * Kept apart from the post type's own set, and not behind the "others"
+	 * flag, because managing a guest list is not a statement about whose posts
+	 * somebody may edit. `manage_qevm_registrations` had been sitting in that
+	 * branch, which worked only because both roles that get capabilities happen
+	 * to get the others set too.
+	 *
+	 * The separation is what stage 8's check-in staff role needs: somebody on a
+	 * door should be able to mark people through it without being handed the
+	 * right to edit other people's events, and that is a different list rather
+	 * than a smaller one.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string[]
+	 */
+	public static function management_capabilities() {
+		return array(
+			'manage_qevm_registrations',
+
+			/*
+			 * Nothing reads this yet — check-in is stage 8. It is granted now
+			 * because a capability that arrives with the feature has to be
+			 * granted by a migration that walks every role on every site, and
+			 * that migration is only avoidable while the plugin is unreleased.
+			 * It costs one row in an option today.
+			 */
+			'manage_qevm_checkins',
+		);
 	}
 }

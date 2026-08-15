@@ -162,7 +162,12 @@ final class Repository {
 
 		$status = self::resolve_status( $id, (int) $data['event_id'], $capacity );
 
-		self::update_status( $id, $status );
+		/*
+		 * set_status(), not update_status(). This is a row learning its initial
+		 * status, not a booking being changed: nothing has happened to it yet,
+		 * it has no attendee rows, and there is nothing to cascade to.
+		 */
+		self::set_status( $id, $status );
 
 		$row['id']     = $id;
 		$row['status'] = $status->value;
@@ -470,7 +475,18 @@ final class Repository {
 	}
 
 	/**
-	 * Change a registration's status.
+	 * Change a registration's status, and carry the change to the people on it.
+	 *
+	 * Cancelling a booking has to reach its attendee rows, or a cancelled
+	 * booking still admits three colleagues at the door — each of them holding
+	 * a ticket code that scans as active. Reinstating one has to put them back,
+	 * or an administrator who cancels by mistake cannot undo it.
+	 *
+	 * The current status is read first so the cascade fires on the transition
+	 * rather than on every save. That costs one SELECT on a path used by an
+	 * administrator changing one row at a time, and it is what stops a later
+	 * per-attendee cancellation from being silently undone by an unrelated edit
+	 * to the booking.
 	 *
 	 * @since 26.0
 	 *
@@ -479,16 +495,94 @@ final class Repository {
 	 * @return bool
 	 */
 	public static function update_status( $id, RegistrationStatus $status ) {
+		$id      = (int) $id;
+		$current = self::find( $id );
+
+		if ( null === $current ) {
+			return false;
+		}
+
+		$previous = $current->status();
+
+		/*
+		 * A status that is already what it is being set to is a success with
+		 * nothing to do, not a failure. $wpdb->update() returns 0 for a row it
+		 * matched but did not change, and returning false on that would make
+		 * "cancel this booking" report an error to anybody who clicked the
+		 * link twice — the one thing a person is most likely to do when they
+		 * are not sure the first click worked.
+		 */
+		if ( $previous === $status ) {
+			return true;
+		}
+
+		if ( ! self::set_status( $id, $status ) ) {
+			return false;
+		}
+
+		$was_cancelled = RegistrationStatus::Cancelled === $previous;
+		$is_cancelled  = RegistrationStatus::Cancelled === $status;
+
+		if ( $is_cancelled && ! $was_cancelled ) {
+			AttendeeRepository::cancel_for_registration( $id );
+		} elseif ( ! $is_cancelled && $was_cancelled ) {
+			AttendeeRepository::reinstate_for_registration( $id );
+		}
+
+		/**
+		 * Fires when a booking's status actually changes.
+		 *
+		 * Fired here rather than at the call site. It used to be fired by the
+		 * attendees screen, which was correct for exactly as long as the admin
+		 * screen was the only way to change a status — the moment a second
+		 * route existed (the cancellation link), a booking could be cancelled
+		 * without anything hearing about it. Waitlist promotion listens to
+		 * this, so a miss is a place that stays empty with people queueing for
+		 * it.
+		 *
+		 * @since 26.0
+		 *
+		 * @param int                $id       Registration id.
+		 * @param RegistrationStatus $status   Status it now has.
+		 * @param RegistrationStatus $previous Status it had before.
+		 */
+		do_action( 'qevm_registration_status_changed', $id, $status, $previous );
+
+		return true;
+	}
+
+	/**
+	 * Write the status column and the timestamps that go with it.
+	 *
+	 * `cancelled_at` is maintained here because it is not free-standing
+	 * information — it is a fact about the status column, and any other writer
+	 * would eventually disagree with it. It is cleared on the way back out so
+	 * that a booking reinstated by mistake does not keep a cancellation date
+	 * it no longer has.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int                $id     Registration id.
+	 * @param RegistrationStatus $status New status.
+	 * @return bool
+	 */
+	private static function set_status( $id, RegistrationStatus $status ) {
 		global $wpdb;
 
-		return (bool) $wpdb->update(
+		$now = gmdate( 'Y-m-d H:i:s' );
+
+		$data    = array(
+			'status'       => $status->value,
+			'updated_at'   => $now,
+			'cancelled_at' => RegistrationStatus::Cancelled === $status ? $now : null,
+		);
+		$formats = array( '%s', '%s', '%s' );
+
+		return false !== $wpdb->update(
 			self::table(),
-			array(
-				'status'     => $status->value,
-				'updated_at' => gmdate( 'Y-m-d H:i:s' ),
-			),
+			$data,
 			array( 'id' => (int) $id ),
-			array( '%s', '%s' ),
+			$formats,
 			array( '%d' )
 		);
 	}
@@ -499,6 +593,17 @@ final class Repository {
 	 * Used by the privacy eraser and by explicit admin deletion, never as part
 	 * of normal cancellation.
 	 *
+	 * The people on the booking go with it. There is no foreign key to do this
+	 * — dbDelta does not create them, and WordPress does not assume InnoDB — so
+	 * the parent owns the cascade, and it owns it here rather than at each call
+	 * site so that no future caller can forget. An erasure that removed the
+	 * booking and left the guests' names behind would be a data protection
+	 * failure reported as a bug about a table nobody was looking at.
+	 *
+	 * The children go first. If the second delete fails the booking survives
+	 * with an incomplete roster, which is repairable; the other order leaves
+	 * rows belonging to nothing, which is not.
+	 *
 	 * @since 26.0
 	 *
 	 * @param int $id Registration id.
@@ -507,11 +612,15 @@ final class Repository {
 	public static function delete( $id ) {
 		global $wpdb;
 
-		return (bool) $wpdb->delete( self::table(), array( 'id' => (int) $id ), array( '%d' ) );
+		$id = (int) $id;
+
+		AttendeeRepository::delete_for_registration( $id );
+
+		return (bool) $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
 	}
 
 	/**
-	 * Delete every registration for an event.
+	 * Delete every registration for an event, and everyone on them.
 	 *
 	 * @since 26.0
 	 *
@@ -525,7 +634,11 @@ final class Repository {
 			return 0;
 		}
 
-		return (int) $wpdb->delete( self::table(), array( 'event_id' => (int) $event_id ), array( '%d' ) );
+		$event_id = (int) $event_id;
+
+		AttendeeRepository::delete_for_event( $event_id );
+
+		return (int) $wpdb->delete( self::table(), array( 'event_id' => $event_id ), array( '%d' ) );
 	}
 
 	/**

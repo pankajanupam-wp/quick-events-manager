@@ -58,10 +58,15 @@ B-tree indexes. Schema in [database.md](../database.md#qevm_occurrences--stage-1
 - Post meta remains the **authoring surface** and the human-readable record.
 - The occurrence row is **derived**, regenerated on `save_post`.
 - `wp qevm occurrence rebuild` regenerates everything from post meta.
-- Every date query in the plugin goes through one `Events\OccurrenceQuery`.
+- Every date query in the plugin goes through one `Events\OccurrenceQuery`, which
+  works by `posts_clauses` — so its argument sets force `suppress_filters => false`.
+  `get_posts()` defaults that to true, and without it the same arguments that filter
+  and sort correctly through `WP_Query` do nothing at all through `get_posts()`: no
+  join, no range, no ordering, and no error.
 - A one-off event has exactly one row — no conceptual overhead for the simple case.
 - `end_utc` is `NOT NULL`; an event with no stated end stores `end_utc = start_utc`,
-  which collapses the three-branch `OR` into one indexed range scan.
+  which collapses the three-branch `OR` into one range condition — and `KEY status_end
+  (status, end_utc)` is what lets MySQL seek it rather than scan.
 - `series_uuid` and `is_exception` are created now and used when recurrence lands.
 
 ## Alternatives considered
@@ -81,7 +86,15 @@ and the migration is free.
 ## Consequences
 
 **Good.** `EXPLAIN` shows an index range scan. Query count stops varying with event
-count. Recurrence becomes an insert loop rather than a schema change. The calendar
+count.
+
+> That first sentence was written before anything was measured, and it was wrong for
+> two chunks. The table shipped with four indexes, every one of them leading with
+> `start_utc`, while the archive filters on `end_utc`. The plan was right about where
+> dates belong and silent about which column answers the question. The Stage 1 gate
+> caught it at 10,000 events — `type: ALL`, whole table, every time — and C1.12 added
+> `KEY status_end (status, end_utc)`. Worth remembering that a correct decision about
+> *storage* does not carry a correct decision about *indexing* with it. Recurrence becomes an insert loop rather than a schema change. The calendar
 can be built once.
 
 **Bad.** A derived table can drift from its source. Mitigated by the rebuild command,

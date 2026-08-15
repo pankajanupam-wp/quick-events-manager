@@ -134,6 +134,33 @@ final class OccurrenceQueryTest extends TestCase {
 	}
 
 	/**
+	 * Filters are never suppressed, and a caller cannot re-enable it.
+	 *
+	 * Everything these arguments ask for is delivered by a `posts_clauses`
+	 * filter, and `get_posts()` defaults `suppress_filters` to true. Without
+	 * this, the identical arguments that work through WP_Query do nothing at
+	 * all through get_posts(): no join, no date range, no ordering, and no
+	 * error — just every event in post order.
+	 *
+	 * @return void
+	 */
+	public function test_filters_are_never_suppressed() {
+		foreach ( array( 'upcoming_args', 'past_args', 'all_args' ) as $helper ) {
+			$args = OccurrenceQuery::$helper();
+
+			$this->assertArrayHasKey( 'suppress_filters', $args, $helper );
+			$this->assertFalse( $args['suppress_filters'], $helper );
+		}
+
+		$forced = OccurrenceQuery::upcoming_args( array( 'suppress_filters' => true ) );
+
+		$this->assertFalse(
+			$forced['suppress_filters'],
+			'a caller must not be able to switch off the filter that makes these arguments mean anything'
+		);
+	}
+
+	/**
 	 * Every key the clause builder reads has a default.
 	 *
 	 * A missing key would be an undefined index at the point the SQL is built,

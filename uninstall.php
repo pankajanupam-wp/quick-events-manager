@@ -34,6 +34,12 @@ function qevm_uninstall_site() {
 		delete_option( $quick_events_manager_option );
 	}
 
+	/*
+	 * Kept in step with Installer::capabilities() by a test, because this file
+	 * cannot call it — uninstall.php runs with the plugin unloaded, so there is
+	 * no autoloader and no class to ask. A capability added there and forgotten
+	 * here would survive deletion and quietly stay on every role.
+	 */
 	$quick_events_manager_roles = array( 'administrator', 'editor' );
 	$quick_events_manager_caps  = array(
 		'edit_qevm_event',
@@ -48,6 +54,7 @@ function qevm_uninstall_site() {
 		'edit_published_qevm_events',
 		'delete_published_qevm_events',
 		'manage_qevm_registrations',
+		'manage_qevm_checkins',
 	);
 
 	foreach ( $quick_events_manager_roles as $quick_events_manager_role_name ) {

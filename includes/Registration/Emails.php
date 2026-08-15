@@ -9,6 +9,7 @@ namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\Admin\Settings;
 use QuickEventsManager\Events\Event;
+use QuickEventsManager\Frontend\Ics;
 
 use QuickEventsManager\Domain\RegistrationStatus;
 
@@ -35,6 +36,70 @@ final class Emails {
 	public function register() {
 		add_action( 'qevm_registration_created', array( $this, 'send_attendee_confirmation' ), 10, 2 );
 		add_action( 'qevm_registration_created', array( $this, 'send_organizer_notification' ), 20, 2 );
+		add_action( 'qevm_registration_promoted', array( $this, 'send_promotion_notice' ), 10, 2 );
+	}
+
+	/**
+	 * Tell somebody they have come off the waiting list.
+	 *
+	 * The whole reason promotion is not silent. Somebody who joined a waiting
+	 * list has almost certainly made other plans by now, and a place they are
+	 * not told about is a seat that stays empty while the organiser counts on
+	 * them being in it. The message therefore leads with what changed, not
+	 * with the event details, and carries the cancellation link so the answer
+	 * "I can't come after all" takes one click.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Registration $registration Booking, now confirmed.
+	 * @param Event        $event        Event.
+	 * @return void
+	 */
+	public function send_promotion_notice( Registration $registration, Event $event ) {
+		$lines = array();
+
+		/* translators: %s: Attendee name. */
+		$lines[] = sprintf( __( 'Hi %s,', 'quick-events-manager' ), $registration->booker_name() );
+		$lines[] = '';
+		/* translators: %s: Event title. */
+		$lines[] = sprintf( __( 'Good news — a place has become available at %s, and yours is now confirmed.', 'quick-events-manager' ), get_the_title( $event->id() ) );
+		$lines[] = '';
+		$lines[] = __( 'You were on the waiting list, so you do not need to book again.', 'quick-events-manager' );
+		$lines[] = '';
+		$lines   = array_merge( $lines, self::event_summary_lines( $event ) );
+		$lines[] = '';
+		/* translators: %s: Registration reference code. */
+		$lines[] = sprintf( __( 'Your reference: %s', 'quick-events-manager' ), $registration->code() );
+		$lines[] = '';
+		$lines[] = get_permalink( $event->id() );
+		$lines[] = '';
+		$lines[] = __( 'If you can no longer come, please cancel so somebody else can take your place:', 'quick-events-manager' );
+		$lines[] = CancellationLink::url( $registration, $event );
+
+		/**
+		 * Filter the email telling somebody they are off the waiting list.
+		 *
+		 * @since 26.0
+		 *
+		 * @param array        $email        Keys: to, subject, body, headers.
+		 * @param Registration $registration The registration.
+		 * @param Event        $event        The event.
+		 */
+		$email = apply_filters(
+			'qevm_promotion_email',
+			array(
+				'to'      => $registration->booker_email(),
+				/* translators: %s: Event title. */
+				'subject' => sprintf( __( 'Your place at %s is confirmed', 'quick-events-manager' ), get_the_title( $event->id() ) ),
+				'body'    => implode( "\n", $lines ),
+				'headers' => array(),
+				'ics'     => self::calendar( $event ),
+			),
+			$registration,
+			$event
+		);
+
+		self::dispatch( $email, $event );
 	}
 
 	/**
@@ -77,6 +142,16 @@ final class Emails {
 		$lines[] = '';
 		$lines[] = get_permalink( $event->id() );
 
+		/*
+		 * The cancellation link goes in every confirmation, including the
+		 * waitlist one. Somebody who has queued for a place and then finds
+		 * they cannot come is the single most valuable person to hear from —
+		 * they are holding a position in front of people who could take it.
+		 */
+		$lines[] = '';
+		$lines[] = __( 'If you can no longer come, please cancel so somebody else can take your place:', 'quick-events-manager' );
+		$lines[] = CancellationLink::url( $registration, $event );
+
 		$body = implode( "\n", $lines );
 
 		/**
@@ -95,16 +170,21 @@ final class Emails {
 				'subject' => $subject,
 				'body'    => $body,
 				'headers' => array(),
+
+				/*
+				 * No calendar file for a waiting list place. An .ics is a
+				 * statement that this is happening and you are going to it;
+				 * putting a provisional place straight into somebody's calendar
+				 * is how a person turns up to an event they were never
+				 * confirmed for. They get one when they are promoted.
+				 */
+				'ics'     => $waitlisted ? '' : self::calendar( $event ),
 			),
 			$registration,
 			$event
 		);
 
-		if ( empty( $email['to'] ) ) {
-			return;
-		}
-
-		wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
+		self::dispatch( $email, $event );
 	}
 
 	/**
@@ -161,11 +241,78 @@ final class Emails {
 			$event
 		);
 
+		self::dispatch( $email );
+	}
+
+	/**
+	 * The event as an iCalendar document, or an empty string if it has no date.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event $event Event.
+	 * @return string
+	 */
+	private static function calendar( Event $event ) {
+		if ( '' === $event->start_utc() ) {
+			return '';
+		}
+
+		return Ics::build( $event );
+	}
+
+	/**
+	 * Send one of these emails, with its calendar file if it has one.
+	 *
+	 * `wp_mail()` takes attachments as **file paths**, and the calendar exists
+	 * only as a string. Writing it to a temporary file to hand back a path
+	 * means finding a writable directory on a host that may not have one,
+	 * guessing at a unique name, and deleting it afterwards on a code path
+	 * that can exit early — three ways to leave rubbish in the uploads folder
+	 * for the sake of a 400-byte text file.
+	 *
+	 * So it goes on through PHPMailer directly. The listener is added
+	 * immediately before the send and removed immediately after, in a finally,
+	 * because `phpmailer_init` fires for **every** email the site sends: left
+	 * attached, it would staple this event's calendar file to password resets,
+	 * comment notifications and every other plugin's mail.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $email Keys: to, subject, body, headers, ics.
+	 * @param Event|null           $event Event the calendar file describes.
+	 * @return void
+	 */
+	private static function dispatch( array $email, ?Event $event = null ) {
 		if ( empty( $email['to'] ) ) {
 			return;
 		}
 
-		wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
+		$ics = isset( $email['ics'] ) ? (string) $email['ics'] : '';
+
+		if ( '' === $ics || null === $event ) {
+			wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
+
+			return;
+		}
+
+		$filename = sanitize_file_name( get_post_field( 'post_name', $event->id() ) . '.ics' );
+
+		$attach = static function ( $phpmailer ) use ( $ics, $filename ) {
+			$phpmailer->addStringAttachment(
+				$ics,
+				$filename,
+				'base64',
+				'text/calendar; charset=utf-8; method=PUBLISH'
+			);
+		};
+
+		add_action( 'phpmailer_init', $attach );
+
+		try {
+			wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
+		} finally {
+			remove_action( 'phpmailer_init', $attach );
+		}
 	}
 
 	/**

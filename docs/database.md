@@ -139,7 +139,8 @@ CREATE TABLE {prefix}qevm_occurrences (
     KEY start_utc     (start_utc),
     KEY event_start   (event_id, start_utc),
     KEY series_start  (series_uuid, start_utc),
-    KEY status_start  (status, start_utc)
+    KEY status_start  (status, start_utc),
+    KEY status_end    (status, end_utc)
 );
 ```
 
@@ -148,7 +149,17 @@ CREATE TABLE {prefix}qevm_occurrences (
 **`end_utc` is `NOT NULL`.** An event with no stated end stores `end_utc = start_utc`.
 This single decision removes the three-branch `OR` meta_query the current code needs
 to answer "is this still upcoming", replacing four `postmeta` joins and a `CAST` with
-one indexed range scan.
+one range condition.
+
+**`status_end` is what makes that range a seek.** Added in C1.12, after the Stage 1
+gate measured the archive at 10,000 events and found `type: ALL`. The four original
+indexes all led with `start_utc`; the archive filters on `end_utc >= now`, so the
+predicate had nothing to seek on and every query read the whole table. With the index,
+a realistic archive — 5% of events still to come — reads 501 rows instead of 10,000.
+
+MySQL still chooses a full scan when more than roughly a third of the table matches,
+and it is right to: reading the table beats 5,000 index lookups. An index is worth
+having for the case that is common, not for the case that is worst.
 
 The row is **derived**, not authored. Post meta remains the human-readable record and
 the thing the editor writes; `save_post` regenerates the occurrence rows from it, and
@@ -203,6 +214,16 @@ become unreadable.
 **No IP address column, ever.** Rate limiting keys on a salted hash held in a
 transient. It keeps the privacy disclosure short and honest.
 
+`consent_version` is a fingerprint of the wording that was agreed to — twelve hex
+characters of SHA-1, derived from the text rather than typed by hand *(C1.8)*. A
+version somebody has to remember to increment is a version that is wrong the first
+time the text is edited in a hurry. The wording itself is not archived, so this
+answers "was this the wording that is on the site now?" and not "what exactly did
+they see". Both columns are written only when consent was actually given: an empty
+version with a timestamp beside it would read as consent to nothing at a specific
+moment. Neither is ever taken from the request — what was agreed to is whatever the
+site was showing.
+
 `order_id` is reserved in stage 1, used in stage 9.
 
 ### `qevm_attendees` — stage 1 *(built in C1.5)*
@@ -238,6 +259,18 @@ booker is position 1. `name` may be empty for guests whose names were not collec
 that is a known and acceptable state, not an error.
 
 `ticket_type_id` is reserved in stage 1, used in stage 7.
+
+**Written by `RegistrationService` after the booking has resolved** *(C1.7)*, never
+during it: capacity is counted in places on the registration, and the insert-then-rank
+routine that makes that safe under concurrency must not have anything added to it.
+Only position 1 carries an `email`, because the form asks for one address and
+inventing a guest's would record something nobody entered.
+
+There is no foreign key — `dbDelta` does not create them and WordPress does not
+assume InnoDB — so the parent owns the cascade. `Repository::delete()` removes a
+booking's rows before removing the booking, `Repository::delete_for_event()` reaches
+them through a join, and `Repository::update_status()` carries a cancellation and a
+reinstatement across on the transition rather than on every save.
 
 ### `qevm_attendee_meta` — stage 3
 

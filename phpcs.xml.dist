@@ -157,6 +157,22 @@
 		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>
 
+	<!--
+		Integration tests read the database on purpose.
+
+		Checking that a booking really landed means asking MySQL, not asking the
+		code that wrote it — a repository that returns what it just cached would
+		pass a test written any other way. Caching is equally beside the point:
+		a cached answer is the thing these tests exist to look past.
+
+		Scoped to tests/integration only. Everywhere else a direct query outside
+		a repository is still a finding, which is what stopped the same class of
+		bug that closed a competitor's listing.
+	-->
+	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude-pattern>/tests/integration/*</exclude-pattern>
+	</rule>
+
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>

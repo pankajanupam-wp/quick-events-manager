@@ -8,3 +8,7 @@ package-lock.json
 .DS_Store
 /.wp-env.json
 /.wp-env.override.json
+
+# Playwright output from the accessibility run.
+/test-results/
+/playwright-report/

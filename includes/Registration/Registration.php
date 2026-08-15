@@ -164,6 +164,40 @@ final class Registration {
 	}
 
 	/**
+	 * Which consent wording was agreed to, if any.
+	 *
+	 * A fingerprint of the text, not the text: see
+	 * QuickEventsManager\Privacy\Consent.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string
+	 */
+	public function consent_version() {
+		return (string) $this->get( 'consent_version' );
+	}
+
+	/**
+	 * When consent was given, in UTC.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string Empty when no consent was recorded.
+	 */
+	public function consent_at() {
+		return (string) $this->get( 'consent_at', '' );
+	}
+
+	/**
+	 * Whether this registration carries a record of consent.
+	 *
+	 * @since 26.0
+	 */
+	public function has_consent(): bool {
+		return '' !== $this->consent_version() && '' !== $this->consent_at();
+	}
+
+	/**
 	 * Extra fields stored as JSON.
 	 *
 	 * @since 26.0

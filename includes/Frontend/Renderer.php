@@ -10,6 +10,8 @@ namespace QuickEventsManager\Frontend;
 use QuickEventsManager\Admin\Settings;
 use QuickEventsManager\Events\Event;
 use QuickEventsManager\Events\Query;
+use QuickEventsManager\Privacy\Consent;
+use QuickEventsManager\Registration\CancellationHandler;
 use QuickEventsManager\Registration\FormHandler;
 use QuickEventsManager\Registration\RegistrationService;
 
@@ -142,19 +144,100 @@ final class Renderer {
 			return '';
 		}
 
-		if ( ! RegistrationService::is_open( $event ) ) {
+		/*
+		 * Cancellation comes before the "is registration open" gate, and that
+		 * order is the whole point. Registration closes as an event approaches
+		 * and an event fills up — which is exactly when somebody who cannot
+		 * come needs to say so, and exactly when the place they free is worth
+		 * the most. Gating the panel behind is_open() would hide the
+		 * cancellation link at the only time it matters.
+		 */
+		if ( CancellationHandler::is_cancellation_request() ) {
+			$state = CancellationHandler::current_state();
+
+			if ( null !== $state ) {
+				Assets::enqueue_frontend();
+
+				return Templates::render(
+					'cancellation.php',
+					array(
+						'state' => $state,
+						'event' => CancellationHandler::event_for( $state ) ?? $event,
+					)
+				);
+			}
+		}
+
+		$closed = RegistrationService::closed_reason( $event );
+
+		if ( '' !== $closed ) {
+			return self::closed_notice( $event, $closed );
+		}
+
+		Assets::enqueue_frontend();
+		Assets::enqueue_registration_form();
+
+		return Templates::render(
+			'registration-form.php',
+			array(
+				'event'        => $event,
+				'is_full'      => RegistrationService::is_full( $event ),
+				'remaining'    => RegistrationService::places_remaining( $event ),
+				'result'       => FormHandler::current_result(),
+				'max_places'   => RegistrationService::MAX_PLACES,
+				'consent_text' => Consent::text(),
+			)
+		);
+	}
+
+	/**
+	 * The explanation that stands in for a form which is no longer open.
+	 *
+	 * Only for the two reasons a visitor can act on. Registration that was
+	 * never switched on gets nothing, because nothing was ever offered and an
+	 * "unavailable" notice on every event that does not take bookings is
+	 * noise. A reason supplied by somebody else's filter gets nothing either —
+	 * that code closed registration for a reason only it knows, and inventing
+	 * an explanation on its behalf would be worse than silence.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event  $event  Event.
+	 * @param string $reason From RegistrationService::closed_reason().
+	 * @return string
+	 */
+	private static function closed_notice( Event $event, $reason ) {
+		$messages = array(
+			'ended'   => __( 'This event has already taken place, so registration is closed.', 'quick-events-manager' ),
+			'expired' => __( 'Registration for this event has closed.', 'quick-events-manager' ),
+		);
+
+		/**
+		 * Filters the explanation shown in place of a closed registration form.
+		 *
+		 * Return an empty string for a reason to show nothing for it, or add a
+		 * key to explain a reason of your own.
+		 *
+		 * @since 26.0
+		 *
+		 * @param array<string, string> $messages Message by reason.
+		 * @param Event                 $event    The event.
+		 * @param string                $reason   The reason registration is closed.
+		 */
+		$messages = (array) apply_filters( 'qevm_registration_closed_notice', $messages, $event, $reason );
+
+		if ( empty( $messages[ $reason ] ) ) {
 			return '';
 		}
 
 		Assets::enqueue_frontend();
 
 		return Templates::render(
-			'registration-form.php',
+			'registration-closed.php',
 			array(
-				'event'     => $event,
-				'is_full'   => RegistrationService::is_full( $event ),
-				'remaining' => RegistrationService::places_remaining( $event ),
-				'result'    => FormHandler::current_result(),
+				'event'   => $event,
+				'reason'  => $reason,
+				'message' => (string) $messages[ $reason ],
 			)
 		);
 	}

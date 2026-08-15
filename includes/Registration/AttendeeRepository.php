@@ -371,6 +371,45 @@ final class AttendeeRepository {
 	}
 
 	/**
+	 * Put everyone on a booking back, after the booking itself was reinstated.
+	 *
+	 * The mirror of cancel_for_registration(), and the reason an administrator
+	 * who cancels the wrong row can undo it. Only rows that are cancelled are
+	 * touched, so this cannot invent a place that was never held.
+	 *
+	 * It does reactivate somebody who dropped out of a booking that was later
+	 * cancelled and reinstated. Nothing in 26.0 can cancel one person out of a
+	 * booking, so there is no such row to get wrong yet; when per-attendee
+	 * cancellation arrives the two cases have to be told apart, and this is
+	 * where that happens.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $registration_id Booking id.
+	 * @return int Rows changed.
+	 */
+	public static function reinstate_for_registration( int $registration_id ): int {
+		global $wpdb;
+
+		if ( ! self::table_exists() ) {
+			return 0;
+		}
+
+		$changed = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, updated_at = %s WHERE registration_id = %d AND status = %s',
+				self::table(),
+				AttendeeStatus::Active->value,
+				gmdate( 'Y-m-d H:i:s' ),
+				$registration_id,
+				AttendeeStatus::Cancelled->value
+			)
+		);
+
+		return (int) $changed;
+	}
+
+	/**
 	 * Delete every attendee on a booking.
 	 *
 	 * Used by the privacy eraser and by explicit deletion, never by ordinary
@@ -389,6 +428,39 @@ final class AttendeeRepository {
 		}
 
 		return (int) $wpdb->delete( self::table(), array( 'registration_id' => $registration_id ), array( '%d' ) );
+	}
+
+	/**
+	 * Delete everyone booked onto an event, across every booking.
+	 *
+	 * Attendee rows carry a registration id and no event id, so the event is
+	 * reached through the booking. A join rather than a list of ids: an event
+	 * with two thousand bookings would otherwise build a two-thousand
+	 * placeholder IN clause, and the answer to "which rows" belongs in the
+	 * database rather than in PHP memory.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return int Rows removed.
+	 */
+	public static function delete_for_event( int $event_id ): int {
+		global $wpdb;
+
+		if ( ! self::table_exists() || ! Repository::table_exists() ) {
+			return 0;
+		}
+
+		$removed = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE a FROM %i AS a INNER JOIN %i AS r ON a.registration_id = r.id WHERE r.event_id = %d',
+				self::table(),
+				Repository::table(),
+				$event_id
+			)
+		);
+
+		return (int) $removed;
 	}
 
 	/**

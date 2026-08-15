@@ -161,7 +161,24 @@ final class OccurrenceQuery {
 				'post_status' => 'publish',
 			),
 			$args,
-			array( self::QUERY_VAR => array_merge( self::defaults(), $spec, $caller_spec ) )
+			array(
+				self::QUERY_VAR    => array_merge( self::defaults(), $spec, $caller_spec ),
+
+				/*
+				 * Not negotiable, and it goes after $args so a caller cannot
+				 * turn it back on.
+				 *
+				 * Every one of these arguments is delivered by a posts_clauses
+				 * filter, and get_posts() defaults suppress_filters to true
+				 * (wp-includes/post.php). So the same arguments that filter and
+				 * order correctly through WP_Query do absolutely nothing
+				 * through get_posts(): no join, no date range, no ordering —
+				 * just every event, newest first, silently. Found by the
+				 * integration suite; the admin's event picker was doing exactly
+				 * that.
+				 */
+				'suppress_filters' => false,
+			)
 		);
 	}
 

@@ -434,6 +434,20 @@ function wp_rand( $min = 0, $max = 0 ) {
 }
 
 /**
+ * Site secret for a hashing scheme.
+ *
+ * Fixed rather than random, because a stub that returned something different
+ * on each call would make signing look broken; and distinct per scheme, so a
+ * test can still tell that two schemes do not share a key.
+ *
+ * @param string $scheme Salting scheme.
+ * @return string
+ */
+function wp_salt( $scheme = 'auth' ) {
+	return 'unit-test-salt-for-' . $scheme;
+}
+
+/**
  * Capability check. Always granted in unit tests.
  *
  * @param string $capability Capability.
@@ -595,6 +609,55 @@ class WP_Post {
 	public $post_name = '';
 
 	/**
+	 * Post body.
+	 *
+	 * @var string
+	 */
+	public $post_content = '';
+
+	/**
+	 * Hand-written excerpt, if there is one.
+	 *
+	 * @var string
+	 */
+	public $post_excerpt = '';
+
+	/**
+	 * Author user id.
+	 *
+	 * @var int
+	 */
+	public $post_author = 0;
+
+	/**
+	 * Whether comments are open.
+	 *
+	 * @var string
+	 */
+	public $comment_status = 'closed';
+
+	/**
+	 * Whether pingbacks are open.
+	 *
+	 * @var string
+	 */
+	public $ping_status = 'closed';
+
+	/**
+	 * Manual ordering position.
+	 *
+	 * @var int
+	 */
+	public $menu_order = 0;
+
+	/**
+	 * Parent post id.
+	 *
+	 * @var int
+	 */
+	public $post_parent = 0;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param int    $id          Post id.
@@ -606,6 +669,21 @@ class WP_Post {
 		$this->post_type   = $post_type;
 		$this->post_status = $post_status;
 	}
+
+	/**
+	 * Every field as an array, the way core's WP_Post does.
+	 *
+	 * PHPStan analyses `tests/` as well as `includes/`, so this class — not
+	 * core's — is what it checks plugin code against. A stub narrower than the
+	 * class it stands in for does not report a missing property; it reports the
+	 * *plugin* as wrong for using one that exists. Anything real code touches
+	 * has to be here.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function to_array() {
+		return get_object_vars( $this );
+	}
 }
 
 /**
@@ -614,70 +692,114 @@ class WP_Post {
 class WP_Error {
 
 	/**
-	 * Error code.
+	 * Messages, keyed by error code, in the order they were added.
 	 *
-	 * @var string
+	 * Core keeps a list per code, because one code can carry several messages.
+	 * The stub does the same: a stub narrower than the class it stands in for
+	 * does not report itself as incomplete — it reports the *plugin* as wrong
+	 * for using a method that exists. That has now happened twice, here and on
+	 * WP_Post.
+	 *
+	 * @var array<string, array<int, string>>
 	 */
-	private $code;
+	private $errors = array();
 
 	/**
-	 * Error message.
-	 *
-	 * @var string
-	 */
-	private $message;
-
-	/**
-	 * Error data.
+	 * Data, keyed by error code.
 	 *
 	 * @var array<string, mixed>
 	 */
-	private $data;
+	private $error_data = array();
 
 	/**
 	 * Constructor.
 	 *
-	 * @param string               $code    Error code.
-	 * @param string               $message Error message.
-	 * @param array<string, mixed> $data    Error data.
+	 * @param string $code    Error code.
+	 * @param string $message Error message.
+	 * @param mixed  $data    Error data.
 	 */
-	public function __construct( $code = '', $message = '', $data = array() ) {
-		$this->code    = $code;
-		$this->message = $message;
-		$this->data    = $data;
+	public function __construct( $code = '', $message = '', $data = '' ) {
+		if ( '' === $code ) {
+			return;
+		}
+
+		$this->add( $code, $message, $data );
 	}
 
 	/**
-	 * Error code.
+	 * Add an error.
+	 *
+	 * @param string $code    Error code.
+	 * @param string $message Error message.
+	 * @param mixed  $data    Error data.
+	 * @return void
+	 */
+	public function add( $code, $message = '', $data = '' ) {
+		$this->errors[ $code ][] = $message;
+
+		if ( '' !== $data && array() !== $data ) {
+			$this->error_data[ $code ] = $data;
+		}
+	}
+
+	/**
+	 * Whether anything has been added.
+	 *
+	 * @return bool
+	 */
+	public function has_errors() {
+		return ! empty( $this->errors );
+	}
+
+	/**
+	 * Every code, in the order it was added.
+	 *
+	 * @return array<int, string>
+	 */
+	public function get_error_codes() {
+		return array_keys( $this->errors );
+	}
+
+	/**
+	 * The first code.
 	 *
 	 * @return string
 	 */
 	public function get_error_code() {
-		return $this->code;
+		$codes = $this->get_error_codes();
+
+		return isset( $codes[0] ) ? $codes[0] : '';
 	}
 
 	/**
-	 * Error message.
+	 * A message, for a given code or for the first one.
 	 *
+	 * @param string $code Error code.
 	 * @return string
 	 */
-	public function get_error_message() {
-		return $this->message;
+	public function get_error_message( $code = '' ) {
+		if ( '' === $code ) {
+			$code = $this->get_error_code();
+		}
+
+		return isset( $this->errors[ $code ][0] ) ? $this->errors[ $code ][0] : '';
 	}
 
 	/**
-	 * Error data.
+	 * Data, for a given code or for the first one.
 	 *
-	 * Core has this method, and without it the property is written and never
-	 * read — which is both a static-analysis finding and a sign the stub is
-	 * missing part of the class it stands in for.
-	 *
-	 * @return array<string, mixed>
+	 * @param string $code Error code.
+	 * @return mixed
 	 */
-	public function get_error_data() {
-		return $this->data;
+	public function get_error_data( $code = '' ) {
+		if ( '' === $code ) {
+			$code = $this->get_error_code();
+		}
+
+		return isset( $this->error_data[ $code ] ) ? $this->error_data[ $code ] : null;
 	}
 }
+
 
 /**
  * Whether a value is a WP_Error.
@@ -690,12 +812,22 @@ function is_wp_error( $thing ) {
 }
 
 /*
+ * Core's time constants, with core's own values (wp-includes/default-constants.php).
+ */
+define( 'MINUTE_IN_SECONDS', 60 );
+define( 'HOUR_IN_SECONDS', 60 * MINUTE_IN_SECONDS );
+define( 'DAY_IN_SECONDS', 24 * HOUR_IN_SECONDS );
+define( 'WEEK_IN_SECONDS', 7 * DAY_IN_SECONDS );
+define( 'MONTH_IN_SECONDS', 30 * DAY_IN_SECONDS );
+define( 'YEAR_IN_SECONDS', 365 * DAY_IN_SECONDS );
+
+/*
  * The constants the main plugin file would define. Defined here rather than by
  * loading that file, because loading it also calls Plugin::boot() and registers
  * the whole plugin, which a unit test of a date helper has no business doing.
  */
 define( 'QEVM_VERSION', '26.0' );
-define( 'QEVM_DB_VERSION', 4 );
+define( 'QEVM_DB_VERSION', 5 );
 define( 'QEVM_FILE', ABSPATH . 'quick-events-manager.php' );
 define( 'QEVM_PATH', ABSPATH );
 define( 'QEVM_URL', 'https://example.test/wp-content/plugins/quick-events-manager/' );

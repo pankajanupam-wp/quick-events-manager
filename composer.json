@@ -33,6 +33,10 @@
 	},
 	"scripts": {
 		"test": "phpunit",
+		"test:integration": [
+			"cd .. && npx --yes @wordpress/env run tests-cli wp plugin activate quick-events-manager",
+			"cd .. && npx --yes @wordpress/env run tests-cli --env-cwd=wp-content/plugins/quick-events-manager php vendor/bin/phpunit -c phpunit-integration.xml.dist"
+		],
 		"lint": "phpcs",
 		"lint:fix": "phpcbf",
 		"lint:syntax": "find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l",
@@ -47,6 +51,7 @@
 	},
 	"scripts-descriptions": {
 		"test": "Run the unit suite.",
+		"test:integration": "Run the integration suite against real WordPress and MySQL. Needs `npx @wordpress/env start` from the plugins root first. The `cd ..` is deliberate: wp-env takes its environment from the .wp-env.json beside the plugins, and running it from inside a plugin would define a second one.",
 		"lint": "Check WordPress Coding Standards.",
 		"lint:fix": "Fix what WordPress Coding Standards can fix automatically.",
 		"lint:syntax": "Parse every PHP file, proving the plugin loads on this PHP version.",

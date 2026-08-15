@@ -101,6 +101,7 @@ final class EventsModule implements Module {
 		if ( is_admin() ) {
 			( new MetaBox() )->register();
 			( new AdminColumns() )->register();
+			( new Duplicator() )->register();
 		}
 	}
 
@@ -133,7 +134,15 @@ final class EventsModule implements Module {
 	 *
 	 * end_utc is NOT NULL, and an event with no stated end stores its start
 	 * here. That single decision is what collapses "is this still upcoming"
-	 * from a three-branch OR into one indexed range scan.
+	 * from a three-branch OR into one range condition — and status_end is the
+	 * index that makes the range a seek rather than a scan. Both halves are
+	 * needed: the Stage 1 gate shipped four indexes that all led with
+	 * start_utc, so `end_utc >= now` had nothing to seek on and read all 10,000
+	 * rows at every selectivity. Measurements are in
+	 * docs/development-plan.md#stage-1.
+	 *
+	 * status leads because every date query constrains it, and putting it first
+	 * keeps the status test inside the index instead of on each row fetched.
 	 *
 	 * series_uuid and is_exception are created empty and stay empty until
 	 * recurrence lands in stage 6. They cost nothing now and save altering a
@@ -165,7 +174,8 @@ final class EventsModule implements Module {
 			KEY start_utc (start_utc),
 			KEY event_start (event_id, start_utc),
 			KEY series_start (series_uuid, start_utc),
-			KEY status_start (status, start_utc)
+			KEY status_start (status, start_utc),
+			KEY status_end (status, end_utc)
 		) {$collate};";
 	}
 

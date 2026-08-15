@@ -24,6 +24,8 @@ that happens to share it, and the two do not always move together:
 | A new table, created by `dbDelta`, with no existing data to convert | No | **Yes** |
 | Existing rows have to be transformed | Yes | Yes |
 | A column added that nothing has to backfill | No | **Yes** |
+| An index added under a **new** name | No | **Yes** |
+| An index **changed** while keeping its name | Yes — `dbDelta` compares indexes by name and will not touch it | Yes |
 
 So `Runner::target_version()` is `max( QEVM_DB_VERSION, highest migration )`. Taking
 the larger of the two means neither can be forgotten: a migration above the constant
@@ -144,6 +146,7 @@ Schema versions with no migration behind them:
 | --: | --- |
 | 2 | Adds the `qevm_occurrences` table (C1.2). Created by `dbDelta`; there is no data to convert, because occurrences are derived from post meta and get populated by the sync in C1.3 |
 | 3 | Adds the `qevm_attendees` table (C1.5). Created by `dbDelta` when the registration module is on. Nothing to convert: no site has taken a booking yet, and rows for existing registrations are created by C1.7 |
+| 5 | Adds `KEY status_end (status, end_utc)` to `qevm_occurrences` (C1.12). A new index under a new name, which `dbDelta` adds by itself; no rows change. Found by the Stage 1 gate — every existing index led with `start_utc`, so the archive's `end_utc >= now` had nothing to seek and scanned the table |
 
 ### 1 — Legacy post type
 

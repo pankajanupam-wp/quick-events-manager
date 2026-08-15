@@ -106,7 +106,7 @@ define( 'QEVM_VERSION', '26.0' );
  * This must equal the highest version in includes/Install/Migrations/. A test
  * asserts it, because a migration added without bumping this would never run.
  */
-define( 'QEVM_DB_VERSION', 4 );
+define( 'QEVM_DB_VERSION', 5 );
 
 /**
  * Absolute path to this file.

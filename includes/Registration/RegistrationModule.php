@@ -91,6 +91,8 @@ final class RegistrationModule implements Module {
 	 */
 	public function register() {
 		( new FormHandler() )->register();
+		( new CancellationHandler() )->register();
+		( new Waitlist() )->register();
 		( new Emails() )->register();
 		( new \QuickEventsManager\Privacy\Privacy() )->register();
 

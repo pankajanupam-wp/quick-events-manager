@@ -197,6 +197,94 @@
 	color: #b32d2e;
 }
 
+/*
+ * A field-level error, sitting under its input and pointed at by
+ * aria-describedby. Colour is not the only signal — the text says what is
+ * wrong, and the input carries aria-invalid — because a red border alone
+ * conveys nothing to somebody who cannot see it or cannot distinguish it.
+ */
+.qevm-field__error {
+	color: #b32d2e;
+	font-size: 0.9em;
+	font-weight: 600;
+}
+
+.qevm-field input[aria-invalid="true"] {
+	border-color: #b32d2e;
+	outline: 1px solid #b32d2e;
+}
+
+.qevm-notice__list {
+	margin: 0.5rem 0 0;
+	padding-inline-start: 1.25rem;
+}
+
+/*
+ * The summary is a focus target, so it needs a focus style of its own — the
+ * browser default outline on a div is easy to miss against a tinted panel.
+ */
+.qevm-notice:focus-visible {
+	outline: 2px solid #b32d2e;
+	outline-offset: 2px;
+}
+
+/*
+ * The `hidden` attribute has to win here.
+ *
+ * A browser's own stylesheet says `[hidden] { display: none }`, but that
+ * declaration comes from the user-agent origin, and *any* author declaration
+ * beats it — specificity never enters into it. The guest rows are
+ * `.qevm-field`, which sets `display: grid`, so without this rule they would be
+ * hidden from assistive technology and fully visible on the page, all nineteen
+ * of them.
+ *
+ * Checked in Chrome rather than assumed: with this rule a hidden row computes
+ * to `display: none`, and without it to `display: grid`.
+ */
+.qevm-registration [hidden] {
+	display: none;
+}
+
+.qevm-guests {
+	display: grid;
+	gap: var(--qevm-gap);
+	margin: 0;
+	padding: 0.75rem 1rem 1rem;
+	border: var(--qevm-border);
+	border-radius: var(--qevm-radius);
+}
+
+.qevm-guests__legend {
+	padding: 0 0.35rem;
+	font-weight: 600;
+}
+
+.qevm-guests__hint {
+	margin: 0;
+	color: var(--qevm-muted);
+	font-size: 0.9em;
+}
+
+/*
+ * The checkbox sits inline with its own short label, and the site's wording
+ * goes underneath — so this field does not want the grid the text fields use.
+ */
+.qevm-field--consent {
+	display: block;
+}
+
+.qevm-field--consent label {
+	display: inline-flex;
+	gap: 0.4rem;
+	align-items: baseline;
+}
+
+.qevm-consent__text {
+	display: block;
+	margin-top: 0.25rem;
+	font-size: 0.9em;
+}
+
 .qevm-button {
 	display: inline-block;
 	padding: 0.6rem 1.25rem;
@@ -208,24 +296,65 @@
 	cursor: pointer;
 }
 
+/*
+ * Destructive, and it should look it. Colour alone would not be enough — a
+ * button that only differs by hue is the same button to anybody who cannot
+ * distinguish the two — so the weight of the border carries the meaning as
+ * well, and the label says "Cancel my booking" rather than "Confirm".
+ */
+.qevm-button--danger {
+	border-color: #b32d2e;
+	color: #b32d2e;
+}
+
+.qevm-link {
+	text-decoration: underline;
+}
+
 .qevm-notice {
 	margin: 0 0 var(--qevm-gap);
 	padding: 0.75rem 1rem;
-	border-left: 4px solid var(--qevm-muted);
+	border-inline-start: 4px solid var(--qevm-muted);
 	border-radius: 4px;
 	background: rgba(0, 0, 0, 0.04);
 }
 
 .qevm-notice--success {
-	border-left-color: #007017;
+	border-inline-start-color: #007017;
 }
 
 .qevm-notice--error {
-	border-left-color: #b32d2e;
+	border-inline-start-color: #b32d2e;
 }
 
 .qevm-notice--info {
-	border-left-color: #996800;
+	border-inline-start-color: #996800;
+}
+
+.qevm-cancellation__summary {
+	display: grid;
+	gap: 0.35rem;
+	margin: 0 0 var(--qevm-gap);
+}
+
+.qevm-cancellation__item {
+	display: grid;
+	grid-template-columns: minmax(6rem, 12rem) 1fr;
+	gap: 0.5rem;
+}
+
+.qevm-cancellation__item dt {
+	margin: 0;
+	color: var(--qevm-muted);
+	font-weight: 600;
+}
+
+.qevm-cancellation__item dd {
+	margin: 0;
+}
+
+.qevm-cancellation__warning {
+	font-weight: 600;
 }
 
 .qevm-registration__remaining {
@@ -239,7 +368,16 @@
  */
 .qevm-honeypot {
 	position: absolute !important;
+
+	/*
+	 * `left` first as the fallback, then the logical property, which wins on
+	 * anything that understands it. The order matters here more than anywhere
+	 * else in this file: if the offset failed to apply the honeypot would
+	 * become a visible, labelled "Website" field in the middle of the form,
+	 * and people would dutifully fill it in and have their booking refused.
+	 */
 	left: -9999px !important;
+	inset-inline-start: -9999px !important;
 	width: 1px;
 	height: 1px;
 	overflow: hidden;

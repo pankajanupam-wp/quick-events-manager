@@ -36,6 +36,26 @@ final class AttendeesScreen {
 	const PER_PAGE = 25;
 
 	/**
+	 * Action name for entering a booking on somebody's behalf.
+	 */
+	const ADD_ACTION = 'qevm_add_registration';
+
+	/**
+	 * Nonce action for entering a booking.
+	 */
+	const ADD_NONCE = 'qevm_add_registration';
+
+	/**
+	 * Action name for sending a confirmation again.
+	 */
+	const RESEND_ACTION = 'qevm_resend_confirmation';
+
+	/**
+	 * Nonce action for sending a confirmation again.
+	 */
+	const RESEND_NONCE = 'qevm_resend_confirmation';
+
+	/**
 	 * Hook into the admin.
 	 *
 	 * @since 26.0
@@ -45,6 +65,8 @@ final class AttendeesScreen {
 	public function register() {
 		add_action( 'admin_menu', array( $this, 'add_page' ) );
 		add_action( 'admin_post_qevm_update_registration', array( $this, 'handle_update' ) );
+		add_action( 'admin_post_' . self::ADD_ACTION, array( $this, 'handle_add' ) );
+		add_action( 'admin_post_' . self::RESEND_ACTION, array( $this, 'handle_resend' ) );
 	}
 
 	/**
@@ -87,6 +109,8 @@ final class AttendeesScreen {
 		echo '<div class="wrap qevm-attendees">';
 		echo '<h1>' . esc_html__( 'Attendees', 'quick-events-manager' ) . '</h1>';
 
+		$this->render_notice();
+
 		if ( 0 === $event_id ) {
 			$this->render_event_picker();
 			echo '</div>';
@@ -117,8 +141,47 @@ final class AttendeesScreen {
 		$this->render_filters( $event_id, $status, $search );
 		$this->render_table( $registrations, $event_id );
 		$this->render_pagination( $total, $paged, $event_id, $status, $search );
+		$this->render_add_form( $event );
 
 		echo '</div>';
+	}
+
+
+	/**
+	 * Say what the last action did.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	private function render_notice() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading a redirect result, which changes nothing.
+		if ( ! isset( $_GET['qevm_done'] ) ) {
+			return;
+		}
+
+		$result = sanitize_key( wp_unslash( $_GET['qevm_done'] ) );
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_text_field() wraps the decode, which has to happen first.
+		$message = isset( $_GET['qevm_message'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qevm_message'] ) ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$notices = array(
+			'added'            => array( 'success', __( 'Attendee added.', 'quick-events-manager' ) ),
+			'added_waitlisted' => array( 'warning', __( 'Attendee added to the waiting list — the event is full.', 'quick-events-manager' ) ),
+			'resent'           => array( 'success', __( 'Confirmation sent again.', 'quick-events-manager' ) ),
+			'error'            => array( 'error', __( 'That did not work.', 'quick-events-manager' ) ),
+		);
+
+		if ( ! isset( $notices[ $result ] ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>',
+			esc_attr( $notices[ $result ][0] ),
+			esc_html( 'error' === $result && '' !== $message ? $message : $notices[ $result ][1] )
+		);
 	}
 
 	/**
@@ -264,11 +327,12 @@ final class AttendeesScreen {
 					<th scope="col"><?php esc_html_e( 'Reference', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Registered', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Status', 'quick-events-manager' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Confirmation', 'quick-events-manager' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 			<?php if ( empty( $registrations ) ) : ?>
-				<tr><td colspan="7"><?php esc_html_e( 'No registrations yet.', 'quick-events-manager' ); ?></td></tr>
+				<tr><td colspan="8"><?php esc_html_e( 'No registrations yet.', 'quick-events-manager' ); ?></td></tr>
 			<?php else : ?>
 				<?php foreach ( $registrations as $registration ) : ?>
 					<tr>
@@ -306,12 +370,252 @@ final class AttendeesScreen {
 								<button type="submit" class="button button-small"><?php esc_html_e( 'Update', 'quick-events-manager' ); ?></button>
 							</form>
 						</td>
+						<td>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="qevm-resend-form">
+								<input type="hidden" name="action" value="<?php echo esc_attr( self::RESEND_ACTION ); ?>" />
+								<input type="hidden" name="registration_id" value="<?php echo esc_attr( (string) $registration->id() ); ?>" />
+								<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>" />
+								<?php wp_nonce_field( self::RESEND_NONCE ); ?>
+								<button type="submit" class="button button-small">
+									<?php
+									printf(
+										/* translators: %s: Attendee name, for screen readers. */
+										esc_html__( 'Resend%s', 'quick-events-manager' ),
+										'<span class="screen-reader-text"> ' . esc_html(
+											sprintf(
+												/* translators: %s: Attendee name. */
+												__( 'confirmation to %s', 'quick-events-manager' ),
+												$registration->booker_name()
+											)
+										) . '</span>'
+									);
+									?>
+								</button>
+							</form>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			<?php endif; ?>
 			</tbody>
 		</table>
 		<?php
+	}
+
+	/**
+	 * Enter a booking somebody made another way.
+	 *
+	 * Phone calls, walk-ins and a paper sign-up sheet at the door are how a
+	 * large share of any real event's attendees arrive. Without this the
+	 * organiser either keeps a second list the plugin knows nothing about — so
+	 * capacity, the waiting list and the attendee export are all wrong — or
+	 * types the person's details into the public form pretending to be them.
+	 *
+	 * There is no consent checkbox here on purpose. The attendee never saw the
+	 * wording, so nothing here can honestly record that they agreed to it; the
+	 * note under the form says who is responsible instead.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event $event Event being added to.
+	 * @return void
+	 */
+	private function render_add_form( Event $event ) {
+		$full = RegistrationService::is_full( $event );
+		?>
+		<div class="qevm-add-attendee">
+			<h2><?php esc_html_e( 'Add an attendee', 'quick-events-manager' ); ?></h2>
+
+			<p class="description">
+				<?php esc_html_e( 'For bookings taken by phone, by email or in person. The attendee is emailed a confirmation unless you say otherwise.', 'quick-events-manager' ); ?>
+			</p>
+
+			<?php if ( $full ) : ?>
+				<p class="notice notice-warning inline">
+					<?php esc_html_e( 'This event is full. Anybody you add now joins the waiting list.', 'quick-events-manager' ); ?>
+				</p>
+			<?php endif; ?>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( self::ADD_ACTION ); ?>" />
+				<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event->id() ); ?>" />
+				<?php wp_nonce_field( self::ADD_NONCE ); ?>
+
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row">
+							<label for="qevm-add-name"><?php esc_html_e( 'Name', 'quick-events-manager' ); ?></label>
+						</th>
+						<td><input type="text" id="qevm-add-name" name="name" class="regular-text" required /></td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="qevm-add-email"><?php esc_html_e( 'Email', 'quick-events-manager' ); ?></label>
+						</th>
+						<td><input type="email" id="qevm-add-email" name="email" class="regular-text" required /></td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="qevm-add-phone"><?php esc_html_e( 'Phone', 'quick-events-manager' ); ?></label>
+						</th>
+						<td><input type="tel" id="qevm-add-phone" name="phone" class="regular-text" /></td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="qevm-add-quantity"><?php esc_html_e( 'Places', 'quick-events-manager' ); ?></label>
+						</th>
+						<td>
+							<input type="number" id="qevm-add-quantity" name="quantity" value="1" min="1"
+								max="<?php echo esc_attr( (string) RegistrationService::MAX_PLACES ); ?>" class="small-text" />
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Confirmation', 'quick-events-manager' ); ?></th>
+						<td>
+							<label for="qevm-add-notify">
+								<input type="checkbox" id="qevm-add-notify" name="notify" value="1" checked />
+								<?php esc_html_e( 'Email the attendee a confirmation', 'quick-events-manager' ); ?>
+							</label>
+						</td>
+					</tr>
+				</table>
+
+				<p class="description">
+					<?php esc_html_e( 'No consent record is stored for an attendee added this way, because they were never shown the wording. Make sure you have their permission to keep their details.', 'quick-events-manager' ); ?>
+				</p>
+
+				<?php submit_button( __( 'Add attendee', 'quick-events-manager' ) ); ?>
+			</form>
+		</div>
+		<?php
+	}
+
+
+	/**
+	 * Enter a booking on somebody's behalf.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function handle_add() {
+		if ( ! current_user_can( 'manage_qevm_registrations' ) ) {
+			wp_die( esc_html__( 'You do not have permission to add registrations.', 'quick-events-manager' ) );
+		}
+
+		check_admin_referer( self::ADD_NONCE );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- check_admin_referer() above.
+		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
+		$notify   = ! empty( $_POST['notify'] );
+
+		$input = array(
+			'name'     => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
+			'email'    => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
+			'phone'    => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '',
+			'quantity' => isset( $_POST['quantity'] ) ? absint( wp_unslash( $_POST['quantity'] ) ) : 1,
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		/*
+		 * Suppressing the email is done by unhooking the sender rather than by
+		 * skipping the action, so that everything else listening to
+		 * `qevm_registration_created` still runs. The organiser said "do not
+		 * email them", not "pretend this booking did not happen".
+		 */
+		if ( ! $notify ) {
+			add_filter( 'qevm_attendee_email', '__return_empty_array', 99 );
+		}
+
+		$registration = ( new RegistrationService() )->create(
+			$event_id,
+			$input,
+			RegistrationService::CONTEXT_MANUAL
+		);
+
+		if ( ! $notify ) {
+			remove_filter( 'qevm_attendee_email', '__return_empty_array', 99 );
+		}
+
+		if ( is_wp_error( $registration ) ) {
+			$this->redirect_back( $event_id, 'error', $registration->get_error_message() );
+		}
+
+		$this->redirect_back(
+			$event_id,
+			RegistrationStatus::Waitlisted === $registration->status() ? 'added_waitlisted' : 'added'
+		);
+	}
+
+	/**
+	 * Send somebody their confirmation again.
+	 *
+	 * The most common support request an organiser gets, and until now the only
+	 * answer was to read the reference code down the phone.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function handle_resend() {
+		if ( ! current_user_can( 'manage_qevm_registrations' ) ) {
+			wp_die( esc_html__( 'You do not have permission to send confirmations.', 'quick-events-manager' ) );
+		}
+
+		check_admin_referer( self::RESEND_NONCE );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- check_admin_referer() above.
+		$id       = isset( $_POST['registration_id'] ) ? absint( wp_unslash( $_POST['registration_id'] ) ) : 0;
+		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$registration = Repository::find( $id );
+
+		if ( null === $registration ) {
+			$this->redirect_back( $event_id, 'error', __( 'That booking could not be found.', 'quick-events-manager' ) );
+		}
+
+		$event = new Event( $registration->event_id() );
+
+		if ( ! $event->is_valid() ) {
+			$this->redirect_back( $event_id, 'error', __( 'That event could not be found.', 'quick-events-manager' ) );
+		}
+
+		/*
+		 * The confirmation, not a new registration: nothing is inserted, no
+		 * place is taken and `qevm_registration_created` does not fire again.
+		 * Firing that would run every listener a second time — a second
+		 * organiser notification, and anything a site has added of its own.
+		 */
+		( new Emails() )->send_attendee_confirmation( $registration, $event );
+
+		$this->redirect_back( $event_id, 'resent' );
+	}
+
+	/**
+	 * Back to the attendee list, with something to say.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int    $event_id Event to return to.
+	 * @param string $result   Result code for the notice.
+	 * @param string $message  Optional detail for an error.
+	 * @return never
+	 */
+	private function redirect_back( $event_id, $result, $message = '' ) {
+		$args = array(
+			'post_type' => QEVM_POST_TYPE,
+			'page'      => self::SLUG,
+			'event_id'  => (int) $event_id,
+			'qevm_done' => $result,
+		);
+
+		if ( '' !== $message ) {
+			$args['qevm_message'] = rawurlencode( $message );
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'edit.php' ) ) );
+
+		exit;
 	}
 
 	/**
@@ -379,17 +683,15 @@ final class AttendeesScreen {
 		$new_status = RegistrationStatus::coerce( $status );
 
 		if ( $id > 0 && $new_status instanceof RegistrationStatus ) {
-			Repository::update_status( $id, $new_status );
-
-			/**
-			 * Fires after an administrator changes a registration's status.
-			 *
-			 * @since 26.0
-			 *
-			 * @param int    $id     Registration id.
-			 * @param string $status New status.
+			/*
+			 * `qevm_registration_status_changed` used to be fired here. It now
+			 * fires inside Repository::update_status(), because this screen
+			 * stopped being the only way a status changes the moment
+			 * cancellation links existed — and a hook that fires on one of two
+			 * routes is worse than no hook, since what listens to it appears to
+			 * work.
 			 */
-			do_action( 'qevm_registration_status_changed', $id, $status );
+			Repository::update_status( $id, $new_status );
 		}
 
 		wp_safe_redirect(

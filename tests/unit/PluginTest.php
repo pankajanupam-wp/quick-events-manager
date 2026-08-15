@@ -12,6 +12,7 @@
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use QuickEventsManager\Install\Installer;
 
 /**
  * Release and packaging guards.
@@ -195,6 +196,64 @@ final class PluginTest extends TestCase {
 		$this->assertStringContainsString( 'WP_UNINSTALL_PLUGIN', $uninstall );
 		$this->assertStringContainsString( 'qevm_settings', $uninstall );
 		$this->assertStringContainsString( 'is_multisite', $uninstall );
+	}
+
+	/**
+	 * Uninstalling has to remove every capability installing granted.
+	 *
+	 * The two lists are separate files and cannot share code: uninstall.php
+	 * runs with the plugin unloaded, so there is no autoloader and no Installer
+	 * to ask. Without this test they drift silently, and the symptom is a
+	 * capability nobody can see left on every role of a site that deleted the
+	 * plugin months ago.
+	 *
+	 * @return void
+	 */
+	public function test_uninstall_removes_every_capability_the_installer_grants() {
+		$uninstall = $this->plugin_file( 'uninstall.php' );
+
+		foreach ( Installer::capabilities( true ) as $capability ) {
+			$this->assertStringContainsString(
+				"'" . $capability . "'",
+				$uninstall,
+				$capability . ' is granted by the installer but never removed by uninstall.php'
+			);
+		}
+	}
+
+	/**
+	 * The check-in capability exists before release, not with the feature.
+	 *
+	 * Nothing reads it until stage 8. Adding it then would mean a migration
+	 * walking every role on every site that ever installed the plugin, and that
+	 * is only avoidable while it is unreleased.
+	 *
+	 * @return void
+	 */
+	public function test_the_check_in_capability_is_granted_ahead_of_the_feature() {
+		$this->assertContains( 'manage_qevm_checkins', Installer::capabilities( true ) );
+		$this->assertContains( 'manage_qevm_checkins', Installer::management_capabilities() );
+	}
+
+	/**
+	 * Managing a guest list is not a statement about whose posts you may edit.
+	 *
+	 * Stage 8 needs a role that can mark people through a door without being
+	 * able to edit other people's events, which is only possible if the two
+	 * sets are separate lists rather than one list with a flag.
+	 *
+	 * @return void
+	 */
+	public function test_management_capabilities_are_separate_from_the_post_type_set() {
+		$post_type = Installer::post_type_capabilities( true );
+
+		$this->assertNotContains( 'manage_qevm_registrations', $post_type );
+		$this->assertNotContains( 'manage_qevm_checkins', $post_type );
+
+		$this->assertSame(
+			array(),
+			array_intersect( $post_type, Installer::management_capabilities() )
+		);
 	}
 
 	/**
