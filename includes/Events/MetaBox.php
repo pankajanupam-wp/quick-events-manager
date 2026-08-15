@@ -26,6 +26,35 @@ final class MetaBox {
 	const NONCE = 'qevm_save_event_details';
 
 	/**
+	 * Plain text fields, as request key => meta key.
+	 *
+	 * Saving writes every key in this list, using `''` when the request does
+	 * not carry it — which is right for a checkbox-free text field, because a
+	 * field the user emptied arrives as an empty string and a field they never
+	 * touched arrives with its old value.
+	 *
+	 * It is only right while the form renders an input for every key here. It
+	 * did not: `qevm_organizer_phone` was in this list with no field on the
+	 * screen, so every save of every event wrote an empty string over any phone
+	 * number set through the REST API or by code, and nothing reported it.
+	 * `MetaBoxFieldsTest` now renders the box and fails if a key in this list
+	 * has no input, which is the version of this bug that cannot come back.
+	 *
+	 * @since 26.0
+	 * @var array<string, string>
+	 */
+	const TEXT_FIELDS = array(
+		'qevm_venue_name'        => Meta::VENUE_NAME,
+		'qevm_venue_address'     => Meta::VENUE_ADDRESS,
+		'qevm_venue_city'        => Meta::VENUE_CITY,
+		'qevm_venue_region'      => Meta::VENUE_REGION,
+		'qevm_venue_postal_code' => Meta::VENUE_POSTAL,
+		'qevm_venue_country'     => Meta::VENUE_COUNTRY,
+		'qevm_organizer_name'    => Meta::ORGANIZER_NAME,
+		'qevm_organizer_phone'   => Meta::ORGANIZER_PHONE,
+	);
+
+	/**
 	 * Hook into the editor.
 	 *
 	 * @since 26.0
@@ -168,6 +197,12 @@ final class MetaBox {
 					self::text_field( 'qevm_organizer_email', __( 'Organiser email', 'quick-events-manager' ), $event->meta( Meta::ORGANIZER_EMAIL ), 'email' );
 					?>
 				</div>
+
+				<div class="qevm-field-row">
+					<?php
+					self::text_field( 'qevm_organizer_phone', __( 'Organiser phone', 'quick-events-manager' ), $event->meta( Meta::ORGANIZER_PHONE ), 'tel' );
+					?>
+				</div>
 			</details>
 		</div>
 		<?php
@@ -238,18 +273,7 @@ final class MetaBox {
 			isset( $_POST['qevm_online_url'] ) ? esc_url_raw( wp_unslash( $_POST['qevm_online_url'] ) ) : ''
 		);
 
-		$text_fields = array(
-			'qevm_venue_name'        => Meta::VENUE_NAME,
-			'qevm_venue_address'     => Meta::VENUE_ADDRESS,
-			'qevm_venue_city'        => Meta::VENUE_CITY,
-			'qevm_venue_region'      => Meta::VENUE_REGION,
-			'qevm_venue_postal_code' => Meta::VENUE_POSTAL,
-			'qevm_venue_country'     => Meta::VENUE_COUNTRY,
-			'qevm_organizer_name'    => Meta::ORGANIZER_NAME,
-			'qevm_organizer_phone'   => Meta::ORGANIZER_PHONE,
-		);
-
-		foreach ( $text_fields as $field => $meta_key ) {
+		foreach ( self::TEXT_FIELDS as $field => $meta_key ) {
 			update_post_meta(
 				$post_id,
 				$meta_key,
