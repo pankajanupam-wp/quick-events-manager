@@ -54,7 +54,7 @@ Multiple ticket types per event, each with its own quantity, capacity and sale w
 
 ### 6. QR codes and check-in
 
-QR on confirmations, a mobile-friendly check-in screen, manual search, check-in timestamps, and a staff role that can check people in without being able to edit events. `manage_qevm_registrations` already exists as a separate capability for exactly this.
+QR on confirmations, a mobile-friendly check-in screen, manual search, check-in timestamps, and a staff role that can check people in without being able to edit events. `manage_qevm_checkins` and `manage_qevm_registrations` are both granted from 26.0 for exactly this, kept apart from the post type's own capabilities so the door role is a different list rather than a smaller one. Granting a capability after release means a migration walking every role on every site; granting it before costs nothing.
 
 ### 7. Payments
 

@@ -596,7 +596,15 @@ Retrofitting is where it becomes expensive.
 5. Every `sprintf` carries a `/* translators: */` comment naming each placeholder.
 6. Plurals use `_n()`. Never `if ( $n > 1 )`.
 7. Dates display through `wp_date()` / `date_i18n()`. Never `date()`.
-8. `rtl.css` ships and is tested.
+8. **Stylesheets are direction-independent, and a test enforces it.** No
+   physical direction property — `margin-left`, `padding-right`, `float`,
+   `text-align: left|right` — appears in a shipped stylesheet; use the
+   `-inline-` equivalents, which the browser resolves from `dir`. This
+   deliberately replaces the `rtl.css` this rule originally required: the whole
+   right-to-left surface was five declarations, and a second stylesheet
+   maintained so that four lines can differ drifts, in a file nobody here reads
+   in the language it exists for. See [ADR-0012](adr/0012-direction-independent-css.md);
+   `tests/unit/StylesheetTest.php` is what makes it fail.
 9. Do not translate: hook names, option keys, capability names, post type keys,
    CSS classes, or anything in the naming matrix.
 

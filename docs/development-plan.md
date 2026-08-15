@@ -236,12 +236,57 @@ in the field to migrate.
 | **C1.9** | `manage_qevm_checkins` capability added to `Installer` | XS | Must exist pre-release or it needs a role migration later |
 | **C1.10** | Integration test harness — real WordPress + MySQL via wp-env | L | The piece most likely to be skipped, and the one that catches most |
 | **C1.11** | Integration tests: occurrence sync, rebuild, attendee split, capacity under 8 parallel processes, migration run twice | L | Stage gate evidence |
+| **C1.12** | `KEY status_end (status, end_utc)` on `qevm_occurrences`; schema version 4 → 5 | XS | Added by the gate, not planned. Nothing indexed the column the archive filters on |
 
 **Gate:** upcoming-events query contains **no `CAST(`** and `EXPLAIN` shows
 `type: range` on `qevm_occurrences` · 10,000 events render the archive in under 200ms
 of DB time · a 3-place booking creates 1 registration and 3 attendee rows · 8 parallel
 submissions to a capacity-1 event produce exactly 1 confirmed · every migration is a
 no-op on second run.
+
+> **Gate passed 2026-08-12 — on the second run. The first found a schema defect.**
+>
+> | Criterion | Result |
+> | --- | --- |
+> | No `CAST(` in the upcoming query | **Pass.** No `CAST(`, and no reference to `meta_value` at all |
+> | `EXPLAIN` shows `type: range` on `qevm_occurrences` | **Failed, then passed.** `type: ALL`, `key: (none)`, 10,000 rows on the first run. After C1.12: `type: range`, `key: status_end`, **501 rows** |
+> | 10,000 events, archive under 200ms of DB time | **Pass, by a wide margin.** 1.69ms median across 8 queries, page 1; 1.66ms at page 50, so it does not degrade with depth. The `meta_query` path this stage replaced measures 77.51ms on the same data — **45x** |
+> | 3-place booking → 1 registration, 3 attendees | **Pass**, `RegistrationTest` |
+> | 8 parallel submissions to capacity 1 → 1 confirmed | **Pass**, `CapacityRaceTest`, eight real processes held to one instant |
+> | Every migration a no-op on second run | **Pass**, `MigrationTest` |
+>
+> Suites: 152 unit tests / 467 assertions · 49 integration tests / 238 assertions ·
+> PHPCS and PHPStan clean. The fixture is 10,000 events with 95% of them already
+> over, because that is the shape an event site actually has.
+>
+> **The defect.** The archive filters on `end_utc >= now`. Every index on
+> `qevm_occurrences` led with something else — `start_utc`, `event_id`,
+> `series_uuid`, `status` — so the predicate had nothing to seek on and MySQL read
+> all 10,000 rows at every date. [ADR-0003](adr/0003-occurrence-table.md) had claimed
+> that making `end_utc NOT NULL` "collapses the three-branch `OR` into one indexed
+> range scan". The collapse happened; the scan was never indexed. A correct decision
+> about *storage* does not carry a correct decision about *indexing* with it.
+>
+> Measured across four archive shapes, before and after the candidate
+> `KEY status_end (status, end_utc)`:
+>
+> | Upcoming share | Before | After |
+> | --- | --- | --- |
+> | 100% (10000/10000) | `ALL`, 10000 rows, 9.11ms | `ALL`, 9.05ms |
+> | 50% (5000/10000) | `ALL`, 10000 rows, 5.17ms | `ALL`, 5.14ms |
+> | **5% (500/10000)** — a real archive | `ALL`, 10000 rows, 1.72ms | **`range`, 501 rows, 0.81ms** |
+> | 1% (100/10000) | `ALL`, 10000 rows, 1.42ms | **`range`, 101 rows, 0.27ms** |
+>
+> Above roughly a third selectivity MySQL keeps scanning, and it is right to — reading
+> the table beats 5,000 index lookups. What matters is the two rows where it *should*
+> seek and could not, which is the shape every real archive has.
+>
+> **Why the timing mattered.** An index added before publication is one line in the
+> installer that `dbDelta` applies. The same index added after 26.0 ships is a locking
+> `ALTER TABLE` on every site that has one. This is precisely what Stage 1 exists for,
+> and the gate is what caught it — the unit suite cannot, and the integration suite at
+> a handful of rows reports `range` quite happily, because at that size MySQL picks an
+> index for reasons that have nothing to do with whether the right one exists.
 
 ---
 
@@ -257,12 +302,102 @@ Small chunks, high value.
 | **C2.3** | `.ics` attached to the confirmation email | S | The download exists on the page; the email is where people want it |
 | **C2.4** | Duplicate event action | S | The most-used organiser action; also 90% of "event templates" |
 | **C2.5** | Manual attendee add + resend confirmation | M | Phone and in-person bookings are real |
-| **C2.6** | `rtl.css` | XS | About an hour; Arabic, Hebrew and Persian are large WordPress markets |
-| **C2.7** | Form accessibility pass + **axe-core in CI** | L | From here, a violation fails the build |
+| **C2.6** | ~~`rtl.css`~~ → CSS logical properties | XS | Arabic, Hebrew and Persian are large WordPress markets. **Definition changed during the chunk — see below** |
+| **C2.7** | Form accessibility pass + **axe-core in CI** | L | From here, a violation fails the build. Brought Playwright into the project from nothing — [ADR-0013](adr/0013-accessibility-testing.md) |
 
 **Gate:** AC-3, AC-4, AC-5 pass · cancelling a 3-place booking frees 3 places and
 promotes and emails the next waitlisted person · axe-core clean on archive, single,
 form, form-in-error, confirmation.
+
+> **Gate run 2026-08-15. The audit against AC-3/4/5 found more than it was meant
+> to — including one missing feature.**
+>
+> Running the gate meant checking every criterion against an actual test rather
+> than against memory, and eight were not covered. One of the eight was not a
+> test gap at all:
+>
+> **AC-3.6 was a feature that did not exist.** The criterion says registration
+> after the closing datetime is impossible and "the form is replaced by an
+> explanation". The form was replaced by nothing: `Renderer::registration_form()`
+> returned an empty string. A visitor following a link to register arrived at a
+> page that looked broken, and the organiser got the email asking why.
+>
+> Fixed by `RegistrationService::closed_reason()`, which replaces a boolean that
+> was hiding four different situations. Only two of them are the visitor's
+> business: an event that has finished, and a closing date that has passed.
+> Registration that was never switched on explains nothing, because nothing was
+> ever offered; a closure imposed by somebody's own `qevm_registration_is_open`
+> explains nothing either, because that code closed it for a reason only it
+> knows, and inventing wording on its behalf would put our words on their front
+> page. Wording is filterable through `qevm_registration_closed_notice`.
+>
+> **AC-4.2 was untestable rather than untested.** `CancellationHandler::handle()`
+> reads `$_POST`, checks a nonce and ends in `exit()`, so no test could call it —
+> every cancellation test reached past it to `Repository::update_status()`,
+> proving the effect and skipping the decision. The signature check, the lookup
+> and the status change are now in `process()`, which returns an outcome instead
+> of redirecting. The nonce stays in `handle()` deliberately: it is a fact about
+> the request, and a method taking "is this request genuine" as an argument is a
+> method somebody can call with `true`.
+>
+> | Criterion | Result |
+> | --- | --- |
+> | AC-3.1 JS-disabled registration via POST-redirect-GET | **Was uncovered.** Now three Playwright tests with `javaScriptEnabled: false` |
+> | AC-3.2 confirmation carries reference, timezone and `.ics` | Pass |
+> | AC-3.3 eight concurrent → 1 confirmed, 7 waitlisted | Pass, real processes |
+> | AC-3.4 duplicate address refused with a readable message | **Was admin-path only.** Now covers the public form and the message |
+> | AC-3.5 3 places → 1 registration, 3 attendees | Pass |
+> | AC-3.6 closed registration explained | **Was missing entirely.** Built, and covered in PHP and in the browser |
+> | AC-3.7 thirty submissions from one address succeed | **Was a constant assertion** (`>= 20`, which would have passed a regression below the thirty the criterion names). Now thirty real submissions through the public path with the limiter live |
+> | AC-3.8 manual add counts against capacity | Pass |
+> | AC-4.1 signed link, no login | Pass |
+> | AC-4.2 confirming cancels and frees the place | **Was unreachable.** Now covered through `process()` |
+> | AC-4.3 first waitlisted promoted and emailed | Pass |
+> | AC-4.4 tampered link reveals nothing about existence | **Property held, nothing asserted it.** `verify()` touches no database, so a forged token gets the same answer whether or not the booking exists — now pinned by a test comparing both messages byte for byte |
+> | AC-4.5 cancelling 3 places frees 3 | Pass |
+> | AC-5.1 consent required and unchecked | **Was config-only.** Now asserted against the rendered markup |
+> | AC-5.2 consent version and UTC timestamp stored | Pass |
+> | AC-5.3 / AC-5.4 export and erasure | Pass |
+> | AC-5.5 no IP in any table or option | **Was uncovered.** `NoIpAddressTest` inspects the schema, the rows and the options; verified by adding an `ip_address` column and watching it fail |
+> | AC-5.6 health-adjacent fields excluded from CSV | **Out of scope** — custom fields are C3.5 |
+> | 3-place cancel frees 3, promotes and emails | Pass, as one test written to read like the criterion |
+> | axe-core clean on the five screens | Pass |
+>
+> **On AC-4.4, one thing is deliberately not met as written.** Expired and forged
+> links give *different* messages, and a test pins that difference. Telling
+> somebody their link expired when it was never valid sends them hunting for a
+> newer email that does not exist. Neither message touches the database, so
+> neither reveals whether a booking exists — the property the criterion protects
+> holds. Recorded here rather than quietly satisfied.
+
+
+> **C2.6 was built differently from its definition.** The chunk asked for an
+> `rtl.css`; there isn't one, and there should not be.
+>
+> The whole right-to-left surface was five declarations: `border-left` on
+> `.qevm-notice` plus its three colour variants, and the honeypot's `left: -9999px`.
+> WordPress offers two ways to serve those. `wp_style_add_data( $handle, 'rtl',
+> 'replace' )` swaps in a complete `-rtl` twin — a second copy of 350 lines
+> maintained so that four of them can differ. The additive form is smaller but is
+> still a second file somebody has to remember every time they add a margin. Both
+> drift, and they drift in a file nobody on the project reads in the language it
+> exists for.
+>
+> CSS logical properties do it with no second file: `border-inline-start` is the
+> left border in English and the right border in Arabic, decided by the `dir` the
+> theme already sets. Grid and flex flip on their own, which is why only five
+> declarations were ever in question.
+>
+> What this gives up is the ability to make RTL *look different* rather than
+> mirrored. This plugin has no such need; the file can be added if one appears.
+>
+> The risk it introduces is that the next person writes `margin-left` out of habit
+> and nothing complains, because in English it looks correct. `tests/unit/StylesheetTest.php`
+> reads both stylesheets and fails on any physical direction property — verified by
+> adding a `margin-left` and watching it fail. The honeypot keeps `left` as a
+> fallback with `inset-inline-start` after it, and a test asserts that order,
+> because if that offset ever failed to apply the honeypot would become a visible
+> "Website" field that people fill in and are then refused for.
 
 ---
 
@@ -428,8 +563,8 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | Stage | Chunks | Status |
 | --- | :-: | --- |
 | 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓ · C0.7 ✓** — stage complete |
-| 1 · Schema foundation | 11 | **C1.1 ✓ · C1.2 ✓ · C1.3 ✓ · C1.4 ✓ · C1.5 ✓ · C1.6 ✓** · C1.7–C1.11 pending |
-| 2 · Correctness gaps | 7 | not started |
+| 1 · Schema foundation | 12 | **C1.1–C1.12 ✓** — stage complete. Gate failed on `EXPLAIN` first time round; C1.12 was added to fix it and the gate re-run passes |
+| 2 · Correctness gaps | 7 | **all 7 chunks complete** — gate run 2026-08-15 and passed; eight acceptance criteria were uncovered and one (AC-3.6) was an unbuilt feature |
 | 3 · Records and fields | 6 | not started |
 | 4 · Calendar | 4 | not started |
 | 5 · Communication | 4 | not started |
@@ -438,7 +573,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | 8 · Event operations | 6 | not started |
 | 9 · Commerce | 7 | not started |
 | 10 · Release readiness | 9 | not started |
-| | **70** | |
+| | **71** | |
 
 ---
 

@@ -6,9 +6,12 @@
 	"private": true,
 	"scripts": {
 		"build": "wp-scripts build",
-		"start": "wp-scripts start"
+		"start": "wp-scripts start",
+		"test:a11y": "playwright test --config=tests/e2e/playwright.config.js"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.10.0",
+		"@playwright/test": "^1.48.0",
 		"@wordpress/scripts": "^30.0.0"
 	}
 }

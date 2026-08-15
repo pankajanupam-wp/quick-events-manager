@@ -22,6 +22,8 @@ why, and the consequences we accepted — including the bad ones.
 | [0009](0009-module-architecture.md) | Features are modules with a hard on/off boundary | accepted |
 | [0010](0010-payment-gateway-scope.md) | Gateway interface + Stripe + WooCommerce only | accepted |
 | [0011](0011-scope-boundary.md) | No conference layer in core | accepted |
+| [0012](0012-direction-independent-css.md) | Direction-independent CSS instead of an RTL stylesheet | accepted |
+| [0013](0013-accessibility-testing.md) | Accessibility is verified in a real browser | accepted |
 
 ## Writing a new one
 

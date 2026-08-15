@@ -71,6 +71,126 @@ jobs:
       - name: Run unit tests
         run: composer test
 
+  integration:
+    name: Integration (real WordPress and MySQL)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checked out into a subdirectory so the workspace root can play the part
+      # the plugins directory plays locally: the wp-env config belongs beside
+      # the plugin, never inside it. A .wp-env.json committed to a plugin means
+      # anyone running `wp-env start` in that folder silently gets a second
+      # WordPress, its own containers and its own database.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          path: quick-events-manager
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        working-directory: quick-events-manager
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Describe the environment
+        run: |
+          echo '{ "plugins": [ "./quick-events-manager" ] }' > .wp-env.json
+
+      - name: Start WordPress
+        run: npx --yes @wordpress/env start
+
+      # The same command the README gives a contributor, rather than a CI-only
+      # copy of it: a documented command that nothing runs is one that rots.
+      # It activates the plugin first, because activation is what puts it in
+      # the load order a real site uses, early enough for `init` — and anything
+      # that resets the test database empties the active plugin list.
+      - name: Run integration tests
+        working-directory: quick-events-manager
+        run: composer test:integration
+
+      # The suite asserts no PHP notices of its own, but a fatal inside a hook
+      # can still be swallowed by a redirect. This is the second pair of eyes.
+      - name: Fail on anything WordPress logged
+        if: always()
+        run: |
+          log=$(npx --yes @wordpress/env run tests-cli \
+            bash -c 'cat /var/www/html/wp-content/debug.log 2>/dev/null || true')
+
+          if [ -n "$log" ]; then
+            echo "::error::WordPress logged errors during the integration run"
+            echo "$log"
+            exit 1
+          fi
+
+          echo "debug.log is empty"
+
+  accessibility:
+    name: Accessibility (axe-core)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Same subdirectory layout as the integration job, and for the same
+      # reason: the wp-env config belongs beside the plugin, never inside it.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          path: quick-events-manager
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Describe the environment
+        run: |
+          echo '{ "plugins": [ "./quick-events-manager" ] }' > .wp-env.json
+
+      - name: Start WordPress
+        run: npx --yes @wordpress/env start
+
+      # `npm install` rather than `npm ci`: package-lock.json is gitignored, so
+      # there is no lockfile to install from. That is a deliberate choice the
+      # PHP side makes too — each CI run resolving current dependencies is how
+      # a break in a dependency is found here rather than by a user.
+      - name: Install browser tooling
+        working-directory: quick-events-manager
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      # An event with registration switched on, and the rewrite rules flushed.
+      # wp-env starts from an empty database, so without this every test looks
+      # at a site with nothing on it and passes for the wrong reason.
+      - name: Seed the fixture
+        run: |
+          npx --yes @wordpress/env run cli wp plugin activate quick-events-manager
+          npx --yes @wordpress/env run cli \
+            wp eval-file wp-content/plugins/quick-events-manager/tests/e2e/fixture.php
+
+      - name: Run axe-core
+        working-directory: quick-events-manager
+        run: npm run test:a11y
+
+      # Traces and screenshots for the failures, which is the difference
+      # between "axe failed" and knowing what it saw.
+      - name: Keep the evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-failures
+          path: quick-events-manager/test-results/
+          retention-days: 7
+
   build:
     name: Build blocks
     runs-on: ubuntu-latest

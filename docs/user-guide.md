@@ -46,11 +46,35 @@ Then edit the event you want sign-ups for. There is now a **Registration** box:
 
 The form appears on the event page. It works with JavaScript turned off.
 
+### Booking for more than one person
+
+Anyone booking more than one place is asked for a name per place, up to twenty. Names are optional — somebody reserving three places for their team often does not know yet who is coming, and the booking goes through either way.
+
+Each place becomes a person of its own with their own ticket reference, whether or not it has a name against it. That is what makes it possible to check people in one at a time rather than marking a whole booking as arrived.
+
+The name fields appear as the number of places changes, which needs JavaScript. Without it the booking still works and still reserves the right number of places; only the names go uncollected.
+
+### Consent
+
+The form asks people to tick a box agreeing to their details being stored, and records what they agreed to and when. You can reword it under **Events → Settings → Privacy** — link your privacy policy there if you have one.
+
+Editing the wording gives it a new version, and each registration keeps the version it agreed to, so you can tell who saw which text. Earlier wordings are not kept, so keep your own copy if you change it and might need to produce the old one.
+
+Clearing the box empties the wording and stops the plugin asking for consent at all. Nothing is then recorded about it, which is the honest outcome — not a blank consent record.
+
 ### When the event fills up
 
 Nothing breaks. Once the places are gone, further sign-ups become **waitlisted** — the form still works, but it says so, and those people are held in order. If somebody cancels, you can promote whoever is next from the attendees screen.
 
 You are never oversold: two people clicking Register at the same moment for the last place cannot both get it.
+
+## Copying an event
+
+A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.
+
+The copy gets the title (marked "(copy)"), description, dates, venue, organiser, capacity, categories, tags and every custom field. It does **not** get the original's bookings — those belong to the event people actually registered for.
+
+The copy is always a **draft**, even when the original is published, because it arrives carrying the original's date. Change the date, then publish.
 
 ## Managing attendees
 
@@ -64,6 +88,50 @@ You get everyone who has registered, with search across name, email and referenc
 - **Cancelled** — frees their place
 
 **Export CSV** downloads the list. It opens correctly in Excel including names with accents or non-Latin scripts, which most exports get wrong.
+
+### Adding somebody yourself
+
+Phone calls, walk-ins and a sign-up sheet at the door are how a lot of people actually register. At the bottom of the attendee list there is **Add an attendee** — name, email, phone and how many places.
+
+Three things worth knowing:
+
+- **Capacity still applies.** Adding somebody to a full event puts them on the waiting list, the same as anybody else. The room is the same size whichever way they got into it.
+- **It works when registration is closed**, and on an event that is still a draft. That is the point: the call always comes after the closing date.
+- **No consent record is stored.** The person never saw your consent wording, so the plugin will not claim they agreed to it. Make sure you have their permission to keep their details — a made-up consent record is worse than none, because it looks real in an audit.
+
+They are emailed a confirmation unless you untick the box.
+
+### Sending a confirmation again
+
+Every row has a **Resend** button. Use it when somebody has lost their email or mistyped their address and you have corrected it.
+
+Resending sends the confirmation and does nothing else — no new booking, no second place taken, no second notification to you.
+
+### When registration closes
+
+Once an event has happened, or its closing date has passed, the form is replaced by a short explanation rather than disappearing. A page that simply has no form on it looks broken, and the organiser gets the email asking why.
+
+An event you never switched registration on for shows nothing at all — nothing was offered, so there is nothing to explain.
+
+## When somebody cannot come
+
+Every confirmation email contains a link the attendee can use to cancel. They do not need an account, and you do not have to do it for them.
+
+Following the link shows their booking and asks them to confirm — it never cancels on the first click, because mail scanners and link previewers follow URLs in email without anybody reading them.
+
+The link stops working when the event ends. Cancelling a booking for something that has already happened frees nothing and throws away a useful record of who came.
+
+### The waiting list moves on its own
+
+When a place is given back, the longest-waiting booking that fits is confirmed automatically and told by email.
+
+It is strictly in order of joining. If the next person is waiting for three places and only one has come free, the place waits for them rather than going to somebody who joined later — a waiting list people can be overtaken in is not really a waiting list. Cancelling a *waitlisted* booking promotes nobody, because it was never holding a place.
+
+### If something is wrong with the form
+
+Mistakes are shown twice: once as a list at the top of the form, and again beside the field they belong to. The form keeps what was typed, so nobody retypes their details to fix one character, and the cursor moves to the first field that needs attention.
+
+None of that needs JavaScript. With scripting off the form still submits, still reports errors and still confirms — the only thing lost is the per-guest name fields, and a note in the form says so.
 
 ## Emails
 

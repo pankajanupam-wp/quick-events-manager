@@ -53,7 +53,9 @@ Namespaced classes with a hand-written autoloader — Composer's is a dev depend
 | Entity | Where | Why |
 | --- | --- | --- |
 | Event | CPT `qevm_event` + post meta | Needs the editor, blocks, media, taxonomies, permalinks, revisions |
+| When it happens | Custom table `{prefix}qevm_occurrences`, derived from the meta | Post meta cannot answer a date range: `meta_value` is an unindexed `longtext` and `'type' => 'DATETIME'` wraps it in a `CAST` |
 | Registration | Custom table `{prefix}qevm_registrations` | See below |
+| Attendee | Custom table `{prefix}qevm_attendees` | One booking may cover several people, and each of them needs a ticket and a check-in of their own |
 | Settings | Three options | Small, and read on every request |
 
 Registrations are the one thing that must not be posts. The question asked most often is "how many confirmed registrations does this event have", which in a custom table is one indexed `COUNT`. As a post type it is a `meta_query` join, and a 500-person event would add thousands of rows to `wp_postmeta` that every unrelated `WP_Query` then walks past.
@@ -66,7 +68,11 @@ The bug that ruins event plugins is storing local time and nothing else: every e
 
 Each event stores three things — the wall-clock time the organiser typed (`_qevm_start_local`), the timezone they meant it in (`_qevm_timezone`), and the equivalent UTC instant (`_qevm_start_utc`). **UTC is the only value ever sorted or queried on**; display always uses the event's own zone.
 
-`Y-m-d H:i:s` is zero-padded and big-endian, so lexical order is chronological order — which is why the archive can `orderby => meta_value` with no `CAST`. `MetaTest` asserts that property rather than assuming it.
+`Y-m-d H:i:s` is zero-padded and big-endian, so lexical order is chronological order. `MetaTest` asserts that property rather than assuming it.
+
+Dates are also written to `qevm_occurrences` as real `datetime` columns, and **every date query in the plugin reads them from there**, never from post meta — one `posts_clauses` filter in `Events\OccurrenceQuery` turns "what is on next week" into an indexed range scan. Post meta stays the authoring surface and the human-readable record; the occurrence row is derived, regenerated on `save_post`, and `wp qevm occurrence rebuild` rebuilds the lot.
+
+At 10,000 events the archive costs **1.7ms of database time across 8 queries**, flat with pagination depth. The `meta_query` this replaced measures 77ms on the same data. Both numbers, and the missing index the benchmark found, are in [docs/development-plan.md](docs/development-plan.md#stage-1--schema-foundation).
 
 ### Capacity
 
@@ -108,6 +114,25 @@ What it deliberately does **not** cover is anything involving `$wpdb`. SQL canno
 | Rate limit too tight | 5 per 5 minutes per address locks out an entire office, university or conference venue behind one NAT gateway — exactly the places that run events |
 
 No `composer.lock` is committed, so each PHP version in CI resolves the PHPUnit release that supports it.
+
+### The integration suite
+
+```sh
+npx @wordpress/env start   # from the plugins directory, once
+composer test:integration
+```
+
+Real WordPress, real MySQL, inside the wp-env tests container — the half the unit suite says outright it cannot reach. Each test runs in a database transaction that is rolled back afterwards, so nothing it writes survives it and no test has to clean up after itself.
+
+Three things are worth knowing before adding to it:
+
+- **DDL commits.** MySQL ends the transaction on `CREATE`, `ALTER`, `DROP` and `TRUNCATE`, which takes the rollback with it. A test that runs `dbDelta` or a migration calls `restore_schema()` itself.
+- **The plugin must be active**, not merely present, so that it loads early enough for `init`. `composer test:integration` activates it first; anything that resets the test database — including the WordPress test library's own installer — empties the active plugin list.
+- **`WP_UnitTestCase` is not used.** WordPress 7.0's test library calls `PHPUnit\Util\Test::parseTestMethodAnnotations()` before every test, an API PHPUnit removed in 10, so using it would mean a second PHPUnit toolchain to install, pin and keep alive alongside the 10–12 the unit matrix runs. What catches defects is real WordPress and real MySQL, not that base class; `tests/integration/TestCase.php` brings the isolation it was wanted for in about twenty lines.
+
+`tests/integration/HarnessTest.php` exists to keep the harness honest — that this really is WordPress, that the schema is installed, and that the rollback is working. A suite whose isolation quietly breaks does not fail; it starts passing for the wrong reasons.
+
+`tests/integration/CapacityRaceTest.php` is the one that needed real processes. It starts eight, each with its own database connection, and holds them at a shared wall-clock instant before they all submit for the same single place. Exactly one may end up confirmed. Replacing insert-then-rank with the obvious check-then-insert makes all eight confirm — an event with one place selling eight — which is both what the design prevents and the proof that the concurrency is genuine rather than eight bookings in a queue.
 
 ## Checking against a real install
 

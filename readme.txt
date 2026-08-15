@@ -63,7 +63,9 @@ https://github.com/pankajanupam-wp/quick-events-manager
 
 = Privacy =
 
-When somebody registers for an event, the plugin stores the name, email address, phone number and number of places they entered, so you can see who is coming.
+When somebody registers for an event, the plugin stores the name, email address, phone number and number of places they entered, so you can see who is coming. If they book several places and name the people taking them, those names are stored too.
+
+Registering asks people to agree to that, in wording you control, and records which wording they agreed to and the moment they did. Nothing else about the agreement is kept.
 
 It does not store IP addresses. It sends nothing to any external service — no tracking, no analytics, no calls home. Registrations are covered by WordPress's own privacy tools, so an export or erasure request includes them automatically.
 
@@ -145,6 +147,7 @@ Added:
 * Event categories and tags
 * Event list, details and registration blocks, with matching shortcodes
 * Free registration with capacity, waiting list and closing date
+* Group booking, with a name and a ticket reference for each person
 * Attendee management with search, status filtering and CSV export
 * Confirmation and notification emails
 * "Add to calendar" .ics downloads and Google Calendar links
@@ -152,6 +155,7 @@ Added:
 * A read-only REST API at `/wp-json/qevm/v1/`
 * A Features screen for switching capability on a level at a time
 * Privacy exporters and erasers for attendee data
+* A consent checkbox with wording you control, recording what was agreed to and when
 * Translation support
 
 Changed:
