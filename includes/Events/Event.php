@@ -7,6 +7,8 @@
 
 namespace QuickEventsManager\Events;
 
+use QuickEventsManager\Venues\Venue;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -241,21 +243,23 @@ final class Event {
 	 * @return string
 	 */
 	public function venue_summary() {
-		$parts = array_filter(
-			array(
-				(string) $this->meta( Meta::VENUE_NAME ),
-				(string) $this->meta( Meta::VENUE_ADDRESS ),
-				(string) $this->meta( Meta::VENUE_CITY ),
-				(string) $this->meta( Meta::VENUE_REGION ),
-				(string) $this->meta( Meta::VENUE_POSTAL ),
-				(string) $this->meta( Meta::VENUE_COUNTRY ),
-			),
-			static function ( $part ) {
-				return '' !== $part;
-			}
-		);
+		return $this->venue()->summary();
+	}
 
-		return implode( ', ', $parts );
+	/**
+	 * Where this event is.
+	 *
+	 * Resolves a venue record when the venues module is on and this event names
+	 * one, and the event's own address meta otherwise. Every caller goes through
+	 * here rather than reading the meta keys directly, so the six render paths
+	 * cannot disagree about which source wins.
+	 *
+	 * @since 26.0
+	 *
+	 * @return Venue
+	 */
+	public function venue() {
+		return Venue::for_event( $this );
 	}
 
 	/**

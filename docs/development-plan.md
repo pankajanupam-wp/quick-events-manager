@@ -408,7 +408,8 @@ custom questions. Both change data shape, so they precede any UI that depends on
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C3.1** | `qevm_venue` CPT + migration from flat meta, **flat fields keep working** | L | `_qevm_venue_id` already reserved |
+| **C3.1a** | `qevm_venue` CPT + venues module + resolution with flat-meta fallback | L | [ADR-0014](adr/0014-venue-records-with-flat-fallback.md). **Split from C3.1 — see below** |
+| **C3.1b** | Batched, deduplicating promotion of existing flat addresses into records, on module enable | M | Split from C3.1 |
 | **C3.2** | `qevm_organizer` CPT + same pattern | M | |
 | **C3.3** | Custom field definitions — post meta JSON, admin UI, types, required, ordering | L | Definitions are config; JSON is correct here |
 | **C3.4** | `qevm_attendee_meta` + form rendering + validation | M | Answers are reportable; JSON is not |
@@ -418,6 +419,47 @@ custom questions. Both change data shape, so they precede any UI that depends on
 **Gate:** an event created before the venues module existed still renders its address ·
 a custom field appears on the form, in the export, and in the privacy export · a
 flagged field is absent from CSV unless explicitly included.
+
+> **C3.1 was challenged and split before any code was written.**
+>
+> The row said "`qevm_venue` CPT + migration from flat meta". Three things were
+> wrong with it.
+>
+> **The promotion must not be a migration.** `Install\Migrations\Runner` is
+> schema-version-driven and runs on `admin_init` for every site on upgrade.
+> Promoting flat addresses there would create `qevm_venue` posts on sites that
+> never switch venues on — where the post type is not registered at all, so the
+> rows would exist and be reachable from nowhere but the database. Promotion
+> belongs in the module's own enable path.
+>
+> **Which means C3.1 needs a module, and the row did not mention one.** Every
+> other document does: `roadmap.md` says "the flat fields must keep working for
+> anyone who does not switch on the module", and the architecture invariant is
+> that a feature is a module or it is core. The plan row was the odd one out.
+>
+> **Deduplication is the feature, and the row omitted it.** Forty events at the
+> same address becoming forty records makes nothing reusable. The key is the
+> normalised address tuple rather than the name — two "Town Hall"s in different
+> cities are different buildings, and a silent merge cannot be undone.
+>
+> With a CPT, a module, capabilities, an editor selector, resolution, fallback,
+> batched promotion and deduplication, the chunk was XL rather than L, so it
+> was split at the seam the plan's own rule implies: C3.1a is the module and
+> resolution, C3.1b is the promotion.
+>
+> **"Flat fields keep working" turned out to be three cases, not one** — module
+> off; module on with nothing chosen; module on with a record chosen that has
+> since been trashed or deleted. The third is why nothing ever deletes the flat
+> meta, and it is what makes disabling the module non-destructive as
+> `Module::deactivate()` requires. [ADR-0014](adr/0014-venue-records-with-flat-fallback.md)
+> records the decision and the alternative that was rejected.
+>
+> **Found while surveying for the chunk, and fixed separately:** the event
+> editor's save routine wrote `qevm_organizer_phone` from a form that never
+> rendered it, so every save of every event wrote an empty string over any phone
+> number set through REST or by code. It never shipped. `MetaBoxFieldsTest` now
+> works against the rendered form rather than a hand-kept list, so a field that
+> is saved without being rendered fails the build.
 
 ---
 

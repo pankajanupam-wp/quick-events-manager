@@ -12,7 +12,7 @@ It ships as one release. Nothing is published until the whole of [docs/roadmap.m
 
 - Events with start and end dates and times, and a real timezone per event
 - All-day events and online events with a joining link
-- Venue and organiser details
+- Venue and organiser details, with reusable venue records as an option
 - Event categories and tags
 - A Features screen for switching capability on a module at a time
 - Free registration with capacity, automatic waiting list and a closing date

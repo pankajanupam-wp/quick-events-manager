@@ -140,18 +140,20 @@ final class Schema {
 	 * @return array<string, mixed>
 	 */
 	private function place( Event $event ) {
+		$venue = $event->venue();
+
 		$address = array_filter(
 			array(
 				'@type'           => 'PostalAddress',
-				'streetAddress'   => (string) $event->meta( Meta::VENUE_ADDRESS ),
-				'addressLocality' => (string) $event->meta( Meta::VENUE_CITY ),
-				'addressRegion'   => (string) $event->meta( Meta::VENUE_REGION ),
-				'postalCode'      => (string) $event->meta( Meta::VENUE_POSTAL ),
-				'addressCountry'  => (string) $event->meta( Meta::VENUE_COUNTRY ),
+				'streetAddress'   => $venue->part( Meta::VENUE_ADDRESS ),
+				'addressLocality' => $venue->part( Meta::VENUE_CITY ),
+				'addressRegion'   => $venue->part( Meta::VENUE_REGION ),
+				'postalCode'      => $venue->part( Meta::VENUE_POSTAL ),
+				'addressCountry'  => $venue->part( Meta::VENUE_COUNTRY ),
 			)
 		);
 
-		$name = (string) $event->meta( Meta::VENUE_NAME );
+		$name = $venue->name();
 
 		return array_filter(
 			array(

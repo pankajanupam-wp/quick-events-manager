@@ -40,6 +40,32 @@ Changing `rewrite` or `has_archive` changes every event URL on the site, so be s
 | --- | --- | --- |
 | `$args` | `array` | Post type arguments |
 
+### `qevm_venue_post_type_args` (filter)
+
+The arguments passed to `register_post_type()` for `qevm_venue`. Only fires while the venues module is enabled.
+
+Venues are registered with no public URLs — `public`, `publicly_queryable`, `has_archive`, `rewrite` and `query_var` are all off — because a generated venue page is a heading and an address, and "every event at this venue" deserves a design rather than a post type default. Turning them back on through this filter works, but the post type registers no rewrite rules, so nothing will have flushed them:
+
+```php
+add_filter(
+	'qevm_venue_post_type_args',
+	function ( $args ) {
+		$args['public']             = true;
+		$args['publicly_queryable'] = true;
+		$args['has_archive']        = 'venues';
+		$args['rewrite']            = array( 'slug' => 'venues', 'with_front' => false );
+
+		return $args;
+	}
+);
+```
+
+Visit **Settings → Permalinks** once after adding that, or the new URLs return 404 until something else flushes.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$args` | `array` | Post type arguments |
+
 ### `qevm_event_duplicated` (action)
 
 Fires after an event has been copied. The copy already has the original's meta, terms and occurrence rows; it does **not** have its registrations or attendees, and it never will — those belong to the original.

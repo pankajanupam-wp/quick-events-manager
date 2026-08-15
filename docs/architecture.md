@@ -160,7 +160,16 @@ WordPress-native by default; custom tables by exception, each justified in writi
 ([ADR-0005](adr/0005-storage-strategy.md))
 
 Events, venues and organisers are custom post types — they are authored, and they want
-the editor, media, taxonomies, permalinks, revisions and search that come free.
+the editor, media, taxonomies, permalinks, revisions and search that come free. Events
+and venues are built; organisers are still flat meta on the event, and become a record
+in the same way venues did.
+
+Venues carry one wrinkle worth stating here, because it looks like a mistake until the
+reason is known: an event keeps its own copy of the address even when it points at a
+venue record. A venue is an opt-in module, and a record that is the *only* copy of an
+address disappears with the module — taking the location off the event page, the `.ics`,
+the structured data and the confirmation email at once.
+[ADR-0014](adr/0014-venue-records-with-flat-fallback.md) has the full argument.
 Occurrences, registrations, attendees, tickets, orders, transactions, check-ins and
 queued email are custom tables — they are generated in volume and queried relationally.
 

@@ -140,6 +140,15 @@ define( 'QEVM_BASENAME', plugin_basename( __FILE__ ) );
 define( 'QEVM_POST_TYPE', 'qevm_event' );
 
 /**
+ * Post type key for reusable venues.
+ *
+ * Registered only while the venues module is enabled. Events keep their flat
+ * address meta whether or not it is, so this post type is somewhere to put an
+ * address that repeats, never the only place an address can live.
+ */
+define( 'QEVM_POST_TYPE_VENUE', 'qevm_venue' );
+
+/**
  * Taxonomy key for event categories.
  */
 define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );

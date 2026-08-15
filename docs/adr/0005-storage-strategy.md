@@ -30,7 +30,8 @@ tier, which indexes serve which named queries, the migration path, and uninstall
 behaviour. That list lives in
 [database.md](../database.md#storage-decision-framework).
 
-Applied, this yields custom post types for events, venues and organisers; taxonomies
+Applied, this yields custom post types for events, venues and organisers — events and
+venues built, organisers still flat meta pending their own chunk; taxonomies
 for categories and tags; and ten custom tables for occurrences, registrations,
 attendees, attendee meta, ticket types, orders, order items, transactions, check-ins
 and the email queue.

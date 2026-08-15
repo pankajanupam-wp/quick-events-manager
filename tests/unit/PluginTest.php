@@ -236,6 +236,45 @@ final class PluginTest extends TestCase {
 	}
 
 	/**
+	 * The venue capabilities exist before the module that reads them.
+	 *
+	 * Reusable venues are stage 4 and ship switched off, so most sites never
+	 * register the post type these names belong to. Granting them as the module
+	 * is enabled would keep them out of capabilities(), and out of the parity
+	 * check that is the only thing holding uninstall.php's hand-written list to
+	 * the installer's.
+	 *
+	 * @param string $capability Capability name the venue post type maps onto.
+	 * @return void
+	 */
+	#[DataProvider( 'venue_capability_provider' )]
+	public function test_venue_capabilities_are_granted_ahead_of_the_module( $capability ) {
+		$this->assertContains( $capability, Installer::capabilities( true ) );
+		$this->assertContains( $capability, Installer::venue_post_type_capabilities( true ) );
+	}
+
+	/**
+	 * Every capability name the venue post type maps onto.
+	 *
+	 * @return array<int, array{string}>
+	 */
+	public static function venue_capability_provider() {
+		return array(
+			array( 'edit_qevm_venue' ),
+			array( 'read_qevm_venue' ),
+			array( 'delete_qevm_venue' ),
+			array( 'edit_qevm_venues' ),
+			array( 'publish_qevm_venues' ),
+			array( 'delete_qevm_venues' ),
+			array( 'edit_others_qevm_venues' ),
+			array( 'delete_others_qevm_venues' ),
+			array( 'read_private_qevm_venues' ),
+			array( 'edit_published_qevm_venues' ),
+			array( 'delete_published_qevm_venues' ),
+		);
+	}
+
+	/**
 	 * Managing a guest list is not a statement about whose posts you may edit.
 	 *
 	 * Stage 8 needs a role that can mark people through a door without being

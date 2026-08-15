@@ -68,6 +68,20 @@ Nothing breaks. Once the places are gone, further sign-ups become **waitlisted**
 
 You are never oversold: two people clicking Register at the same moment for the last place cannot both get it.
 
+## Reusing a venue
+
+If you keep typing the same address, turn venues on: **Events → Features → Reusable venues**.
+
+You then get **Events → Venues**, where a venue is a name, an address, and optionally a description and a photo. On any event there is a **Venue** box in the sidebar — pick one and its address is used instead of the fields under **Location and organiser**.
+
+Two things worth knowing, because they are the questions people ask:
+
+**You do not have to use it.** Leaving the box on **Address on this event** is a normal, permanent choice, not something half-finished. A church hall booked one afternoon does not need a record; type the address on the event and move on. Venues are for the places you use again.
+
+**Nothing is lost if you change your mind.** Each event keeps its own copy of the address, so switching the feature off later — or deleting a venue you no longer use — leaves every event still showing where it is. Turning the feature back on picks up where you left off.
+
+Venues have no pages of their own on your site. They exist to fill in addresses, not to be visited.
+
 ## Copying an event
 
 A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.

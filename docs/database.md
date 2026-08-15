@@ -52,8 +52,8 @@ A custom table must additionally answer, in writing, in an ADR:
 | --- | --- | --- |
 | **Event** | CPT `qevm_event` + post meta | Authored. Wants the block editor, media, revisions, taxonomies, permalinks, search — all free, none worth rebuilding |
 | **Event category / tag** | Taxonomies `qevm_event_category`, `qevm_event_tag` | Core gives archives, admin UI, REST |
-| **Venue** | CPT `qevm_venue` + post meta | Authored and reusable: address, description, photo, map. Low volume. Needs its own admin screen |
-| **Organizer** | CPT `qevm_organizer` + post meta | Same reasoning. Not a WP user — most organisers have no account |
+| **Venue** | CPT `qevm_venue` + post meta, **plus a copy on the event** | Authored and reusable: address, description, photo, map. Low volume. Needs its own admin screen. The event keeps its own address so the module can be switched off — [ADR-0014](adr/0014-venue-records-with-flat-fallback.md) |
+| **Organizer** | CPT `qevm_organizer` + post meta | Same reasoning. Not a WP user — most organisers have no account. **Not built yet** — still flat meta on the event |
 | **Occurrence** | **Table** `qevm_occurrences` | Every date query in the plugin. Needs a real indexed `datetime`. [ADR-0003](adr/0003-occurrence-table.md) |
 | **Series** | `series_uuid` column + post meta | No table needed. A UUID groups events across a "this and following" split and survives deletion of any member |
 | **Registration** | **Table** `qevm_registrations` | Transactional, high volume, queried by event and status |

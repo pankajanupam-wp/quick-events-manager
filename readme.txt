@@ -28,7 +28,7 @@ When you want more, you switch it on yourself under **Events > Features**. Anyth
 * A proper timezone per event, so a talk at 6pm in Kolkata stays at 6pm in Kolkata
 * All-day events
 * Online events with a joining link
-* Venue and organiser details
+* Venue and organiser details, with reusable venue records as an option
 * Event categories and tags
 * Featured images
 * An event list that sorts by date, not by when you published it
@@ -143,7 +143,7 @@ Added:
 
 * Start and end dates and times, with a real timezone per event
 * All-day and online events
-* Venue and organiser details
+* Venue and organiser details, with reusable venue records as an option
 * Event categories and tags
 * Event list, details and registration blocks, with matching shortcodes
 * Free registration with capacity, waiting list and closing date

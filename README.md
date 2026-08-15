@@ -23,7 +23,7 @@ Level 3   opt-in      Ticketing · Check-in · Payments · WooCommerce · Recurr
 
 A plugin this size is only pleasant to use because most of it is switched off. Somebody putting a list of meetups on a page should never be handed a payment gateway screen.
 
-> **Status: in development.** 26.0 ships as a single release and is not published until everything in [docs/roadmap.md](docs/roadmap.md) is built. Core, registration and attendees are done; the Level 2 and 3 modules are not. See the roadmap for the build order.
+> **Status: in development.** 26.0 ships as a single release and is not published until everything in [docs/roadmap.md](docs/roadmap.md) is built. Core, registration, attendees and reusable venues are done; the rest of Level 2 and all of Level 3 are not. See the roadmap for the build order.
 
 ## Architecture
 

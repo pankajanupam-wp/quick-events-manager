@@ -181,6 +181,7 @@ final class Installer {
 	public static function capabilities( $include_others = true ) {
 		return array_merge(
 			self::post_type_capabilities( $include_others ),
+			self::venue_post_type_capabilities( $include_others ),
 			self::management_capabilities()
 		);
 	}
@@ -215,6 +216,55 @@ final class Installer {
 				'read_private_qevm_events',
 				'edit_published_qevm_events',
 				'delete_published_qevm_events',
+			)
+		);
+	}
+
+	/**
+	 * The capability names WordPress maps onto the venue post type.
+	 *
+	 * Reusable venues are a module, and one that is off on a fresh install, so
+	 * on most sites the post type these names belong to is never registered.
+	 * They are granted anyway, and for the reason `manage_qevm_checkins` is: a
+	 * capability that arrives with its feature has to be granted by a migration
+	 * walking every role on every site, and that migration is only avoidable
+	 * while the plugin is unreleased.
+	 *
+	 * Granting them as the module is switched on would look tidier and would
+	 * slip the uninstall guard in the process. Deletion works from a list
+	 * written out by hand, because uninstall.php runs with no autoloader and
+	 * nothing to ask; the only thing keeping that list honest is a test against
+	 * capabilities(). A name this method never returns is a name the list is
+	 * never required to carry, and it would then outlive deletion on every role
+	 * of every site that had enabled the module.
+	 *
+	 * @since 26.0
+	 *
+	 * @param bool $include_others Whether to include the manage-others caps.
+	 * @return string[]
+	 */
+	public static function venue_post_type_capabilities( $include_others = true ) {
+		$caps = array(
+			'edit_qevm_venue',
+			'read_qevm_venue',
+			'delete_qevm_venue',
+			'edit_qevm_venues',
+			'publish_qevm_venues',
+			'delete_qevm_venues',
+		);
+
+		if ( ! $include_others ) {
+			return $caps;
+		}
+
+		return array_merge(
+			$caps,
+			array(
+				'edit_others_qevm_venues',
+				'delete_others_qevm_venues',
+				'read_private_qevm_venues',
+				'edit_published_qevm_venues',
+				'delete_published_qevm_venues',
 			)
 		);
 	}

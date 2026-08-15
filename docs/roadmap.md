@@ -46,7 +46,9 @@ Editable subject and body with placeholders, and an HTML option. Replaces the pl
 
 ### 4. Reusable venues and organisers
 
-Promote the flat meta fields to real records, using the `_qevm_venue_id` column already reserved in 26.0. Needs a migration from flat fields to records for anyone who used the earlier build, and the flat fields must keep working for anyone who does not switch on the module.
+**Venues are built.** `qevm_venue` is a post type behind the Level 2 **Reusable venues** module, and `_qevm_venue_id` — reserved in 26.0 and read by nothing until now — is what an event points at. Every event still keeps its own copy of the address, so switching the module off, deleting a venue or trashing one leaves the event rendering its location as before; [ADR-0014](adr/0014-venue-records-with-flat-fallback.md) explains why that duplication is deliberate rather than an oversight.
+
+Still to come: promoting the addresses already on existing events into records, deduplicated so forty events at one address become one venue and not forty; and the same treatment for organisers, which remain flat meta on the event.
 
 ### 5. Ticketing
 
