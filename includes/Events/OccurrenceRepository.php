@@ -7,6 +7,7 @@
 
 namespace QuickEventsManager\Events;
 
+use QuickEventsManager\Domain\OccurrenceStatus;
 use QuickEventsManager\Install\Installer;
 
 defined( 'ABSPATH' ) || exit;
@@ -108,6 +109,52 @@ final class OccurrenceRepository {
 				'SELECT * FROM %i WHERE event_id = %d ORDER BY start_utc ASC, id ASC',
 				self::table(),
 				$event_id
+			),
+			ARRAY_A
+		);
+
+		return array_map(
+			static fn( array $row ): Occurrence => new Occurrence( $row ),
+			(array) $rows
+		);
+	}
+
+	/**
+	 * Every listable occurrence touching a range of local dates.
+	 *
+	 * Bounded on `start_local` and `end_local` rather than the UTC columns,
+	 * because a calendar grid is a set of *dates* and the date an event belongs
+	 * on is the one the organiser typed. A 23:00 event in Kolkata is not on the
+	 * previous day because a visitor is reading from London, and the grid would
+	 * be lying to both of them if it were.
+	 *
+	 * An occurrence is returned when it overlaps the range at all, so an event
+	 * running from the 30th to the 2nd appears in both months.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $from Local date, `Y-m-d`, inclusive.
+	 * @param string $to   Local date, `Y-m-d`, inclusive.
+	 * @return Occurrence[]
+	 */
+	public static function for_local_range( string $from, string $to ): array {
+		global $wpdb;
+
+		if ( ! self::table_exists() ) {
+			return array();
+		}
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM %i
+				 WHERE status = %s
+				   AND start_local <= %s
+				   AND end_local >= %s
+				 ORDER BY start_local ASC, id ASC',
+				self::table(),
+				OccurrenceStatus::Scheduled->value,
+				$to . ' 23:59:59',
+				$from . ' 00:00:00'
 			),
 			ARRAY_A
 		);

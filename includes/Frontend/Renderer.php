@@ -196,6 +196,52 @@ final class Renderer {
 	}
 
 	/**
+	 * Render a month of events as a grid.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $atts Display attributes.
+	 * @return string
+	 */
+	public static function calendar( array $atts = array() ) {
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\Calendar\CalendarModule::ID ) ) {
+			return '';
+		}
+
+		$atts = shortcode_atts(
+			array( 'month' => '' ),
+			$atts,
+			'qevm_event_calendar'
+		);
+
+		/*
+		 * The requested month comes from the URL as well as the attribute, so a
+		 * link to a particular month works and so does the navigation built on
+		 * top of it. Anything unparseable falls back to now rather than erroring
+		 * — a mistyped URL should show this month, not a stack trace.
+		 */
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which month to display changes nothing.
+		$requested = isset( $_GET['qevm_month'] ) ? sanitize_text_field( wp_unslash( $_GET['qevm_month'] ) ) : (string) $atts['month'];
+
+		$month = \QuickEventsManager\Calendar\Month::from_string( $requested );
+
+		Assets::enqueue_frontend();
+
+		return Templates::render(
+			'calendar-month.php',
+			array(
+				'month'    => $month,
+				'list_url' => add_query_arg(
+					array(
+						'qevm_month' => $month->key(),
+						'qevm_view'  => 'list',
+					)
+				),
+			)
+		);
+	}
+
+	/**
 	 * The custom questions an event asks, or none.
 	 *
 	 * Gated on the module here, at the render boundary, for the same reason the

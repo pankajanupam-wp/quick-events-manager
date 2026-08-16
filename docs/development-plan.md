@@ -567,13 +567,43 @@ flagged field is absent from CSV unless explicitly included.
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C4.1** | Month grid — real `<table>` with `scope`, arrow-key navigation, announced changes | L | The accessibility test the whole standard rests on |
+| **C4.1** | Month grid — real `<table>` with `scope`, announced changes | L | The accessibility test the whole standard rests on. Arrow-key navigation moved to C4.3 — see below |
 | **C4.2** | **List view as a first-class equivalent**, not a fallback | M | Highest-value accessibility decision in the release |
 | **C4.3** | Previous/next navigation without a page reload; mobile layout | M | |
 | **C4.4** | Calendar block + `[qevm_event_calendar]` shortcode, one renderer | M | |
 
 **Gate:** axe-core clean · fully keyboard navigable · the list view returns the same
 events as the grid for the same range · usable on a 360px viewport.
+
+> **C4.1 departures, recorded before the gate.**
+>
+> **Arrow-key navigation moved to C4.3.** It is the ARIA `grid` pattern — a
+> roving tabindex over the day cells — and it is an enhancement over a table
+> that has to work without it. Building it in the same chunk as the markup
+> would mean the keyboard story and the semantics land together with nothing
+> having proved the semantics stand alone. C4.3 already owns "navigation
+> without a page reload", which is the other half of the same script.
+>
+> **"Announced changes" is mostly free, and that is the argument for a table.**
+> A `<td>` inside a row, under a `<th scope="col">`, is announced with its
+> column header by every screen reader without a live region. The `<caption>`
+> carries the month and the event count, so entering the grid says where you
+> are before you move through thirty cells. A live region is needed only for
+> the changes C4.3 introduces.
+>
+> **Days are bucketed by the organiser's local date, never by the UTC instant.**
+> The first version of the test that was supposed to prove this used a Kolkata
+> event at 23:30 — which is 18:00 UTC, the same date either way — so bucketing
+> on the UTC columns passed it. Rewritten with New York, where 23:30 is 03:30
+> the next morning in UTC, and it fails as it should. The test now also asserts
+> that its own fixture still spans a UTC date boundary, so it cannot quietly
+> lose its meaning again.
+>
+> **Not yet covered: axe on the calendar markup.** There is no way to put the
+> grid on a page until the shortcode and block land in C4.4, so the browser
+> scan of it belongs to that chunk. The markup is asserted in PHP — a real
+> `<table>`, a `<caption>`, seven `scope="col"` headers — but that is not the
+> same thing and is not counted as if it were.
 
 ---
 
