@@ -163,7 +163,7 @@ abstract class TestCase extends PHPUnitTestCase {
 	protected function empty_plugin_tables() {
 		global $wpdb;
 
-		foreach ( array( 'registrations', 'attendees', 'attendee_meta', 'occurrences' ) as $table ) {
+		foreach ( array( 'registrations', 'attendees', 'attendee_meta', 'email_queue', 'occurrences' ) as $table ) {
 			$name = Installer::table( $table );
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test fixture; the name comes from a fixed list in this method.
@@ -208,7 +208,7 @@ abstract class TestCase extends PHPUnitTestCase {
 	protected function restore_schema() {
 		global $wpdb;
 
-		foreach ( array( 'registrations', 'attendees', 'attendee_meta', 'occurrences' ) as $table ) {
+		foreach ( array( 'registrations', 'attendees', 'attendee_meta', 'email_queue', 'occurrences' ) as $table ) {
 			$name = Installer::table( $table );
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test fixture rebuilding its own tables.

@@ -198,6 +198,7 @@ final class Plugin {
 		 * clear a plugin's scheduled events for it.
 		 */
 		Privacy\Retention::unschedule();
+		Email\Worker::unschedule();
 
 		flush_rewrite_rules();
 	}

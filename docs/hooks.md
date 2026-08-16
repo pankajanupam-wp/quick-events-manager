@@ -147,6 +147,27 @@ Everything else is copied, including meta this plugin does not own. A Duplicate 
 | `$skipped` | `string[]` | Meta keys to leave behind |
 | `$from` | `int` | Original post id |
 
+## Email
+
+### `qevm_email_queued` (action)
+
+Fires after a message has been added to the queue. The worker uses it to ask for a run in the next few seconds rather than leaving a confirmation until the next five-minute tick.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `int` | Queue id |
+| `$message` | `array` | Message as it was queued |
+
+### `qevm_email_attempted` (action)
+
+Fires after one queued message has been handed to `wp_mail()`, whether or not it went. `$went` reports what `wp_mail()` returned, which means the message was accepted for delivery — not that it arrived.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `int` | Queue id |
+| `$went` | `bool` | Whether `wp_mail()` accepted it |
+| `$recipient` | `string` | Address it was for |
+
 ## Calendar
 
 ### `qevm_calendar_default_view` (filter)

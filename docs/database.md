@@ -311,7 +311,7 @@ Bounded by attendees × questions, so it grows linearly and predictably. Answers
 reportable — `KEY meta_key` serves "how many people chose the vegetarian option"
 without scanning JSON.
 
-### `qevm_email_queue` — stage 5
+### `qevm_email_queue` — stage 5 *(built in C5.1)*
 
 ```sql
 CREATE TABLE {prefix}qevm_email_queue (
@@ -340,6 +340,17 @@ CREATE TABLE {prefix}qevm_email_queue (
 The body is rendered at queue time, not send time, so an email says what it said when
 it was triggered even if the template later changes. `attempts` plus `last_error`
 means a delivery failure is visible rather than silent.
+
+`sending` is a claim, not a progress report. A worker moves a row into it with an
+`UPDATE … WHERE status IN ( pending, sending )`, which MySQL applies to a given row
+once — so two workers running at the same time, a cron tick and a page load, cannot
+both take the same message and send it twice. A duplicate confirmation carries the
+same booking reference and the recipient cannot tell which is real.
+
+The claim also pushes `scheduled_for` forward, which is what makes an abandoned
+message recoverable: a worker that dies leaves its row in `sending`, and after the
+timeout the row is due again. `attempts` was already incremented by the claim, so a
+row that keeps killing workers still runs out of attempts rather than looping.
 
 ### `qevm_ticket_types` — stage 7
 

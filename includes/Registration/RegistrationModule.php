@@ -96,6 +96,9 @@ final class RegistrationModule implements Module {
 		( new Emails() )->register();
 		( new \QuickEventsManager\Privacy\Privacy() )->register();
 		( new \QuickEventsManager\Privacy\Retention() )->register();
+		( new \QuickEventsManager\Email\Worker() )->register();
+
+		add_filter( 'cron_schedules', array( \QuickEventsManager\Email\Worker::class, 'add_interval' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- Five minutes, for a queue that must not leave a confirmation sitting for an hour.
 
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();
@@ -118,6 +121,16 @@ final class RegistrationModule implements Module {
 	public function activate() {
 		Installer::run_schema( self::schema() );
 		Installer::run_schema( self::attendees_schema() );
+
+		/*
+		 * The email queue is created here because registration is the only
+		 * thing that sends mail today. It is shared infrastructure rather than
+		 * this module's property — anything else that starts sending must make
+		 * the same call, and Queue guards every method on the table existing so
+		 * that a sender arriving before the table does fails quietly rather
+		 * than fatally.
+		 */
+		Installer::run_schema( \QuickEventsManager\Email\Queue::schema() );
 	}
 
 	/**
@@ -141,6 +154,7 @@ final class RegistrationModule implements Module {
 		 * This removes nothing. Every row stays where it is.
 		 */
 		\QuickEventsManager\Privacy\Retention::unschedule();
+		\QuickEventsManager\Email\Worker::unschedule();
 	}
 
 	/**
