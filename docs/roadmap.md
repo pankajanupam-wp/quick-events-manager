@@ -44,7 +44,7 @@ A month grid as its own module. Reads the same query layer the list uses. Needs 
 
 The questions are asked once, of the person booking. Asking each guest is a change of form rather than of schema, since the answers already hang off the attendee row.
 
-Still to come: feeding the answers to the CSV export and the attendee screen, with the sensitive ones left out by default.
+Answers reach the CSV export, the attendee screen and the privacy export. Questions marked sensitive are left out of the ordinary CSV and need a second, explicitly labelled button — a per-export decision rather than a setting somebody ticks once. The attendee screen shows them, because it is behind a capability and the answers are why the question was asked; the privacy export carries them too, since that is the person's own data.
 
 ### 3. Email templates
 

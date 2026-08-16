@@ -127,6 +127,12 @@ You get everyone who has registered, with search across name, email and referenc
 
 **Export CSV** downloads the list. It opens correctly in Excel including names with accents or non-Latin scripts, which most exports get wrong.
 
+If your event asks questions of its own, the answers become columns in the file — except the ones you marked sensitive. Those need the second button, **Export CSV including sensitive answers**, which only appears when there is something for it to include.
+
+It is a separate button rather than a setting on purpose. A file of dietary requirements and access needs is health information about named people, and it gets emailed to caterers, copied onto laptops and left in downloads folders. A setting gets ticked once by somebody who needed it that afternoon and stays ticked for everybody afterwards; a button is a decision you make each time.
+
+The attendee screen itself shows every answer, sensitive ones included. That screen is behind a login, shows one event, and the answers are why you asked. It is the file leaving your computer that gets the extra step, not the screen you run the event from.
+
 ### Adding somebody yourself
 
 Phone calls, walk-ins and a sign-up sheet at the door are how a lot of people actually register. At the bottom of the attendee list there is **Add an attendee** — name, email, phone and how many places.

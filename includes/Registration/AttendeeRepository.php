@@ -7,6 +7,7 @@
 
 namespace QuickEventsManager\Registration;
 
+use QuickEventsManager\CustomFields\AnswerRepository;
 use QuickEventsManager\Domain\AttendeeStatus;
 use QuickEventsManager\Install\Installer;
 
@@ -427,7 +428,51 @@ final class AttendeeRepository {
 			return 0;
 		}
 
+		self::forget_answers( self::ids_for_registration( $registration_id ) );
+
 		return (int) $wpdb->delete( self::table(), array( 'registration_id' => $registration_id ), array( '%d' ) );
+	}
+
+	/**
+	 * The attendee ids on one booking.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $registration_id Booking id.
+	 * @return int[]
+	 */
+	private static function ids_for_registration( int $registration_id ): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table; the ids are read to delete what hangs off them, so a cached answer is the wrong one.
+		$ids = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE registration_id = %d', self::table(), $registration_id )
+		);
+
+		return array_map( 'intval', (array) $ids );
+	}
+
+	/**
+	 * Remove the custom answers a set of attendees gave.
+	 *
+	 * Called from here rather than left to the custom fields module, and
+	 * regardless of whether that module is switched on. The rows exist whatever
+	 * the Features screen says, and an attendee deleted while the module was off
+	 * would otherwise leave their dietary requirements in a table with nothing
+	 * left pointing at them — including when the deletion is a privacy erasure,
+	 * which is the one case where "we removed everything" has to be true.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int[] $attendee_ids Attendee ids.
+	 * @return void
+	 */
+	private static function forget_answers( array $attendee_ids ): void {
+		if ( array() === $attendee_ids || ! AnswerRepository::table_exists() ) {
+			return;
+		}
+
+		AnswerRepository::delete_for_attendees( $attendee_ids );
 	}
 
 	/**
@@ -450,6 +495,18 @@ final class AttendeeRepository {
 		if ( ! self::table_exists() || ! Repository::table_exists() ) {
 			return 0;
 		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom tables; the ids are read to delete what hangs off them.
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT a.id FROM %i AS a INNER JOIN %i AS r ON a.registration_id = r.id WHERE r.event_id = %d',
+				self::table(),
+				Repository::table(),
+				$event_id
+			)
+		);
+
+		self::forget_answers( array_map( 'intval', (array) $ids ) );
 
 		$removed = $wpdb->query(
 			$wpdb->prepare(

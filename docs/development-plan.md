@@ -413,7 +413,7 @@ custom questions. Both change data shape, so they precede any UI that depends on
 | **C3.2** | `qevm_organizer` CPT + same pattern | M | "Same pattern" read as *extract* the pattern, not copy it — `includes/Records/` |
 | **C3.3** | Custom field definitions — post meta JSON, admin UI, types, required, ordering | L | Definitions are config; JSON is correct here. Keys are minted, never derived from the label — see below |
 | **C3.4** | `qevm_attendee_meta` + form rendering + validation | M | Answers are reportable; JSON is not. Asked once, of the booker — see below |
-| **C3.5** | Custom answers in CSV export and attendee screen; health-adjacent fields flagged and excluded by default | M | Dietary and access needs are health-adjacent |
+| **C3.5** | Custom answers in CSV export and attendee screen; health-adjacent fields flagged and excluded by default | M | Dietary and access needs are health-adjacent. Closes AC-5.6. Found an erasure defect — see below |
 | **C3.6** | Data retention setting + cron sweep, with a filter | M | |
 
 **Gate:** an event created before the venues module existed still renders its address ·
@@ -487,6 +487,34 @@ flagged field is absent from CSV unless explicitly included.
 > exist" from the row counters rather than as a failure, which is worse. Both
 > `restore_schema()` and the integration bootstrap now create every module's
 > tables regardless of what is switched on.
+>
+> **C3.5 found a privacy defect, not just a missing feature.** Deleting an
+> attendee did not delete the answers hanging off them. An erasure request
+> therefore removed the registration and the attendee rows and left the
+> person's access requirements in `qevm_attendee_meta` with nothing pointing at
+> them — unreachable by any later export, unreachable by any later erasure, and
+> reported to the requester as "removed". `AttendeeRepository` now clears them
+> first, and does so whether or not the custom fields module is switched on,
+> because the rows exist regardless of what the Features screen says.
+>
+> **The exclusion is a second button, not a setting.** A setting is ticked once
+> by somebody who needed the data that afternoon and stays ticked for every
+> export anybody makes afterwards. The button only appears when the event
+> actually asks something sensitive, so it does not become a control people
+> learn to click past.
+>
+> **The screen shows everything; the file does not.** Not an inconsistency: the
+> attendee screen is behind a capability, shows one event, and the answers are
+> the reason the question was asked. A CSV leaves the building. The privacy
+> export carries the sensitive answers too — withholding somebody's own dietary
+> requirements from their own subject access request would be the flag doing
+> the opposite of its job.
+>
+> **`Exporter::handle()` was untestable in the same way `CancellationHandler`
+> was at AC-4.2** — it ends in `exit()`, which cannot be caught, so everything
+> deciding what the file contains sat where no test could reach it. The
+> file-building half is now `Exporter::write()`, taking a stream. The capability
+> and nonce stay in `handle()`.
 >
 > **Found while surveying for the chunk, and fixed separately:** the event
 > editor's save routine wrote `qevm_organizer_phone` from a form that never

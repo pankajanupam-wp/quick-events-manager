@@ -277,6 +277,16 @@ final class AttendeesScreen {
 			admin_url( 'admin-post.php?action=qevm_export_registrations&event_id=' . $event_id ),
 			Exporter::NONCE
 		);
+
+		$sensitive_url = wp_nonce_url(
+			admin_url(
+				'admin-post.php?action=qevm_export_registrations&event_id=' . $event_id
+				. '&' . Exporter::SENSITIVE_ARG . '=1'
+			),
+			Exporter::NONCE
+		);
+
+		$has_sensitive = self::asks_anything_sensitive( $event_id );
 		?>
 		<form method="get" class="qevm-attendees-filters">
 			<input type="hidden" name="post_type" value="<?php echo esc_attr( QEVM_POST_TYPE ); ?>" />
@@ -302,8 +312,46 @@ final class AttendeesScreen {
 			<a class="button" href="<?php echo esc_url( $export_url ); ?>">
 				<?php esc_html_e( 'Export CSV', 'quick-events-manager' ); ?>
 			</a>
+
+			<?php if ( $has_sensitive ) : ?>
+				<a class="button" href="<?php echo esc_url( $sensitive_url ); ?>">
+					<?php esc_html_e( 'Export CSV including sensitive answers', 'quick-events-manager' ); ?>
+				</a>
+			<?php endif; ?>
 		</form>
+
+		<?php if ( $has_sensitive ) : ?>
+			<p class="description">
+				<?php esc_html_e( 'Answers marked sensitive — dietary needs, access requirements — are left out of the ordinary export. The second button includes them; that file holds health information about named people, so send it only where it needs to go.', 'quick-events-manager' ); ?>
+			</p>
+		<?php endif; ?>
 		<?php
+	}
+
+	/**
+	 * Whether this event asks anything marked sensitive.
+	 *
+	 * The second export button only appears when there is something for it to
+	 * include. An always-present "including sensitive answers" button on an
+	 * event with no such questions is a button that teaches people to click it.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return bool
+	 */
+	private static function asks_anything_sensitive( $event_id ) {
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\CustomFields\CustomFieldsModule::ID ) ) {
+			return false;
+		}
+
+		foreach ( \QuickEventsManager\CustomFields\Definitions::for_event( $event_id ) as $field ) {
+			if ( $field->is_sensitive() ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -316,6 +364,14 @@ final class AttendeesScreen {
 	 * @return void
 	 */
 	private function render_table( array $registrations, $event_id ) {
+		$fields  = self::answer_fields( $event_id );
+		$answers = array() === $fields || array() === $registrations
+			? array()
+			: \QuickEventsManager\CustomFields\AnswerRepository::for_registrations(
+				array_map( static fn ( $registration ) => $registration->id(), $registrations )
+			);
+
+		$columns = array() === $fields ? 8 : 9;
 		?>
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
@@ -328,11 +384,14 @@ final class AttendeesScreen {
 					<th scope="col"><?php esc_html_e( 'Registered', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Status', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Confirmation', 'quick-events-manager' ); ?></th>
+					<?php if ( array() !== $fields ) : ?>
+						<th scope="col"><?php esc_html_e( 'Answers', 'quick-events-manager' ); ?></th>
+					<?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
 			<?php if ( empty( $registrations ) ) : ?>
-				<tr><td colspan="8"><?php esc_html_e( 'No registrations yet.', 'quick-events-manager' ); ?></td></tr>
+				<tr><td colspan="<?php echo esc_attr( (string) $columns ); ?>"><?php esc_html_e( 'No registrations yet.', 'quick-events-manager' ); ?></td></tr>
 			<?php else : ?>
 				<?php foreach ( $registrations as $registration ) : ?>
 					<tr>
@@ -393,11 +452,96 @@ final class AttendeesScreen {
 								</button>
 							</form>
 						</td>
+						<?php if ( array() !== $fields ) : ?>
+							<td>
+								<?php
+								$qevm_given = isset( $answers[ $registration->id() ] ) ? $answers[ $registration->id() ] : array();
+
+								self::render_answers( $fields, $qevm_given );
+								?>
+							</td>
+						<?php endif; ?>
 					</tr>
 				<?php endforeach; ?>
 			<?php endif; ?>
 			</tbody>
 		</table>
+		<?php
+	}
+
+	/**
+	 * The questions whose answers this screen shows.
+	 *
+	 * Every question, including the sensitive ones — unlike the CSV, which
+	 * leaves them out unless asked. The difference is not inconsistency, it is
+	 * the point: this screen is behind a capability and shows one event at a
+	 * time to somebody already running it, and the caterer's numbers are the
+	 * reason the question was asked. A CSV leaves the building. It gets
+	 * emailed, copied to a laptop and left in a downloads folder, and it is the
+	 * copy that outlives everybody's memory of why it existed.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return \QuickEventsManager\CustomFields\Field[]
+	 */
+	private static function answer_fields( $event_id ) {
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\CustomFields\CustomFieldsModule::ID ) ) {
+			return array();
+		}
+
+		return \QuickEventsManager\CustomFields\Definitions::for_event( $event_id );
+	}
+
+	/**
+	 * One booking's answers, as a short description list.
+	 *
+	 * A column per question would be unreadable at twenty questions and unusable
+	 * at five. One cell holding a labelled list stays legible however many were
+	 * asked, and reads correctly to a screen reader as a set of pairs.
+	 *
+	 * @since 26.0
+	 *
+	 * @param \QuickEventsManager\CustomFields\Field[] $fields Questions asked.
+	 * @param array<string, string|string[]>           $given  Answers given.
+	 * @return void
+	 */
+	private static function render_answers( array $fields, array $given ) {
+		$pairs = array();
+
+		foreach ( $fields as $field ) {
+			if ( ! isset( $given[ $field->key() ] ) ) {
+				continue;
+			}
+
+			$value = $given[ $field->key() ];
+			$value = is_array( $value ) ? implode( ', ', $value ) : (string) $value;
+
+			if ( '' === trim( $value ) ) {
+				continue;
+			}
+
+			$pairs[] = array(
+				'label'     => $field->label(),
+				'value'     => $value,
+				'sensitive' => $field->is_sensitive(),
+			);
+		}
+
+		if ( array() === $pairs ) {
+			echo '<span aria-hidden="true">&mdash;</span>';
+
+			return;
+		}
+		?>
+		<dl class="qevm-answers">
+			<?php foreach ( $pairs as $qevm_pair ) : ?>
+				<dt<?php echo $qevm_pair['sensitive'] ? ' class="qevm-answers__label--sensitive"' : ''; ?>>
+					<?php echo esc_html( $qevm_pair['label'] ); ?>
+				</dt>
+				<dd><?php echo esc_html( $qevm_pair['value'] ); ?></dd>
+			<?php endforeach; ?>
+		</dl>
 		<?php
 	}
 

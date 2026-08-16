@@ -132,6 +132,7 @@ final class Privacy {
 				'data'        => array_merge(
 					self::booking_data( $registration ),
 					self::guest_data( $registration ),
+					self::answer_data( $registration ),
 					self::consent_data( $registration )
 				),
 			);
@@ -188,6 +189,47 @@ final class Privacy {
 				'value' => $registration->created_at(),
 			),
 		);
+	}
+
+	/**
+	 * The answers given to the event's own questions.
+	 *
+	 * Every answer, including the ones marked sensitive. That flag governs what
+	 * leaves in a CSV an organiser downloads; it has nothing to do with a person
+	 * asking what this site holds about them. Withholding somebody's own dietary
+	 * requirements from their own subject access request would be the flag doing
+	 * the exact opposite of its job.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Registration $registration Booking being exported.
+	 * @return array<int, array{name: string, value: string}>
+	 */
+	private static function answer_data( Registration $registration ) {
+		$fields = \QuickEventsManager\CustomFields\Definitions::for_event( $registration->event_id() );
+
+		if ( array() === $fields ) {
+			return array();
+		}
+
+		$given = \QuickEventsManager\CustomFields\AnswerRepository::for_registrations( array( $registration->id() ) );
+		$given = isset( $given[ $registration->id() ] ) ? $given[ $registration->id() ] : array();
+		$data  = array();
+
+		foreach ( $fields as $field ) {
+			if ( ! isset( $given[ $field->key() ] ) ) {
+				continue;
+			}
+
+			$value = $given[ $field->key() ];
+
+			$data[] = array(
+				'name'  => $field->label(),
+				'value' => is_array( $value ) ? implode( ', ', $value ) : (string) $value,
+			);
+		}
+
+		return $data;
 	}
 
 	/**
@@ -296,6 +338,7 @@ final class Privacy {
 		$content = '<p>' . __( 'When you register for an event on this site, we store the name, email address, phone number and number of places you enter, so we know who is attending. If you book more than one place and give the names of the people taking them, we store those names too.', 'quick-events-manager' ) . '</p>'
 			. '<p>' . __( 'We record that you agreed to this when you registered, and the time you did, so we can show what you were asked to agree to.', 'quick-events-manager' ) . '</p>'
 			. '<p>' . __( 'We do not store your IP address, and we do not share this information with any external service.', 'quick-events-manager' ) . '</p>'
+			. '<p>' . __( 'If the event asks questions of its own, we store your answers to them alongside your registration.', 'quick-events-manager' ) . '</p>'
 			. '<p>' . __( 'Registrations are kept until the site owner deletes them.', 'quick-events-manager' ) . '</p>';
 
 		wp_add_privacy_policy_content( __( 'Quick Events Manager', 'quick-events-manager' ), wp_kses_post( $content ) );

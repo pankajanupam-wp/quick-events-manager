@@ -191,6 +191,72 @@ final class AnswerRepository {
 	}
 
 	/**
+	 * Answers for a page of registrations, keyed by registration id.
+	 *
+	 * One join rather than a lookup per row. The CSV export walks five hundred
+	 * registrations at a time and the attendee screen a screenful, and asking
+	 * per row is what turns an export of a thousand people into a timeout.
+	 *
+	 * Not filtered to the booker's row, deliberately, even though the booker is
+	 * the only person asked today. Writing `position = 1` into the SQL would
+	 * bake this release's form into the storage layer, and the day guests are
+	 * asked too this would silently keep returning one set.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int[] $registration_ids Registration ids.
+	 * @return array<int, array<string, string|string[]>>
+	 */
+	public static function for_registrations( array $registration_ids ) {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $registration_ids ) ) ) );
+
+		if ( array() === $ids || ! self::table_exists() ) {
+			return array();
+		}
+
+		$meta         = self::table();
+		$attendees    = Installer::table( 'attendees' );
+		$placeholders = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom tables; the IN list is a generated run of %d and the ids go through prepare().
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT a.registration_id, m.meta_key, m.meta_value
+				 FROM {$attendees} a
+				 INNER JOIN {$meta} m ON m.attendee_id = a.id
+				 WHERE a.registration_id IN ({$placeholders})
+				 ORDER BY a.position ASC, m.meta_id ASC",
+				$ids
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+		$answers = array();
+
+		foreach ( (array) $rows as $row ) {
+			$registration_id = (int) $row['registration_id'];
+			$key             = (string) $row['meta_key'];
+			$value           = (string) $row['meta_value'];
+
+			if ( ! isset( $answers[ $registration_id ][ $key ] ) ) {
+				$answers[ $registration_id ][ $key ] = $value;
+
+				continue;
+			}
+
+			$answers[ $registration_id ][ $key ] = array_merge(
+				(array) $answers[ $registration_id ][ $key ],
+				array( $value )
+			);
+		}
+
+		return $answers;
+	}
+
+	/**
 	 * Delete every answer an attendee gave.
 	 *
 	 * @since 26.0
