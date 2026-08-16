@@ -149,6 +149,10 @@ Everything else is copied, including meta this plugin does not own. A Duplicate 
 
 ## Email
 
+Templates are edited under **Events → Email templates**, which appears when the Email templates module is on. A template left empty uses the wording the plugin ships with, so a site that never touches them keeps getting whatever the current release says.
+
+The escaping rule is worth knowing before writing one: **the template's own markup is kept, and every placeholder value is escaped into it.** An HTML template runs values through `esc_html()`; a plain-text one strips tags from them. So `{attendee_name}` can never introduce markup, however it was typed into the registration form.
+
 ### `qevm_email_queued` (action)
 
 Fires after a message has been added to the queue. The worker uses it to ask for a run in the next few seconds rather than leaving a confirmation until the next five-minute tick.

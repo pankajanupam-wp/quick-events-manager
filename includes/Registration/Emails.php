@@ -101,7 +101,7 @@ final class Emails {
 				'subject' => sprintf( __( 'Your place at %s is confirmed', 'quick-events-manager' ), get_the_title( $event->id() ) ),
 				'body'    => implode( "\n", $lines ),
 				'headers' => array(),
-				'ics'     => self::calendar( $event ),
+				'values'  => \QuickEventsManager\Email\Templates::values_for( $registration, $event ),
 			),
 			$registration,
 			$event
@@ -178,7 +178,7 @@ final class Emails {
 				'subject' => $subject,
 				'body'    => $body,
 				'headers' => array(),
-
+				'values'  => \QuickEventsManager\Email\Templates::values_for( $registration, $event ),
 			),
 			$registration,
 			$event
@@ -250,6 +250,7 @@ final class Emails {
 				'subject' => sprintf( __( 'New registration for %s', 'quick-events-manager' ), get_the_title( $event->id() ) ),
 				'body'    => implode( "\n", $lines ),
 				'headers' => array(),
+				'values'  => \QuickEventsManager\Email\Templates::values_for( $registration, $event ),
 			),
 			$registration,
 			$event
@@ -292,6 +293,18 @@ final class Emails {
 		}
 
 		/*
+		 * The site's own wording, if it has written any and the module that
+		 * lets it is on. The built-in wording is what everybody else gets, and
+		 * a template missing a subject or a body counts as not written rather
+		 * than being sent half-empty.
+		 */
+		$rendered = self::apply_template( $template, $email );
+
+		if ( array() !== $rendered ) {
+			$email = array_merge( $email, $rendered );
+		}
+
+		/*
 		 * Queued, not sent. Registration used to hand each message straight to
 		 * wp_mail() inside the request that triggered it, which is fine for the
 		 * one or two a booking produces and is the thing that makes emailing
@@ -325,6 +338,35 @@ final class Emails {
 			 */
 			wp_mail( $email['to'], $email['subject'], $email['body'], isset( $email['headers'] ) ? $email['headers'] : array() );
 		}
+	}
+
+	/**
+	 * Rewrite a message from the site's own template, if there is one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string               $template Template id.
+	 * @param array<string, mixed> $email    Message as built.
+	 * @return array<string, mixed> Empty when the built-in wording stands.
+	 */
+	private static function apply_template( $template, array $email ) {
+		if ( '' === (string) $template ) {
+			return array();
+		}
+
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\Email\TemplatesModule::ID ) ) {
+			return array();
+		}
+
+		$written = \QuickEventsManager\Email\Templates::get( $template );
+
+		if ( null === $written ) {
+			return array();
+		}
+
+		$values = isset( $email['values'] ) && is_array( $email['values'] ) ? $email['values'] : array();
+
+		return $written->render( $values );
 	}
 
 	/**

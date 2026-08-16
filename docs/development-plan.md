@@ -708,12 +708,32 @@ events as the grid for the same range · usable on a 360px viewport.
 | --- | --- | :-: | --- |
 | **C5.1** | `qevm_email_queue` + cron worker + batching + retry + per-recipient status | L | `wp_mail()` is synchronous; 500 recipients in one request is a timeout |
 | **C5.2** | Route existing confirmation and notification mail through the queue | M | Nearly lost a rule the tests caught — see below |
-| **C5.3** | Email templates — editable subject and body, placeholders, HTML option | L | Replaces the plain-text builders left deliberately simple |
+| **C5.3** | Email templates — editable subject and body, placeholders, HTML option | L | Replaces the plain-text builders left deliberately simple. Templates override rather than replace — see below |
 | **C5.4** | Email all attendees, through the queue | M | |
 
 **Gate:** 500 recipients send without a timeout, with a per-recipient record of what
 was sent and what failed · a failed send is retried and visible, not silent.
 
+> **C5.3 — templates override, they do not replace.** A template that has never
+> been edited is not stored at all, and the built-in wording is what gets sent.
+> That is what lets the wording improve in a later release for every site that
+> never touched it, while leaving alone every site that did. Clearing a template
+> puts the built-in wording back rather than sending an empty message, and a
+> template missing either a subject or a body counts as not written.
+>
+> **The escaping rule is the whole of the renderer.** A template is authored by
+> somebody with the capability to edit settings, so its own markup is trusted —
+> that is the point of offering HTML at all. The values dropped into it are not:
+> an attendee's name comes from a public form. So the template is left alone and
+> every value is escaped on its way in, according to the format: `esc_html()`
+> into HTML, tags stripped for plain text, because `&lt;b&gt;Priya&lt;/b&gt;` in
+> a text email is worse than `Priya`. Getting this backwards is silent — the
+> email looks right in every test written with an ordinary name in it — so it is
+> verified by removing the escape and watching the injection test fail.
+>
+> The subject is always plain whatever the body is. Mail clients do not render
+> markup there, so escaping it puts the entities themselves in somebody's inbox.
+>
 > **C5.2 nearly lost the rule that a waiting list place gets no calendar file.**
 >
 > Attachments cannot travel on a queue row the way they travelled on a message:
