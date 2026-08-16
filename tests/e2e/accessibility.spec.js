@@ -77,6 +77,19 @@ async function expectNoViolations( page, where ) {
 	).toEqual( [] );
 }
 
+/**
+ * Answer the fixture's required custom question.
+ *
+ * The fixture asks a required "Which session?" so the axe scans see a real
+ * select, a radio group and a checkbox group rather than only text inputs. Any
+ * test that expects a submission to succeed has to answer it — which is itself
+ * the proof that a required custom question is enforced end to end, since
+ * leaving this out is exactly what made four tests fail when it was added.
+ */
+async function answerRequiredQuestions( page ) {
+	await page.selectOption( '#qevm_field-1-fsession0001', 'Morning' );
+}
+
 test.describe( 'Public screens', () => {
 	test( 'event archive', async ( { page } ) => {
 		await page.goto( '/?post_type=qevm_event' );
@@ -149,6 +162,7 @@ test.describe( 'Public screens', () => {
 		 * looked like a missing confirmation the first time this ran.
 		 */
 		await page.check( '#qevm-consent' );
+		await answerRequiredQuestions( page );
 
 		await page.click( '[data-qevm-registration-form] button[type="submit"]' );
 
@@ -171,6 +185,7 @@ test.describe( 'Keyboard and focus', () => {
 		await page.keyboard.type( `kbd-${ Date.now() }@example.com` );
 
 		await page.check( '#qevm-consent' );
+		await answerRequiredQuestions( page );
 
 		/*
 		 * Tab through to the submit button rather than clicking it. If anything
@@ -264,6 +279,7 @@ test.describe( 'Without JavaScript', () => {
 		await page.fill( '#qevm-name', 'No Script' );
 		await page.fill( '#qevm-email', `nojs-${ Date.now() }@example.com` );
 		await page.check( '#qevm-consent' );
+		await answerRequiredQuestions( page );
 
 		await page.click( '[data-qevm-registration-form] button[type="submit"]' );
 
@@ -304,6 +320,7 @@ test.describe( 'Without JavaScript', () => {
 		const address = `nojs-dup-${ Date.now() }@example.com`;
 
 		await page.fill( '#qevm-email', address );
+		await answerRequiredQuestions( page );
 		await page.click( '[data-qevm-registration-form] button[type="submit"]' );
 		await expect( page.locator( '.qevm-notice--success, .qevm-notice--info' ) ).toBeVisible();
 
@@ -312,6 +329,7 @@ test.describe( 'Without JavaScript', () => {
 		await page.fill( '#qevm-name', 'No Script' );
 		await page.fill( '#qevm-email', address );
 		await page.check( '#qevm-consent' );
+		await answerRequiredQuestions( page );
 		await page.click( '[data-qevm-registration-form] button[type="submit"]' );
 
 		const summary = page.locator( '[data-qevm-error-summary]' );

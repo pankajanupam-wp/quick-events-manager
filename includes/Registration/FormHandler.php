@@ -7,6 +7,7 @@
 
 namespace QuickEventsManager\Registration;
 
+use QuickEventsManager\CustomFields\Answers;
 use QuickEventsManager\Domain\RegistrationStatus;
 
 defined( 'ABSPATH' ) || exit;
@@ -89,43 +90,7 @@ final class FormHandler {
 			$this->redirect( $event_id, 'success', '' );
 		}
 
-		/*
-		 * Unslashed but not sanitised here, on purpose. RegistrationService is
-		 * the single point where a registration is validated, and it sanitises
-		 * each field as it validates it: sanitize_text_field() for the name and
-		 * phone, sanitize_email() plus is_email() for the address, absint() for
-		 * the quantity. The REST controller hands the service the same raw
-		 * shape, so both transports get identical treatment.
-		 *
-		 * Sanitising a second time here would be the more obviously safe thing
-		 * to do, and is exactly what makes validation drift: two places would
-		 * then define what a valid name is, and only one of them would be
-		 * updated the next time that changes.
-		 */
-		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitised in RegistrationService::create(); see above.
-		$input = array(
-			'name'     => isset( $_POST['qevm_name'] ) ? wp_unslash( $_POST['qevm_name'] ) : '',
-			'email'    => isset( $_POST['qevm_email'] ) ? wp_unslash( $_POST['qevm_email'] ) : '',
-			'phone'    => isset( $_POST['qevm_phone'] ) ? wp_unslash( $_POST['qevm_phone'] ) : '',
-			'quantity' => isset( $_POST['qevm_quantity'] ) ? wp_unslash( $_POST['qevm_quantity'] ) : 1,
-
-			/*
-			 * One name per further place, keyed by position. wp_unslash() walks
-			 * an array, and RegistrationService::guest_names() is what decides
-			 * which keys are real — anything past the quantity is discarded
-			 * there rather than trusted here.
-			 */
-			'guests'   => isset( $_POST['qevm_guest_name'] ) ? wp_unslash( $_POST['qevm_guest_name'] ) : array(),
-
-			/*
-			 * Only whether the box was ticked. What was agreed to is read from
-			 * the site's own settings when the row is written, never from the
-			 * request — a submission does not get to name the wording it
-			 * consented to.
-			 */
-			'consent'  => ! empty( $_POST['qevm_consent'] ),
-		);
-		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$input = self::collect_input();
 
 		$result = ( new RegistrationService() )->create( $event_id, $input );
 
@@ -143,6 +108,76 @@ final class FormHandler {
 			RegistrationStatus::Waitlisted === $result->status() ? 'waitlisted' : 'success',
 			''
 		);
+	}
+
+	/**
+	 * Everything the form submitted, unslashed and otherwise untouched.
+	 *
+	 * Split out of handle() so a test can see it. handle() checks a nonce, reads
+	 * $_POST and ends in a redirect, so what it collected was never observable —
+	 * and the gate found that it collected the wrong thing: the custom answers
+	 * were rendered on the form and checked by the service, and nothing between
+	 * the two carried them. Every integration test passed, because they all call
+	 * the service directly and never cross this boundary.
+	 *
+	 * The nonce and the honeypot stay in handle(): they are facts about the
+	 * request rather than about its contents.
+	 *
+	 * Unslashed but not sanitised. RegistrationService is the single point where
+	 * a registration is validated, and it sanitises each field as it validates
+	 * it: sanitize_text_field() for the name and phone, sanitize_email() plus
+	 * is_email() for the address, absint() for the quantity. The REST controller
+	 * hands the service the same raw shape, so both transports get identical
+	 * treatment. Sanitising a second time here would be the more obviously safe
+	 * thing to do, and is exactly what makes validation drift: two places would
+	 * then define what a valid name is, and only one of them would be updated
+	 * the next time that changes.
+	 *
+	 * @since 26.0
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function collect_input() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the caller; sanitised in RegistrationService::create(), which is the single validation path both transports share.
+		return array(
+			'name'                => isset( $_POST['qevm_name'] ) ? wp_unslash( $_POST['qevm_name'] ) : '',
+			'email'               => isset( $_POST['qevm_email'] ) ? wp_unslash( $_POST['qevm_email'] ) : '',
+			'phone'               => isset( $_POST['qevm_phone'] ) ? wp_unslash( $_POST['qevm_phone'] ) : '',
+			'quantity'            => isset( $_POST['qevm_quantity'] ) ? wp_unslash( $_POST['qevm_quantity'] ) : 1,
+
+			/*
+			 * One name per further place, keyed by position. wp_unslash() walks
+			 * an array, and RegistrationService::guest_names() is what decides
+			 * which keys are real — anything past the quantity is discarded
+			 * there rather than trusted here.
+			 */
+			'guests'              => isset( $_POST['qevm_guest_name'] ) ? wp_unslash( $_POST['qevm_guest_name'] ) : array(),
+
+			/*
+			 * The answers to the event's own questions, keyed by place and then
+			 * by field key. Passed through whole and checked in
+			 * CustomFields\Answers against the definitions, which is the only
+			 * place that knows what was asked — a question's type decides
+			 * whether a value is a string or a list, and a choice question
+			 * accepts only what it offered.
+			 *
+			 * This line is the whole reason the gate exists. The form rendered
+			 * the questions and the service checked them, and nothing carried
+			 * them between the two: every answer anybody typed into the public
+			 * form was dropped here, silently, while every integration test
+			 * passed because they call the service directly.
+			 */
+			Answers::FIELD_PREFIX => isset( $_POST[ Answers::FIELD_PREFIX ] ) ? wp_unslash( $_POST[ Answers::FIELD_PREFIX ] ) : array(),
+
+			/*
+			 * Only whether the box was ticked. What was agreed to is read from
+			 * the site's own settings when the row is written, never from the
+			 * request — a submission does not get to name the wording it
+			 * consented to.
+			 */
+			'consent'             => ! empty( $_POST['qevm_consent'] ),
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	}
 
 	/**
@@ -230,14 +265,25 @@ final class FormHandler {
 			array(
 				'errors' => $fields,
 				'values' => array(
-					'name'     => isset( $input['name'] ) ? sanitize_text_field( (string) $input['name'] ) : '',
-					'email'    => isset( $input['email'] ) ? sanitize_text_field( (string) $input['email'] ) : '',
-					'phone'    => isset( $input['phone'] ) ? sanitize_text_field( (string) $input['phone'] ) : '',
-					'quantity' => isset( $input['quantity'] ) ? absint( $input['quantity'] ) : 1,
-					'guests'   => RegistrationService::guest_names(
+					'name'                => isset( $input['name'] ) ? sanitize_text_field( (string) $input['name'] ) : '',
+					'email'               => isset( $input['email'] ) ? sanitize_text_field( (string) $input['email'] ) : '',
+					'phone'               => isset( $input['phone'] ) ? sanitize_text_field( (string) $input['phone'] ) : '',
+					'quantity'            => isset( $input['quantity'] ) ? absint( $input['quantity'] ) : 1,
+					'guests'              => RegistrationService::guest_names(
 						isset( $input['guests'] ) ? $input['guests'] : array(),
 						RegistrationService::MAX_PLACES
 					),
+
+					/*
+					 * Stashed raw. The form repopulates from these, and a value
+					 * cleaned here would be cleaned twice — once on the way into
+					 * the stash and once on the way back through validation —
+					 * which is how a submission comes back subtly different from
+					 * what somebody typed. Escaping happens where it is printed.
+					 */
+					Answers::FIELD_PREFIX => isset( $input[ Answers::FIELD_PREFIX ] ) && is_array( $input[ Answers::FIELD_PREFIX ] )
+						? $input[ Answers::FIELD_PREFIX ]
+						: array(),
 				),
 			),
 			self::STASH_TTL

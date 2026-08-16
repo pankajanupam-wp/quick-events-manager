@@ -119,7 +119,6 @@ final class Exporter {
 	 * @return void
 	 */
 	public static function write( $out, $event_id, $include_sensitive = false ) {
-
 		/*
 		 * A UTF-8 byte order mark. Excel on Windows assumes the system code
 		 * page without it and mangles every non-ASCII name in the file, which

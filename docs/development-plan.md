@@ -420,6 +420,41 @@ custom questions. Both change data shape, so they precede any UI that depends on
 a custom field appears on the form, in the export, and in the privacy export · a
 flagged field is absent from CSV unless explicitly included.
 
+> **Gate passed 2026-08-16, on the second run. The first found a defect that
+> made the whole of C3.4 useless in production.**
+>
+> Both criteria are worded about the *page* — "renders its address", "appears on
+> the form" — and nothing asserted either. Every custom-field test called
+> `RegistrationService::create()` directly, and every venue test asserted on
+> `Venue::summary()`. Both layers were correct. The layer between them was not.
+>
+> **`FormHandler` never read the answers.** It builds its input array by naming
+> each key, and the custom answers were not among them, so every answer typed
+> into the public registration form was discarded on the way to the service. The
+> form rendered the questions; the service was ready to check them; nothing
+> carried them across. No test could see it, because no test crossed that
+> boundary. Found by making the accessibility fixture ask a *required* question
+> and watching four browser tests fail to submit at all.
+>
+> `collect_input()` is now split out of `handle()` — the third time this shape
+> has appeared, after `CancellationHandler::process()` at the Stage 2 gate and
+> `Exporter::write()` in C3.5. A method that reads a superglobal and ends in a
+> redirect or an `exit()` hides everything it decides.
+>
+> | Criterion | Result |
+> | --- | --- |
+> | An event from before the venues module renders its address | **Property held, nothing asserted it.** Now rendered through `Renderer::event_details()` and asserted on the markup, before and after switching the module on |
+> | A chosen venue is what renders | **Was uncovered.** Now asserted, including that the old flat address is *not* what appears |
+> | A chosen organiser is what renders | **Was uncovered.** Same treatment |
+> | A custom field appears on the form | **Failed.** The markup was right and the submission was dropped — see above |
+> | A custom field appears in the export | Pass |
+> | A custom field appears in the privacy export | Pass |
+> | A flagged field is absent from CSV unless included | Pass, and verified by removing the filter |
+> | axe-core clean on the new controls | **Was uncovered.** The fixture had no custom questions, so six control types — select, radio group, checkbox group, single checkbox, textarea, help text — had never been scanned. Added to the fixture; clean |
+>
+> Suites: 182 unit / 604 · 201 integration / 1147 · 14 accessibility.
+> PHPCS and PHPStan clean.
+
 > **C3.1 was challenged and split before any code was written.**
 >
 > The row said "`qevm_venue` CPT + migration from flat meta". Three things were

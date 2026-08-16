@@ -237,20 +237,19 @@ final class Retention {
 			return array();
 		}
 
-		$occurrences   = Installer::table( 'occurrences' );
-		$registrations = Repository::table();
-
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery -- Custom tables; a cached answer to "what is old enough to delete" is the wrong answer.
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT o.event_id
-				 FROM {$occurrences} o
-				 INNER JOIN {$registrations} r ON r.event_id = o.event_id
+				'SELECT DISTINCT o.event_id
+				 FROM %i o
+				 INNER JOIN %i r ON r.event_id = o.event_id
 				 WHERE o.end_utc < %s
 				 GROUP BY o.event_id
 				 HAVING MAX( o.end_utc ) < %s
 				 ORDER BY o.event_id ASC
-				 LIMIT %d",
+				 LIMIT %d',
+				Installer::table( 'occurrences' ),
+				Repository::table(),
 				$cutoff,
 				$cutoff,
 				(int) $limit

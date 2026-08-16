@@ -14,6 +14,8 @@ use QuickEventsManager\CustomFields\Definitions;
 use QuickEventsManager\CustomFields\Field;
 use QuickEventsManager\Domain\FieldType;
 use QuickEventsManager\Registration\AttendeeRepository;
+use QuickEventsManager\Registration\FormHandler;
+use QuickEventsManager\Registration\RegistrationService;
 use QuickEventsManager\Registration\RegistrationModule;
 
 /**
@@ -290,6 +292,64 @@ final class AnswersTest extends TestCase {
 
 		$this->assertSame( 1, get_num_queries() - $before );
 		$this->assertCount( 5, $answers );
+	}
+
+	/**
+	 * The form handler carries the answers to the service.
+	 *
+	 * The gate found that it did not. The form rendered the questions and the
+	 * service checked them, and the transport between the two built its input
+	 * array by hand and never read them — so every answer typed into the public
+	 * form was dropped, silently, while every test here passed because they all
+	 * call the service directly.
+	 *
+	 * This asserts the boundary rather than the endpoints: whatever keys the
+	 * handler collects, the ones the form posts have to be among them.
+	 *
+	 * @return void
+	 */
+	public function test_the_form_handler_passes_answers_through() {
+		$event_id = $this->event_asking(
+			array(
+				$this->field( 'Dietary requirements', FieldType::Text ),
+			)
+		);
+
+		$field = Definitions::for_event( $event_id )[0];
+
+		wp_set_current_user( 0 );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Building the request the handler verifies for itself.
+		$previous = $_POST;
+
+		$_POST = wp_slash(
+			array(
+				'qevm_event_id'       => (string) $event_id,
+				'qevm_name'           => 'Priya Raman',
+				'qevm_email'          => 'form-path@example.com',
+				'qevm_quantity'       => '1',
+				'qevm_consent'        => '1',
+				Answers::FIELD_PREFIX => array(
+					RegistrationService::ANSWER_POSITION => array( $field->key() => 'Vegetarian' ),
+				),
+			)
+		);
+
+		$collected = FormHandler::collect_input();
+
+		$_POST = $previous;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$this->assertArrayHasKey(
+			Answers::FIELD_PREFIX,
+			$collected,
+			'the form handler drops the answers before the service ever sees them'
+		);
+
+		$this->assertSame(
+			'Vegetarian',
+			$collected[ Answers::FIELD_PREFIX ][ RegistrationService::ANSWER_POSITION ][ $field->key() ]
+		);
 	}
 
 	/**

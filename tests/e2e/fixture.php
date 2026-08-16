@@ -17,6 +17,10 @@
  */
 
 use QuickEventsManager\Events\Meta;
+use QuickEventsManager\CustomFields\CustomFieldsModule;
+use QuickEventsManager\CustomFields\Definitions;
+use QuickEventsManager\CustomFields\Field;
+use QuickEventsManager\Domain\FieldType;
 use QuickEventsManager\Modules\Registry;
 use QuickEventsManager\Registration\RegistrationModule;
 
@@ -26,19 +30,34 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 
 $slug = getenv( 'QEVM_EVENT_SLUG' ) ? getenv( 'QEVM_EVENT_SLUG' ) : 'accessibility-fixture';
 
-// Registration has to be on, or the form never renders and six tests pass vacuously.
-$modules = (array) get_option( QEVM_OPTION_MODULES, array() );
+/*
+ * Registration has to be on, or the form never renders and six tests pass
+ * vacuously. Custom questions have to be on for the same reason: they add
+ * fieldsets, radio groups and checkbox groups, which are the controls most
+ * often got wrong and the ones axe has most to say about.
+ */
+$modules  = (array) get_option( QEVM_OPTION_MODULES, array() );
+$registry = new Registry();
+$changed  = false;
 
-if ( ! in_array( RegistrationModule::ID, $modules, true ) ) {
-	$modules[] = RegistrationModule::ID;
+foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID ) as $required ) {
+	if ( in_array( $required, $modules, true ) ) {
+		continue;
+	}
 
+	$modules[] = $required;
+	$changed   = true;
+}
+
+if ( $changed ) {
 	update_option( QEVM_OPTION_MODULES, $modules );
 
-	$registry = new Registry();
-	$module   = $registry->get( RegistrationModule::ID );
+	foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID ) as $required ) {
+		$module = $registry->get( $required );
 
-	if ( null !== $module ) {
-		$module->activate();
+		if ( null !== $module ) {
+			$module->activate();
+		}
 	}
 }
 
@@ -79,6 +98,24 @@ if ( $existing instanceof WP_Post ) {
 if ( is_wp_error( $event_id ) ) {
 	WP_CLI::error( $event_id->get_error_message() );
 }
+
+/*
+ * One question of each shape the form can render: a plain input, a long answer,
+ * a dropdown, a list of radios, a single checkbox and a checkbox group. Between
+ * them they cover every branch of registration-fields.php, so the axe scan sees
+ * all of it rather than the one case that happened to be in the fixture.
+ */
+Definitions::save(
+	$event_id,
+	array(
+		new Field( 'fdietary0001', 'Dietary requirements', FieldType::Text, false, array(), 'Tell us about allergies too.' ),
+		new Field( 'faccess00001', 'Access requirements', FieldType::Textarea, false, array(), '', true ),
+		new Field( 'fsession0001', 'Which session?', FieldType::Select, true, array( 'Morning', 'Afternoon' ) ),
+		new Field( 'ftravel00001', 'How are you travelling?', FieldType::Radio, false, array( 'Walking', 'Public transport', 'Driving' ) ),
+		new Field( 'fnewsletter1', 'Add me to the newsletter', FieldType::Checkbox ),
+		new Field( 'fhelp0000001', 'Can you help on the day?', FieldType::Checkboxes, false, array( 'Setting up', 'Welcome desk', 'Clearing away' ) ),
+	)
+);
 
 /*
  * The error-state and confirmation tests submit real bookings, and the
