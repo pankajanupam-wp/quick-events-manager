@@ -33,6 +33,26 @@ final class Blocks {
 		'event-list'         => 'event_list',
 		'event-details'      => 'event_details',
 		'event-registration' => 'registration_form',
+		'event-calendar'     => 'calendar',
+	);
+
+	/**
+	 * Blocks that belong to a module, mapped to the module's id.
+	 *
+	 * A block whose module is switched off is not registered at all, so it does
+	 * not appear in the inserter. The renderers already refuse to output
+	 * anything without their module, which meant the block could be inserted,
+	 * showed nothing in the editor, saved nothing to the page, and gave no
+	 * reason for any of it — the site owner is left assuming the block is
+	 * broken rather than that a feature is off.
+	 *
+	 * Blocks not listed here are core and always available.
+	 *
+	 * @var array<string, string>
+	 */
+	const MODULE_BLOCKS = array(
+		'event-registration' => \QuickEventsManager\Registration\RegistrationModule::ID,
+		'event-calendar'     => \QuickEventsManager\Calendar\CalendarModule::ID,
 	);
 
 	/**
@@ -64,7 +84,13 @@ final class Blocks {
 			return;
 		}
 
+		$registry = \QuickEventsManager\Plugin::instance()->registry();
+
 		foreach ( self::BLOCKS as $name => $renderer ) {
+			if ( isset( self::MODULE_BLOCKS[ $name ] ) && ! $registry->is_enabled( self::MODULE_BLOCKS[ $name ] ) ) {
+				continue;
+			}
+
 			$metadata = QEVM_PATH . 'build/' . $name;
 
 			if ( ! is_readable( $metadata . '/block.json' ) ) {

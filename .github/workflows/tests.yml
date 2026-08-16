@@ -213,6 +213,6 @@ jobs:
 
       - name: Confirm every block was built
         run: |
-          for block in event-list event-details event-registration; do
+          for block in event-list event-details event-registration event-calendar; do
             test -f "build/${block}/block.json" || { echo "::error::build/${block}/block.json missing"; exit 1; }
           done

@@ -373,6 +373,99 @@ final class CalendarMonthTest extends TestCase {
 	}
 
 	/**
+	 * The shortcode and the block render through the same function.
+	 *
+	 * "One renderer" is the whole point of the chunk. Two implementations of a
+	 * calendar is two sets of escaping decisions and two things to keep in step,
+	 * and the editor preview would eventually stop matching the page.
+	 *
+	 * @return void
+	 */
+	public function test_the_block_and_the_shortcode_share_a_renderer() {
+		$this->enable_calendar();
+
+		$this->event_on( '2026-09-15 18:00:00', '2026-09-15 20:00:00', 'UTC', 'Shared renderer' );
+
+		$mapped = \QuickEventsManager\Blocks\Blocks::BLOCKS['event-calendar'];
+
+		$this->assertSame( 'calendar', $mapped, 'the block no longer points at the calendar renderer' );
+
+		$from_shortcode = do_shortcode( '[qevm_event_calendar month="2026-09"]' );
+		$from_renderer  = Renderer::calendar( array( 'month' => '2026-09' ) );
+
+		$this->assertStringContainsString( 'Shared renderer', $from_shortcode );
+		$this->assertSame( $from_renderer, $from_shortcode );
+	}
+
+	/**
+	 * The calendar block is not offered while its module is off.
+	 *
+	 * A block that can be inserted, shows nothing, saves nothing and explains
+	 * none of it reads as a broken block rather than as a feature that is
+	 * switched off.
+	 *
+	 * @return void
+	 */
+	public function test_the_block_is_not_registered_with_the_module_off() {
+		$this->assertArrayHasKey( 'event-calendar', \QuickEventsManager\Blocks\Blocks::MODULE_BLOCKS );
+
+		$this->assertSame(
+			CalendarModule::ID,
+			\QuickEventsManager\Blocks\Blocks::MODULE_BLOCKS['event-calendar']
+		);
+
+		update_option( QEVM_OPTION_MODULES, array( RegistrationModule::ID ) );
+
+		/*
+		 * Every plugin block comes out of the registry first. register_blocks()
+		 * runs on `init`, so they are all registered by the time any test runs,
+		 * and calling it again without clearing them makes WordPress complain
+		 * about each one — noise that says nothing about the thing under test.
+		 */
+		$registry = \WP_Block_Type_Registry::get_instance();
+		$names    = array();
+
+		foreach ( array_keys( \QuickEventsManager\Blocks\Blocks::BLOCKS ) as $block ) {
+			$names[] = 'qevm/' . $block;
+		}
+
+		foreach ( $names as $name ) {
+			if ( $registry->is_registered( $name ) ) {
+				$registry->unregister( $name );
+			}
+		}
+
+		try {
+			( new \QuickEventsManager\Blocks\Blocks() )->register_blocks();
+
+			$this->assertFalse(
+				$registry->is_registered( 'qevm/event-calendar' ),
+				'the calendar block was registered with its module switched off'
+			);
+
+			$this->assertTrue(
+				$registry->is_registered( 'qevm/event-list' ),
+				'gating one block on its module took a core block down with it'
+			);
+		} finally {
+			/*
+			 * Put the registry back. It is global and survives the transaction
+			 * this test is wrapped in, so leaving the calendar block missing
+			 * would break whatever ran next.
+			 */
+			foreach ( $names as $name ) {
+				if ( $registry->is_registered( $name ) ) {
+					$registry->unregister( $name );
+				}
+			}
+
+			$this->enable_calendar();
+
+			( new \QuickEventsManager\Blocks\Blocks() )->register_blocks();
+		}
+	}
+
+	/**
 	 * How many blank cells a grid starts with.
 	 *
 	 * @param array<int, array<int, mixed>> $weeks Weeks.

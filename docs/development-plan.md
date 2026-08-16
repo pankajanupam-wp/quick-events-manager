@@ -570,7 +570,7 @@ flagged field is absent from CSV unless explicitly included.
 | **C4.1** | Month grid — real `<table>` with `scope`, announced changes | L | The accessibility test the whole standard rests on. Arrow-key navigation moved to C4.3 — see below |
 | **C4.2** | **List view as a first-class equivalent**, not a fallback | M | Highest-value accessibility decision in the release. What "equivalent" had to mean is below |
 | **C4.3** | Previous/next navigation without a page reload; mobile layout; arrow keys from C4.1 | M | Pulled the `[qevm_event_calendar]` shortcode forward from C4.4 — see below |
-| **C4.4** | Calendar block + `[qevm_event_calendar]` shortcode, one renderer | M | |
+| **C4.4** | Calendar block, one renderer with the shortcode | M | Shortcode landed early in C4.3. Found two latent defects — see below |
 
 **Gate:** axe-core clean · fully keyboard navigable · the list view returns the same
 events as the grid for the same range · usable on a 360px viewport.
@@ -644,6 +644,25 @@ events as the grid for the same range · usable on a 360px viewport.
 > is empty at parse and written into later *is* announced, which is right here,
 > because focus should stay on the button somebody is stepping through months
 > with.
+>
+> **C4.4 found two things that had nothing to do with the calendar.**
+>
+> **Blocks were offered whatever their module was doing.** The renderers refuse
+> to output anything without their module, so the registration block could be
+> inserted on a site with registration off, showed nothing in the editor, saved
+> nothing to the page and explained none of it — which reads as a broken block
+> rather than as a switched-off feature. Blocks belonging to a module are now
+> not registered at all when it is off. Confirmed against a real install:
+> switching the calendar off removes its block and leaves the core ones alone.
+>
+> **`test_shipped_files_are_guarded` had never seen the build output.** `build/`
+> is gitignored and produced by `npm run build`, and CI builds in a separate job
+> from the one that runs the unit suite — so the first person to build and then
+> run the tests locally hit a failure that had been latent since blocks were
+> added. The generated `index.asset.php` files contain `return array( … )` and
+> nothing else, so they are exempted, and a second test now fails if anything
+> other than a generated manifest ever appears in there. The CI check that every
+> block was built was also still naming three blocks.
 >
 > **A mobile layout mistake caught before it shipped.** The first version hid
 > the event lists below 600px and left a dot behind — a common calendar pattern,
