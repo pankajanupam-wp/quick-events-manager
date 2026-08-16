@@ -66,6 +66,16 @@ Visit **Settings → Permalinks** once after adding that, or the new URLs return
 | --- | --- | --- |
 | `$args` | `array` | Post type arguments |
 
+### `qevm_organizer_post_type_args` (filter)
+
+The arguments passed to `register_post_type()` for `qevm_organizer`. Only fires while the organisers module is enabled.
+
+Registered with no public URLs, for the same reasons as venues and one more: a generated page carrying somebody's name, email address and phone number is a page nobody asked for and a scraper will thank you for.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$args` | `array` | Post type arguments |
+
 ### `qevm_promote_event_record` (filter)
 
 Whether an event's existing fields become a reusable record during the one-off promotion sweep that runs when a records module — venues, organisers — is first switched on. Shared by both, so check `$record` if you only mean one of them.

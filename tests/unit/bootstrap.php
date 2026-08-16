@@ -834,6 +834,7 @@ define( 'QEVM_URL', 'https://example.test/wp-content/plugins/quick-events-manage
 define( 'QEVM_BASENAME', 'quick-events-manager/quick-events-manager.php' );
 define( 'QEVM_POST_TYPE', 'qevm_event' );
 define( 'QEVM_POST_TYPE_VENUE', 'qevm_venue' );
+define( 'QEVM_POST_TYPE_ORGANIZER', 'qevm_organizer' );
 define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );
 define( 'QEVM_TAX_TAG', 'qevm_event_tag' );
 define( 'QEVM_OPTION_MODULES', 'qevm_enabled_modules' );

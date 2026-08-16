@@ -153,7 +153,7 @@ final class Ics {
 			$lines[] = 'LOCATION:' . self::escape_text( $location );
 		}
 
-		$organizer = (string) $event->meta( Meta::ORGANIZER_EMAIL );
+		$organizer = $event->organizer()->email();
 
 		if ( '' !== $organizer && is_email( $organizer ) ) {
 			$lines[] = 'ORGANIZER:mailto:' . $organizer;

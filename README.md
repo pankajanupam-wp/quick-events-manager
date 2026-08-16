@@ -17,13 +17,13 @@ Everything else is a **module** the site owner switches on under **Events → Fe
 ```
 Core      always on   Events, listing, single event, search, categories/tags
 Level 1   opt-in      Registration & attendees · Calendar view
-Level 2   opt-in      Custom fields · Email templates · Reusable venues
+Level 2   opt-in      Custom fields · Email templates · Reusable venues · Reusable organisers
 Level 3   opt-in      Ticketing · Check-in · Payments · WooCommerce · Recurring
 ```
 
 A plugin this size is only pleasant to use because most of it is switched off. Somebody putting a list of meetups on a page should never be handed a payment gateway screen.
 
-> **Status: in development.** 26.0 ships as a single release and is not published until everything in [docs/roadmap.md](docs/roadmap.md) is built. Core, registration, attendees and reusable venues are done; the rest of Level 2 and all of Level 3 are not. See the roadmap for the build order.
+> **Status: in development.** 26.0 ships as a single release and is not published until everything in [docs/roadmap.md](docs/roadmap.md) is built. Core, registration, attendees and reusable venues and organisers are done; the rest of Level 2 and all of Level 3 are not. See the roadmap for the build order.
 
 ## Architecture
 

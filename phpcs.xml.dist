@@ -130,6 +130,17 @@
 				<element value="read_private_qevm_venues"/>
 				<element value="edit_published_qevm_venues"/>
 				<element value="delete_published_qevm_venues"/>
+				<element value="edit_qevm_organizer"/>
+				<element value="read_qevm_organizer"/>
+				<element value="delete_qevm_organizer"/>
+				<element value="edit_qevm_organizers"/>
+				<element value="publish_qevm_organizers"/>
+				<element value="delete_qevm_organizers"/>
+				<element value="edit_others_qevm_organizers"/>
+				<element value="delete_others_qevm_organizers"/>
+				<element value="read_private_qevm_organizers"/>
+				<element value="edit_published_qevm_organizers"/>
+				<element value="delete_published_qevm_organizers"/>
 				<element value="manage_qevm_registrations"/>
 				<element value="manage_qevm_checkins"/>
 			</property>

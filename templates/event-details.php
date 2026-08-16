@@ -13,10 +13,12 @@ use QuickEventsManager\Frontend\Ics;
 
 defined( 'ABSPATH' ) || exit;
 
-$qevm_start    = $event->format_start();
-$qevm_end      = $event->format_end();
-$qevm_tz       = $event->timezone_label();
-$qevm_venue    = $event->venue_summary();
+$qevm_start     = $event->format_start();
+$qevm_end       = $event->format_end();
+$qevm_tz        = $event->timezone_label();
+$qevm_venue     = $event->venue_summary();
+$qevm_organizer = $event->organizer()->name();
+
 $qevm_ics_url  = Ics::url( $event->id() );
 $qevm_gcal_url = Ics::google_url( $event );
 ?>
@@ -72,10 +74,10 @@ $qevm_gcal_url = Ics::google_url( $event );
 			</div>
 		<?php endif; ?>
 
-		<?php if ( '' !== (string) $event->meta( \QuickEventsManager\Events\Meta::ORGANIZER_NAME ) ) : ?>
+		<?php if ( '' !== $qevm_organizer ) : ?>
 			<div class="qevm-event-meta__item">
 				<dt><?php esc_html_e( 'Organiser', 'quick-events-manager' ); ?></dt>
-				<dd><?php echo esc_html( (string) $event->meta( \QuickEventsManager\Events\Meta::ORGANIZER_NAME ) ); ?></dd>
+				<dd><?php echo esc_html( $qevm_organizer ); ?></dd>
 			</div>
 		<?php endif; ?>
 	</dl>

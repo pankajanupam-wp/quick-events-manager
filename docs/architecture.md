@@ -164,10 +164,10 @@ the editor, media, taxonomies, permalinks, revisions and search that come free. 
 and venues are built; organisers are still flat meta on the event, and become a record
 in the same way venues did.
 
-Venues carry one wrinkle worth stating here, because it looks like a mistake until the
-reason is known: an event keeps its own copy of the address even when it points at a
-venue record. A venue is an opt-in module, and a record that is the *only* copy of an
-address disappears with the module — taking the location off the event page, the `.ics`,
+Both carry one wrinkle worth stating here, because it looks like a mistake until the
+reason is known: an event keeps its own copy of the address and the contact details even
+when it points at records. Each is an opt-in module, and a record that is the *only*
+copy disappears with the module — taking the location off the event page, the `.ics`,
 the structured data and the confirmation email at once.
 [ADR-0014](adr/0014-venue-records-with-flat-fallback.md) has the full argument.
 Occurrences, registrations, attendees, tickets, orders, transactions, check-ins and

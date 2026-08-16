@@ -50,7 +50,9 @@ Editable subject and body with placeholders, and an HTML option. Replaces the pl
 
 The addresses already on existing events are promoted too, once, in a batched sweep queued when the module is first enabled. Events are matched on a fingerprint of the whole normalised address rather than on the name, so forty events at one address become one venue — and two "Town Hall"s in different towns stay two, because a wrong merge is not something the site owner can undo.
 
-Still to come: the same treatment for organisers, which remain flat meta on the event.
+Organisers work the same way, as a separate module: `qevm_organizer`, `_qevm_organizer_id`, the same resolution, the same fallback and the same sweep. Separate rather than bundled because a site can easily want one and not the other.
+
+The shared machinery lives in `includes/Records/`, so the matching rule that decides what merges exists once rather than twice.
 
 ### 5. Ticketing
 

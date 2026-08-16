@@ -141,7 +141,9 @@ quick-events-manager/
 │   ├── Install/                 Installer, schema versions, Migrations/ runner
 │   │
 │   ├── Events/                  Post type, meta, occurrence sync, queries
+│   ├── Records/                 What venues and organisers share
 │   ├── Venues/                  Reusable venue records, and resolving them
+│   ├── Organizers/              Reusable organiser records
 │   ├── Registration/            Registration + attendee feature
 │   ├── Ticketing/               Ticket types
 │   ├── Commerce/                Orders, payments, gateways

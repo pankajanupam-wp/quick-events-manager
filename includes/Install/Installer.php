@@ -182,6 +182,7 @@ final class Installer {
 		return array_merge(
 			self::post_type_capabilities( $include_others ),
 			self::venue_post_type_capabilities( $include_others ),
+			self::organizer_post_type_capabilities( $include_others ),
 			self::management_capabilities()
 		);
 	}
@@ -265,6 +266,46 @@ final class Installer {
 				'read_private_qevm_venues',
 				'edit_published_qevm_venues',
 				'delete_published_qevm_venues',
+			)
+		);
+	}
+
+	/**
+	 * The capability names WordPress maps onto the organiser post type.
+	 *
+	 * Granted up front for the same reason as the venue set above, and kept in
+	 * a method of its own rather than folded in with them because the two
+	 * modules are independent: a site can run reusable venues without reusable
+	 * organisers, and a later change to one list must not quietly move the
+	 * other.
+	 *
+	 * @since 26.0
+	 *
+	 * @param bool $include_others Whether to include the manage-others caps.
+	 * @return string[]
+	 */
+	public static function organizer_post_type_capabilities( $include_others = true ) {
+		$caps = array(
+			'edit_qevm_organizer',
+			'read_qevm_organizer',
+			'delete_qevm_organizer',
+			'edit_qevm_organizers',
+			'publish_qevm_organizers',
+			'delete_qevm_organizers',
+		);
+
+		if ( ! $include_others ) {
+			return $caps;
+		}
+
+		return array_merge(
+			$caps,
+			array(
+				'edit_others_qevm_organizers',
+				'delete_others_qevm_organizers',
+				'read_private_qevm_organizers',
+				'edit_published_qevm_organizers',
+				'delete_published_qevm_organizers',
 			)
 		);
 	}

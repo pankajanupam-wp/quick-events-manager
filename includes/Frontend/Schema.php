@@ -108,14 +108,14 @@ final class Schema {
 			)
 			: $this->place( $event );
 
-		$organizer = (string) $event->meta( Meta::ORGANIZER_NAME );
+		$organizer = $event->organizer();
 
-		if ( '' !== $organizer ) {
+		if ( '' !== $organizer->name() ) {
 			$data['organizer'] = array_filter(
 				array(
 					'@type' => 'Organization',
-					'name'  => $organizer,
-					'url'   => (string) $event->meta( Meta::ORGANIZER_URL ),
+					'name'  => $organizer->name(),
+					'url'   => $organizer->url(),
 				)
 			);
 		}

@@ -83,6 +83,15 @@ final class Meta {
 	const VENUE_ID = '_qevm_venue_id';
 
 	/**
+	 * The reusable organiser this event points at, or 0.
+	 *
+	 * The counterpart to VENUE_ID, and read only while the organisers module
+	 * is enabled. The event's own organiser fields below are kept whatever the
+	 * module is doing, so an event never loses its contact details.
+	 */
+	const ORGANIZER_ID = '_qevm_organizer_id';
+
+	/**
 	 * Organizer fields.
 	 */
 	const ORGANIZER_NAME  = '_qevm_organizer_name';
@@ -215,6 +224,11 @@ final class Meta {
 				'sanitize' => $text,
 			),
 			self::VENUE_ID             => array(
+				'type'     => 'integer',
+				'default'  => 0,
+				'sanitize' => 'absint',
+			),
+			self::ORGANIZER_ID         => array(
 				'type'     => 'integer',
 				'default'  => 0,
 				'sanitize' => 'absint',

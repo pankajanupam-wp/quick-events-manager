@@ -149,6 +149,14 @@ define( 'QEVM_POST_TYPE', 'qevm_event' );
 define( 'QEVM_POST_TYPE_VENUE', 'qevm_venue' );
 
 /**
+ * Post type key for reusable organisers.
+ *
+ * Spelled the American way to match `_qevm_organizer_*`, which 26.0 already
+ * registered and which cannot change. Everything a user reads says "organiser".
+ */
+define( 'QEVM_POST_TYPE_ORGANIZER', 'qevm_organizer' );
+
+/**
  * Taxonomy key for event categories.
  */
 define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );

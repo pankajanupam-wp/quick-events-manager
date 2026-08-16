@@ -21,6 +21,7 @@ define( 'QEVM_URL', '' );
 define( 'QEVM_BASENAME', '' );
 define( 'QEVM_POST_TYPE', 'qevm_event' );
 define( 'QEVM_POST_TYPE_VENUE', 'qevm_venue' );
+define( 'QEVM_POST_TYPE_ORGANIZER', 'qevm_organizer' );
 define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );
 define( 'QEVM_TAX_TAG', 'qevm_event_tag' );
 define( 'QEVM_OPTION_MODULES', 'qevm_enabled_modules' );

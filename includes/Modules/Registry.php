@@ -43,6 +43,7 @@ final class Registry {
 			new \QuickEventsManager\Events\EventsModule(),
 			new \QuickEventsManager\Registration\RegistrationModule(),
 			new \QuickEventsManager\Venues\VenuesModule(),
+			new \QuickEventsManager\Organizers\OrganizersModule(),
 		);
 
 		/**

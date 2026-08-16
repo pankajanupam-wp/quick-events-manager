@@ -29,6 +29,7 @@ function qevm_uninstall_site() {
 		'qevm_db_version',
 		'qevm_migration_lock',
 		'qevm_venue_promotion',
+		'qevm_organizer_promotion',
 	);
 
 	foreach ( $quick_events_manager_options as $quick_events_manager_option ) {
@@ -65,6 +66,17 @@ function qevm_uninstall_site() {
 		'read_private_qevm_venues',
 		'edit_published_qevm_venues',
 		'delete_published_qevm_venues',
+		'edit_qevm_organizer',
+		'read_qevm_organizer',
+		'delete_qevm_organizer',
+		'edit_qevm_organizers',
+		'publish_qevm_organizers',
+		'delete_qevm_organizers',
+		'edit_others_qevm_organizers',
+		'delete_others_qevm_organizers',
+		'read_private_qevm_organizers',
+		'edit_published_qevm_organizers',
+		'delete_published_qevm_organizers',
 		'manage_qevm_registrations',
 		'manage_qevm_checkins',
 	);

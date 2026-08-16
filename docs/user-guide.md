@@ -86,6 +86,14 @@ Two things worth knowing, because they are the questions people ask:
 
 Venues have no pages of their own on your site. They exist to fill in addresses, not to be visited.
 
+## Reusing an organiser
+
+The same idea for the people or groups who run your events: **Events → Features → Reusable organisers**, then **Events → Organisers**, then pick one in the **Organiser** box on any event.
+
+It is a separate switch from venues on purpose. Plenty of sites use the same three halls over and over and have exactly one organiser — themselves — and a whole screen listing one record is filing for its own sake.
+
+Everything else works the way venues do: your existing events are swept once and matched on all their details together, the contact stays on the event so nothing is lost if you switch it off, and events with an email address but nobody's name against them are left alone.
+
 ## Copying an event
 
 A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.

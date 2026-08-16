@@ -7,6 +7,7 @@
 
 namespace QuickEventsManager\Events;
 
+use QuickEventsManager\Organizers\Organizer;
 use QuickEventsManager\Venues\Venue;
 
 defined( 'ABSPATH' ) || exit;
@@ -260,6 +261,21 @@ final class Event {
 	 */
 	public function venue() {
 		return Venue::for_event( $this );
+	}
+
+	/**
+	 * Who to contact about this event.
+	 *
+	 * Resolves an organiser record when the organisers module is on and this
+	 * event names one, and the event's own organiser meta otherwise — the same
+	 * rule as venue(), for the same reason.
+	 *
+	 * @since 26.0
+	 *
+	 * @return Organizer
+	 */
+	public function organizer() {
+		return Organizer::for_event( $this );
 	}
 
 	/**
