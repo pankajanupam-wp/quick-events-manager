@@ -75,6 +75,20 @@ final class EmailAttachmentTest extends TestCase {
 	}
 
 	/**
+	 * Send everything sitting on the queue.
+	 *
+	 * Registration mail is queued rather than sent inside the request that
+	 * triggered it, so nothing reaches PHPMailer until a worker runs. These
+	 * tests used to observe the send during the booking; that they broke the
+	 * moment mail moved onto the queue is them doing their job.
+	 *
+	 * @return void
+	 */
+	private function drain() {
+		\QuickEventsManager\Email\Worker::run( 5 );
+	}
+
+	/**
 	 * A confirmed booking gets the event as a calendar file.
 	 *
 	 * @return void
@@ -84,6 +98,8 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->assertNotWPError( $registration );
 		$this->assertSame( RegistrationStatus::Confirmed, $registration->status() );
+
+		$this->drain();
 
 		$this->assertCount( 1, $this->captured(), 'exactly one attachment' );
 
@@ -110,12 +126,46 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->book( $event_id, array( 'email' => 'first@example.com' ) );
 
+		$this->drain();
+
 		$this->attachments = array();
 
 		$second = $this->book( $event_id, array( 'email' => 'second@example.com' ) );
 
+		$this->drain();
+
 		$this->assertSame( RegistrationStatus::Waitlisted, $second->status() );
 		$this->assertSame( array(), $this->captured() );
+	}
+
+	/**
+	 * A waiting list place is queued under its own template.
+	 *
+	 * The rule that a provisional place gets no calendar file used to live on
+	 * an `ics` key attached to the message. Moving attachments to send time
+	 * lost it, because both cases were queued under one template name and the
+	 * attachment filter had nothing left to tell them apart — a waitlisted
+	 * place started receiving a calendar entry for a seat it did not have.
+	 *
+	 * This asserts the distinction where it now lives, so the next person to
+	 * touch the attachment filter can see what the template name is carrying.
+	 *
+	 * @return void
+	 */
+	public function test_a_waiting_list_place_is_queued_under_its_own_template() {
+		$event_id = $this->make_event( array( 'capacity' => 1 ) );
+
+		$this->book( $event_id, array( 'email' => 'first@example.com' ) );
+		$this->book( $event_id, array( 'email' => 'second@example.com' ) );
+
+		$templates = array();
+
+		foreach ( \QuickEventsManager\Email\Queue::for_context( 'event', $event_id ) as $row ) {
+			$templates[] = (string) $row['template'];
+		}
+
+		$this->assertContains( 'attendee_confirmation', $templates );
+		$this->assertContains( 'attendee_waitlisted', $templates, 'a waitlisted place was queued as a confirmation' );
 	}
 
 	/**
@@ -129,9 +179,13 @@ final class EmailAttachmentTest extends TestCase {
 		$first = $this->book( $event_id, array( 'email' => 'first@example.com' ) );
 		$this->book( $event_id, array( 'email' => 'second@example.com' ) );
 
+		$this->drain();
+
 		$this->attachments = array();
 
 		Repository::update_status( $first->id(), RegistrationStatus::Cancelled );
+
+		$this->drain();
 
 		$this->assertCount( 1, $this->captured(), 'a promoted place is a real place' );
 		$this->assertStringContainsString( 'BEGIN:VCALENDAR', $this->captured()[0][0] );
@@ -152,6 +206,8 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->book( $event_id );
 
+		$this->drain();
+
 		$this->assertSame( array(), $this->captured() );
 	}
 
@@ -166,6 +222,8 @@ final class EmailAttachmentTest extends TestCase {
 	 */
 	public function test_the_attachment_does_not_leak_into_the_next_email() {
 		$this->book( $this->make_event() );
+
+		$this->drain();
 
 		$this->assertCount( 1, $this->captured(), 'the booking should have attached one' );
 

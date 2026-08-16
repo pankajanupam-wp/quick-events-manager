@@ -204,6 +204,57 @@ final class Worker {
 			$headers = is_array( $decoded ) ? $decoded : array();
 		}
 
+		/**
+		 * Filters the files attached to one queued message.
+		 *
+		 * `wp_mail()` takes attachments as **file paths**, and everything this
+		 * plugin attaches exists only as a string. Writing one to a temporary
+		 * file to hand back a path means finding a writable directory on a host
+		 * that may not have one, guessing at a unique name, and deleting it
+		 * afterwards on a code path that can exit early — three ways to leave
+		 * rubbish in the uploads folder for the sake of a 400-byte text file. So
+		 * it goes on through PHPMailer directly, with the listener added
+		 * immediately before the send and removed immediately after in a
+		 * `finally`: `phpmailer_init` fires for **every** message the site
+		 * sends, and left attached it would staple an event's calendar file to
+		 * password resets and every other plugin's mail.
+		 *
+		 * Attachments are produced here rather than stored on the row, because
+		 * everything this plugin attaches is derived from something the row
+		 * already points at — the confirmation's calendar file is a view of the
+		 * event. Storing a copy at queue time would mean a message delayed by an
+		 * hour carried a calendar entry for a time the event had since moved
+		 * away from, which is worse than a stale line of body text: it goes into
+		 * somebody's diary.
+		 *
+		 * Return an array of `array( 'name' => …, 'content' => …, 'type' => … )`.
+		 *
+		 * @since 26.0
+		 *
+		 * @param array<int, array<string, string>> $files Files to attach.
+		 * @param array<string, mixed>              $row   Queue row.
+		 */
+		$files = (array) apply_filters( 'qevm_email_attachments', array(), $row );
+
+		$attach = static function ( $phpmailer ) use ( $files ) {
+			foreach ( $files as $file ) {
+				if ( empty( $file['name'] ) || ! isset( $file['content'] ) ) {
+					continue;
+				}
+
+				$phpmailer->addStringAttachment(
+					(string) $file['content'],
+					(string) $file['name'],
+					'base64',
+					isset( $file['type'] ) ? (string) $file['type'] : 'application/octet-stream'
+				);
+			}
+		};
+
+		if ( array() !== $files ) {
+			add_action( 'phpmailer_init', $attach );
+		}
+
 		/*
 		 * wp_mail() can throw as well as return false. PHPMailer raises an
 		 * exception for a malformed address, and an uncaught one here would
@@ -222,6 +273,8 @@ final class Worker {
 		} catch ( \Throwable $thrown ) {
 			$went  = false;
 			$error = $thrown->getMessage();
+		} finally {
+			remove_action( 'phpmailer_init', $attach );
 		}
 
 		if ( $went ) {

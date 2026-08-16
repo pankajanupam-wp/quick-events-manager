@@ -707,12 +707,37 @@ events as the grid for the same range · usable on a 360px viewport.
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
 | **C5.1** | `qevm_email_queue` + cron worker + batching + retry + per-recipient status | L | `wp_mail()` is synchronous; 500 recipients in one request is a timeout |
-| **C5.2** | Route existing confirmation and notification mail through the queue | M | |
+| **C5.2** | Route existing confirmation and notification mail through the queue | M | Nearly lost a rule the tests caught — see below |
 | **C5.3** | Email templates — editable subject and body, placeholders, HTML option | L | Replaces the plain-text builders left deliberately simple |
 | **C5.4** | Email all attendees, through the queue | M | |
 
 **Gate:** 500 recipients send without a timeout, with a per-recipient record of what
 was sent and what failed · a failed send is retried and visible, not silent.
+
+> **C5.2 nearly lost the rule that a waiting list place gets no calendar file.**
+>
+> Attachments cannot travel on a queue row the way they travelled on a message:
+> `wp_mail()` takes file paths, the calendar exists only as a string, and it is
+> attached through a one-shot `phpmailer_init` listener that cannot survive
+> being deferred. So attachments are produced at send time instead, from the
+> event the row points at — which is also the better answer, because a calendar
+> entry stored an hour earlier may name a time the event has since moved away
+> from, and that one goes into somebody's diary rather than merely reading
+> oddly.
+>
+> What that lost was the distinction between a confirmed place and a waitlisted
+> one. It had been carried by an `ics` key on the message — empty for a waiting
+> list — and once the attachment was decided at send time from the template
+> name, both cases looked identical and a provisional place started receiving a
+> calendar entry for a seat it did not have. The existing attachment tests
+> failed and said so. The two are now separate templates, and a test asserts the
+> distinction on the queue row itself so the next person to touch the filter can
+> see what the template name is carrying.
+>
+> Three tests also had to learn to drain the queue before asserting, which is
+> them being right rather than them being in the way: mail no longer leaves
+> during the request that triggered it, and a test that still observed the send
+> there was testing something that no longer happens.
 
 ---
 

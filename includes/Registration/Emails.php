@@ -8,6 +8,7 @@
 namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\Admin\Settings;
+use QuickEventsManager\Email\Queue;
 use QuickEventsManager\Events\Event;
 use QuickEventsManager\Frontend\Ics;
 
@@ -37,6 +38,13 @@ final class Emails {
 		add_action( 'qevm_registration_created', array( $this, 'send_attendee_confirmation' ), 10, 2 );
 		add_action( 'qevm_registration_created', array( $this, 'send_organizer_notification' ), 20, 2 );
 		add_action( 'qevm_registration_promoted', array( $this, 'send_promotion_notice' ), 10, 2 );
+
+		/*
+		 * The calendar file is produced at send time rather than stored on the
+		 * queue row, so this has to be hooked whenever registration is on and
+		 * not only when a message is being built.
+		 */
+		add_filter( 'qevm_email_attachments', array( __CLASS__, 'attach_calendar' ), 10, 2 );
 	}
 
 	/**
@@ -99,7 +107,7 @@ final class Emails {
 			$event
 		);
 
-		self::dispatch( $email, $event );
+		self::dispatch( $email, $event, 'waitlist_promotion' );
 	}
 
 	/**
@@ -171,20 +179,26 @@ final class Emails {
 				'body'    => $body,
 				'headers' => array(),
 
-				/*
-				 * No calendar file for a waiting list place. An .ics is a
-				 * statement that this is happening and you are going to it;
-				 * putting a provisional place straight into somebody's calendar
-				 * is how a person turns up to an event they were never
-				 * confirmed for. They get one when they are promoted.
-				 */
-				'ics'     => $waitlisted ? '' : self::calendar( $event ),
 			),
 			$registration,
 			$event
 		);
 
-		self::dispatch( $email, $event );
+		/*
+		 * No calendar file for a waiting list place, which is why the two cases
+		 * are different templates rather than one with a flag. An .ics is a
+		 * statement that this is happening and you are going to it; putting a
+		 * provisional place straight into somebody's calendar is how a person
+		 * turns up to an event they were never confirmed for. They get one when
+		 * they are promoted.
+		 *
+		 * This was carried by an `ics` key on the message until the queue
+		 * arrived, and moving attachments to send time lost it — the template
+		 * was the same either way, so a waitlisted place started receiving a
+		 * calendar entry for a seat it did not have. The test that says so is
+		 * the reason it did not ship.
+		 */
+		self::dispatch( $email, $event, $waitlisted ? 'attendee_waitlisted' : 'attendee_confirmation' );
 	}
 
 	/**
@@ -241,7 +255,7 @@ final class Emails {
 			$event
 		);
 
-		self::dispatch( $email );
+		self::dispatch( $email, null, 'organiser_notification' );
 	}
 
 	/**
@@ -261,58 +275,99 @@ final class Emails {
 	}
 
 	/**
-	 * Send one of these emails, with its calendar file if it has one.
-	 *
-	 * `wp_mail()` takes attachments as **file paths**, and the calendar exists
-	 * only as a string. Writing it to a temporary file to hand back a path
-	 * means finding a writable directory on a host that may not have one,
-	 * guessing at a unique name, and deleting it afterwards on a code path
-	 * that can exit early — three ways to leave rubbish in the uploads folder
-	 * for the sake of a 400-byte text file.
-	 *
-	 * So it goes on through PHPMailer directly. The listener is added
-	 * immediately before the send and removed immediately after, in a finally,
-	 * because `phpmailer_init` fires for **every** email the site sends: left
-	 * attached, it would staple this event's calendar file to password resets,
-	 * comment notifications and every other plugin's mail.
+	 * Put one of these emails on the queue.
 	 *
 	 * @since 26.0
 	 *
-	 * @param array<string, mixed> $email Keys: to, subject, body, headers, ics.
-	 * @param Event|null           $event Event the calendar file describes.
+	 * @param array<string, mixed> $email    Keys: to, subject, body, headers.
+	 * @param Event|null           $event    Event the message is about, if any.
+	 * @param string               $template Which message this is, so the right
+	 *                                       attachment can be produced at send
+	 *                                       time.
 	 * @return void
 	 */
-	private static function dispatch( array $email, ?Event $event = null ) {
+	private static function dispatch( array $email, ?Event $event = null, $template = '' ) {
 		if ( empty( $email['to'] ) ) {
 			return;
 		}
 
-		$ics = isset( $email['ics'] ) ? (string) $email['ics'] : '';
+		/*
+		 * Queued, not sent. Registration used to hand each message straight to
+		 * wp_mail() inside the request that triggered it, which is fine for the
+		 * one or two a booking produces and is the thing that makes emailing
+		 * five hundred attendees impossible. Everything goes through the queue
+		 * so there is one path, one record of what was attempted, and one place
+		 * a failure is visible.
+		 *
+		 * The calendar file is not carried on the row. It is regenerated when
+		 * the message is actually sent, from the event the row points at — see
+		 * the attachment filter in Email\Worker. A copy stored now would put a
+		 * time in somebody's diary that the event may have moved away from by
+		 * the time the message goes.
+		 */
+		$queued = Queue::add(
+			array(
+				'template'     => $template,
+				'recipient'    => (string) $email['to'],
+				'subject'      => (string) $email['subject'],
+				'body'         => (string) $email['body'],
+				'headers'      => isset( $email['headers'] ) ? (array) $email['headers'] : array(),
+				'context_type' => null !== $event ? 'event' : '',
+				'context_id'   => null !== $event ? $event->id() : 0,
+			)
+		);
 
-		if ( '' === $ics || null === $event ) {
-			wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
+		if ( 0 === $queued ) {
+			/*
+			 * The queue could not take it — most likely the table does not
+			 * exist, on a site upgrading from before it did. Sending directly
+			 * is worse than queueing and better than losing the message.
+			 */
+			wp_mail( $email['to'], $email['subject'], $email['body'], isset( $email['headers'] ) ? $email['headers'] : array() );
+		}
+	}
 
-			return;
+	/**
+	 * Attach the calendar file to a confirmation, at the moment it is sent.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<int, array<string, string>> $files Files to attach.
+	 * @param array<string, mixed>              $row   Queue row.
+	 * @return array<int, array<string, string>>
+	 */
+	public static function attach_calendar( $files, $row ) {
+		$files = (array) $files;
+
+		$wants = array( 'attendee_confirmation', 'waitlist_promotion' );
+
+		if ( ! in_array( (string) ( $row['template'] ?? '' ), $wants, true ) ) {
+			return $files;
 		}
 
-		$filename = sanitize_file_name( get_post_field( 'post_name', $event->id() ) . '.ics' );
-
-		$attach = static function ( $phpmailer ) use ( $ics, $filename ) {
-			$phpmailer->addStringAttachment(
-				$ics,
-				$filename,
-				'base64',
-				'text/calendar; charset=utf-8; method=PUBLISH'
-			);
-		};
-
-		add_action( 'phpmailer_init', $attach );
-
-		try {
-			wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
-		} finally {
-			remove_action( 'phpmailer_init', $attach );
+		if ( 'event' !== (string) ( $row['context_type'] ?? '' ) ) {
+			return $files;
 		}
+
+		$event = new Event( (int) ( $row['context_id'] ?? 0 ) );
+
+		if ( ! $event->is_valid() ) {
+			return $files;
+		}
+
+		$ics = self::calendar( $event );
+
+		if ( '' === $ics ) {
+			return $files;
+		}
+
+		$files[] = array(
+			'name'    => sanitize_file_name( get_post_field( 'post_name', $event->id() ) . '.ics' ),
+			'content' => $ics,
+			'type'    => 'text/calendar; charset=utf-8; method=PUBLISH',
+		);
+
+		return $files;
 	}
 
 	/**
