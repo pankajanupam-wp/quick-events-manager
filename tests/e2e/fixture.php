@@ -130,6 +130,73 @@ Definitions::save(
  * scanned and driven in a browser. Until this existed the calendar markup had
  * never been through axe at all — there was nowhere to put it.
  */
+
+/*
+ * Events in the month the calendar opens on, and in the one after it.
+ *
+ * Without these the calendar page renders a perfectly valid empty grid, and
+ * every axe scan of it was passing on markup that contained no event links, no
+ * populated list and none of the has-events styling — the same way the form
+ * scans passed before the custom questions were added to this fixture. An empty
+ * grid is worth scanning; it is not worth scanning instead of a full one.
+ *
+ * Dated relative to now, so the fixture does not quietly stop covering anything
+ * the month it was written in goes by.
+ */
+$calendar_events = array(
+	array(
+		'offset' => '+2 days',
+		'title'  => 'Calendar fixture: single day',
+		'days'   => 0,
+	),
+	array(
+		'offset' => '+3 days',
+		'title'  => 'Calendar fixture: same day again',
+		'days'   => 0,
+	),
+	array(
+		'offset' => '+5 days',
+		'title'  => 'Calendar fixture: across three days',
+		'days'   => 2,
+	),
+	array(
+		'offset' => '+35 days',
+		'title'  => 'Calendar fixture: next month',
+		'days'   => 0,
+	),
+);
+
+foreach ( $calendar_events as $index => $spec ) {
+	$start_at = new DateTimeImmutable( $spec['offset'] . ' 18:00', wp_timezone() );
+	$end_at   = $start_at->modify( '+' . $spec['days'] . ' days' )->modify( '+2 hours' );
+
+	$calendar_event_slug = 'qevm-calendar-event-' . $index;
+	$calendar_existing   = get_page_by_path( $calendar_event_slug, OBJECT, QEVM_POST_TYPE );
+
+	$calendar_event = array(
+		'post_type'    => QEVM_POST_TYPE,
+		'post_status'  => 'publish',
+		'post_name'    => $calendar_event_slug,
+		'post_title'   => $spec['title'],
+		'post_content' => 'An event that exists so the calendar has something in it to scan.',
+		'meta_input'   => array(
+			Meta::START_LOCAL => $start_at->format( 'Y-m-d H:i:s' ),
+			Meta::END_LOCAL   => $end_at->format( 'Y-m-d H:i:s' ),
+			Meta::TIMEZONE    => wp_timezone_string(),
+			Meta::START_UTC   => Meta::to_utc( $start_at->format( 'Y-m-d H:i:s' ), wp_timezone_string() ),
+			Meta::END_UTC     => Meta::to_utc( $end_at->format( 'Y-m-d H:i:s' ), wp_timezone_string() ),
+		),
+	);
+
+	if ( $calendar_existing instanceof WP_Post ) {
+		$calendar_event['ID'] = $calendar_existing->ID;
+
+		wp_update_post( wp_slash( $calendar_event ), true );
+	} else {
+		wp_insert_post( wp_slash( $calendar_event ), true );
+	}
+}
+
 $calendar_slug = 'qevm-calendar-fixture';
 $calendar_page = get_page_by_path( $calendar_slug, OBJECT, 'page' );
 

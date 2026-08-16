@@ -366,10 +366,24 @@ test.describe( 'Closed registration', () => {
 const CALENDAR = '/qevm-calendar-fixture/';
 
 test.describe( 'Calendar', () => {
+	/*
+	 * Both scans assert the calendar has something in it before scanning.
+	 *
+	 * The gate found that it did not: the fixture had no events in the month
+	 * the calendar opens on, so every scan had been passing on an empty grid —
+	 * no event links, no populated list, none of the has-events styling. An
+	 * empty calendar is worth scanning; it is not worth scanning instead of a
+	 * full one, and nothing said which one was being looked at.
+	 */
 	test( 'the month grid', async ( { page } ) => {
 		await page.goto( CALENDAR );
 
 		await expect( page.locator( '.qevm-calendar__grid' ) ).toBeVisible();
+
+		expect(
+			await page.locator( '.qevm-calendar__event' ).count(),
+			'the fixture month has no events, so this scan proves nothing about a populated grid'
+		).toBeGreaterThan( 0 );
 
 		await expectNoViolations( page, 'the calendar grid' );
 	} );
@@ -380,7 +394,27 @@ test.describe( 'Calendar', () => {
 		await expect( page.locator( '.qevm-calendar--list' ) ).toBeVisible();
 		await expect( page.locator( '.qevm-calendar__grid' ) ).toHaveCount( 0 );
 
+		expect(
+			await page.locator( '.qevm-calendar__event' ).count(),
+			'the fixture month has no events, so this scan proves nothing about a populated list'
+		).toBeGreaterThan( 0 );
+
 		await expectNoViolations( page, 'the calendar list' );
+	} );
+
+	test( 'the list holds the same events as the grid, in the browser', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const inGrid = await page.locator( '.qevm-calendar__event a' ).allTextContents();
+
+		await page.goto( `${ CALENDAR }?qevm_view=list` );
+
+		const inList = await page.locator( '.qevm-calendar__event a' ).allTextContents();
+
+		const tidy = ( titles ) =>
+			titles.map( ( title ) => title.trim().split( /\s{2,}/ )[ 0 ] ).sort();
+
+		expect( tidy( inList ) ).toEqual( tidy( inGrid ) );
 	} );
 
 	test( 'stepping to the next month does not reload the page', async ( { page } ) => {
@@ -461,6 +495,93 @@ test.describe( 'Calendar', () => {
 		const tabbable = await page.locator( '[data-qevm-day][tabindex="0"]' ).count();
 
 		expect( tabbable ).toBe( 1 );
+	} );
+
+	/*
+	 * The Stage 4 gate says "fully keyboard navigable", so this is the whole
+	 * journey with no mouse and no programmatic focus: tab in from the top of
+	 * the document, reach the month controls, activate one with the keyboard,
+	 * and land somewhere that lets you carry on.
+	 *
+	 * The arrow-key test above starts by calling focus() on a cell, which
+	 * proves the arrows work and says nothing about whether anybody can get
+	 * there in the first place.
+	 */
+	test( 'the calendar is reachable and operable with the keyboard alone', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const before = ( await page.locator( '.qevm-calendar__month' ).textContent() ).trim();
+
+		await page.locator( 'body' ).press( 'Tab' );
+
+		let reached = null;
+
+		for ( let i = 0; i < 40; i++ ) {
+			reached = await page.evaluate( () => {
+				const el = document.activeElement;
+
+				if ( ! el ) {
+					return null;
+				}
+
+				return el.hasAttribute( 'data-qevm-calendar-next' ) ? 'next' : null;
+			} );
+
+			if ( 'next' === reached ) {
+				break;
+			}
+
+			await page.keyboard.press( 'Tab' );
+		}
+
+		expect( reached ).toBe( 'next' );
+
+		await page.keyboard.press( 'Enter' );
+
+		await expect( page.locator( '.qevm-calendar__month' ) ).not.toHaveText( before );
+
+		/*
+		 * And focus is still on a control, so the next press of Enter moves
+		 * another month rather than doing nothing from a detached node.
+		 */
+		const stillOnControl = await page.evaluate( () =>
+			!! document.activeElement && document.activeElement.hasAttribute( 'data-qevm-calendar-next' )
+		);
+
+		expect( stillOnControl ).toBe( true );
+	} );
+
+	test( 'a day cell can be tabbed to, not only focused by script', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		await page.locator( 'body' ).press( 'Tab' );
+
+		let onDay = false;
+
+		for ( let i = 0; i < 40 && ! onDay; i++ ) {
+			onDay = await page.evaluate(
+				() => !! document.activeElement && document.activeElement.hasAttribute( 'data-qevm-day' )
+			);
+
+			if ( ! onDay ) {
+				await page.keyboard.press( 'Tab' );
+			}
+		}
+
+		expect( onDay ).toBe( true );
+	} );
+
+	test( 'usable at 360px, the width the gate names', async ( { page } ) => {
+		await page.setViewportSize( { width: 360, height: 800 } );
+		await page.goto( CALENDAR );
+
+		const overflows = await page.evaluate(
+			() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+		);
+
+		expect( overflows ).toBe( false );
+
+		await expectNoViolations( page, 'the calendar at 360px' );
 	} );
 
 	test( 'usable at 320px without sideways scrolling', async ( { page } ) => {

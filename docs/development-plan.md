@@ -575,6 +575,33 @@ flagged field is absent from CSV unless explicitly included.
 **Gate:** axe-core clean · fully keyboard navigable · the list view returns the same
 events as the grid for the same range · usable on a 360px viewport.
 
+> **Gate passed 2026-08-17. It found one thing, and it was the same shape as
+> the last two gates found.**
+>
+> **Every axe scan of the calendar had been of an empty grid.** The fixture had
+> no events in the month the calendar opens on, so the scans passed on markup
+> containing no event links, no populated list and none of the has-events
+> styling — while reporting the calendar as clean. The markup turned out to be
+> fine, but nothing had established that. The fixture now seeds events in this
+> month and the next, including a multi-day one, and both scans assert the
+> calendar has something in it before scanning, so it cannot quietly go back to
+> proving nothing.
+>
+> That is three gates in a row where the finding was *a test that was passing
+> without exercising the thing it named*: Stage 2's rate limit asserted a
+> constant, Stage 3's custom-field controls were never scanned, and this. The
+> pattern is a fixture that predates the feature it is supposed to cover.
+>
+> | Criterion | Result |
+> | --- | --- |
+> | axe-core clean | **Was scanning an empty grid.** Now scans a populated one, grid and list, at 360px and 320px |
+> | Fully keyboard navigable | **Was partly assumed.** The arrow-key test began with a programmatic `focus()`, which says nothing about whether anybody can reach a cell. Now a full journey: tab in from the top of the document, reach the month control, activate it with Enter, and confirm focus is still on a control afterwards |
+> | The list returns the same events as the grid | Pass in PHP, and now also cross-checked in the browser by comparing the rendered titles in both views |
+> | Usable at 360px | Pass. 320px was already tested, which is stricter, but the gate names 360 so 360 is now tested by name |
+>
+> Suites: 183 unit / 612 · 219 integration / 1247 · 30 accessibility.
+> PHPCS and PHPStan clean.
+
 > **C4.1 departures, recorded before the gate.**
 >
 > **Arrow-key navigation moved to C4.3.** It is the ARIA `grid` pattern — a
