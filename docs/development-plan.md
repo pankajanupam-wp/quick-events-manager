@@ -411,7 +411,7 @@ custom questions. Both change data shape, so they precede any UI that depends on
 | **C3.1a** | `qevm_venue` CPT + venues module + resolution with flat-meta fallback | L | [ADR-0014](adr/0014-venue-records-with-flat-fallback.md). **Split from C3.1 — see below** |
 | **C3.1b** | Batched, deduplicating promotion of existing flat addresses into records, on module enable | M | Split from C3.1. Matched on the whole normalised address, never the name alone |
 | **C3.2** | `qevm_organizer` CPT + same pattern | M | "Same pattern" read as *extract* the pattern, not copy it — `includes/Records/` |
-| **C3.3** | Custom field definitions — post meta JSON, admin UI, types, required, ordering | L | Definitions are config; JSON is correct here |
+| **C3.3** | Custom field definitions — post meta JSON, admin UI, types, required, ordering | L | Definitions are config; JSON is correct here. Keys are minted, never derived from the label — see below |
 | **C3.4** | `qevm_attendee_meta` + form rendering + validation | M | Answers are reportable; JSON is not |
 | **C3.5** | Custom answers in CSV export and attendee screen; health-adjacent fields flagged and excluded by default | M | Dietary and access needs are health-adjacent |
 | **C3.6** | Data retention setting + cron sweep, with a filter | M | |
@@ -453,6 +453,21 @@ flagged field is absent from CSV unless explicitly included.
 > meta, and it is what makes disabling the module non-destructive as
 > `Module::deactivate()` requires. [ADR-0014](adr/0014-venue-records-with-flat-fallback.md)
 > records the decision and the alternative that was rejected.
+>
+> **C3.3 — the field key is generated, never derived.** Deriving it from the
+> label is the obvious implementation and it destroys data silently. Answers are
+> stored against the key, so a key built from "Dietary requirements" is orphaned
+> the afternoon somebody edits the label to "Dietary requirements or allergies".
+> The form keeps working, that column of the export comes back empty, and the
+> only trace is rows in a table nobody is looking at. Keys are random, assigned
+> on creation, and carried through every edit; a test renames a question through
+> the editor's own save routine and fails if the key moves.
+>
+> **The `sensitive` flag ships in C3.3 although nothing reads it until C3.5.**
+> Dietary requirements and access needs are the two questions every event asks
+> and both reveal something about health. Reserving the flag now costs a key in
+> a JSON object; adding it after people have defined fields means walking every
+> event on every site.
 >
 > **Found while surveying for the chunk, and fixed separately:** the event
 > editor's save routine wrote `qevm_organizer_phone` from a form that never

@@ -38,7 +38,9 @@ A month grid as its own module. Reads the same query layer the list uses. Needs 
 
 ### 2. Custom registration fields
 
-Extra questions on the form, stored in the `fields` JSON column that already exists for them. Field types, required flags, and ordering. Feeds the CSV export and the attendee screen.
+**Definitions are built.** Ten field types, required flags, help text, ordering and a sensitive flag, stored as JSON in `_qevm_registration_fields` on each event and edited from a box on the event editor. Keys are minted rather than derived from the label, so renaming a question never orphans the answers already given to it.
+
+Still to come: storing the answers in `qevm_attendee_meta`, rendering the questions on the form, and feeding them to the CSV export and the attendee screen.
 
 ### 3. Email templates
 

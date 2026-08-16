@@ -94,6 +94,18 @@ It is a separate switch from venues on purpose. Plenty of sites use the same thr
 
 Everything else works the way venues do: your existing events are swept once and matched on all their details together, the contact stays on the event so nothing is lost if you switch it off, and events with an email address but nobody's name against them are left alone.
 
+## Asking your own questions
+
+**Events → Features → Custom registration questions**, then edit any event. There is a **Registration questions** box under the event details.
+
+Each question has wording, an answer type — short answer, long answer, email, phone, number, date, a dropdown, a list to choose one from, yes/no, or choose-any — optional help text, and a position number. Tick **An answer is required** to refuse the form without one. Leave a question's wording blank to remove it.
+
+Ordering is a number rather than dragging, so it works by keyboard and with a screen reader, and with JavaScript off.
+
+Tick **The answer is sensitive** for anything health-adjacent — dietary needs, access requirements. It changes nothing about the form; it marks the answer so it is left out of exports unless you deliberately include it.
+
+Renaming a question later is safe. Answers stay attached to it however much you reword it.
+
 ## Copying an event
 
 A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.

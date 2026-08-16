@@ -44,6 +44,7 @@ final class Registry {
 			new \QuickEventsManager\Registration\RegistrationModule(),
 			new \QuickEventsManager\Venues\VenuesModule(),
 			new \QuickEventsManager\Organizers\OrganizersModule(),
+			new \QuickEventsManager\CustomFields\CustomFieldsModule(),
 		);
 
 		/**

@@ -144,6 +144,7 @@ quick-events-manager/
 │   ├── Records/                 What venues and organisers share
 │   ├── Venues/                  Reusable venue records, and resolving them
 │   ├── Organizers/              Reusable organiser records
+│   ├── CustomFields/            Custom registration questions
 │   ├── Registration/            Registration + attendee feature
 │   ├── Ticketing/               Ticket types
 │   ├── Commerce/                Orders, payments, gateways

@@ -147,6 +147,25 @@ Everything else is copied, including meta this plugin does not own. A Duplicate 
 | `$skipped` | `string[]` | Meta keys to leave behind |
 | `$from` | `int` | Original post id |
 
+## Registration questions
+
+### `qevm_registration_fields` (filter)
+
+The custom questions asked on an event's form, in order. Return a `Field[]`; anything else in the array is dropped rather than trusted, because a stray value here would otherwise fatal every event page on the site.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$fields` | `Field[]` | Questions, in order |
+| `$event_id` | `int` | Event id |
+
+### `qevm_registration_fields_limit` (filter)
+
+How many questions one event may ask. Defaults to 20 — not a technical limit, but a form with fifty questions is a form nobody finishes, and the organiser who built it will blame the plugin for their sign-up rate.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$limit` | `int` | Maximum number of questions |
+
 ## Front end
 
 ### `qevm_template_path` (filter)
