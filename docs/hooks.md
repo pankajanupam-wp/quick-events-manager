@@ -166,6 +166,13 @@ How many questions one event may ask. Defaults to 20 — not a technical limit, 
 | --- | --- | --- |
 | `$limit` | `int` | Maximum number of questions |
 
+### `qevm_registration_field_answers` (note)
+
+There is no filter over stored answers. Values are checked against the question's own
+definition before they are written — a choice question accepts only the choices it
+offers — and a hook that let that be bypassed would put values in the export that were
+never on the screen.
+
 ## Front end
 
 ### `qevm_template_path` (filter)

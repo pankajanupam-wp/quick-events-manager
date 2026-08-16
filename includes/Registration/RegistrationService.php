@@ -9,6 +9,11 @@ namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\Events\Event;
 use QuickEventsManager\Events\Meta;
+use QuickEventsManager\CustomFields\AnswerRepository;
+use QuickEventsManager\CustomFields\Answers;
+use QuickEventsManager\CustomFields\CustomFieldsModule;
+use QuickEventsManager\CustomFields\Definitions;
+use QuickEventsManager\Plugin;
 use QuickEventsManager\Privacy\Consent;
 
 defined( 'ABSPATH' ) || exit;
@@ -59,6 +64,15 @@ final class RegistrationService {
 	/**
 	 * A booking somebody made themselves, through the form.
 	 */
+	/**
+	 * The place whose attendee row carries the custom answers.
+	 *
+	 * One, the person booking. Named rather than written as a literal because
+	 * the storage is per attendee and could carry a set for every guest; the
+	 * form asking once is the current limit, not the shape of the data.
+	 */
+	const ANSWER_POSITION = 1;
+
 	const CONTEXT_PUBLIC = 'public';
 
 	/**
@@ -137,7 +151,7 @@ final class RegistrationService {
 			}
 		}
 
-		$fields = $this->validate( $input, $manual );
+		$fields = $this->validate( $input, $manual, $event_id );
 
 		if ( is_wp_error( $fields ) ) {
 			return $fields;
@@ -207,11 +221,21 @@ final class RegistrationService {
 		 * registration because the roster could not be written would be the
 		 * worse of the two failures by a wide margin.
 		 */
-		AttendeeRepository::create_for_registration(
+		$attendees = AttendeeRepository::create_for_registration(
 			$registration->id(),
 			$registration->quantity(),
 			self::people( $fields )
 		);
+
+		/*
+		 * Answers are written after the attendee rows, because each set belongs
+		 * to a person and there is nothing to attach them to until the people
+		 * exist. Like the rows themselves, a failure here does not undo the
+		 * booking: the places are held and the confirmation goes out.
+		 */
+		if ( isset( $fields['answers'] ) && array() !== $fields['answers'] ) {
+			self::store_answers( $attendees, $fields['answers'] );
+		}
 
 		if ( ! $manual ) {
 			$this->record_attempt();
@@ -334,11 +358,12 @@ final class RegistrationService {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array<string, mixed> $input  Raw input.
-	 * @param bool                 $manual Whether an organiser is entering this on somebody's behalf.
-	 * @return array{name: string, email: string, phone: string, quantity: int, guests: array<int, string>}|\WP_Error
+	 * @param array<string, mixed> $input    Raw input.
+	 * @param bool                 $manual   Whether an organiser is entering this on somebody's behalf.
+	 * @param int                  $event_id Event the booking is for, so its own questions can be checked.
+	 * @return array{name: string, email: string, phone: string, quantity: int, guests: array<int, string>, answers: array<int, array<string, string|string[]>>}|\WP_Error
 	 */
-	private function validate( array $input, $manual = false ) {
+	private function validate( array $input, $manual = false, $event_id = 0 ) {
 		/*
 		 * Every problem, not the first one.
 		 *
@@ -411,12 +436,19 @@ final class RegistrationService {
 			);
 		}
 
+		/*
+		 * Quantity is settled before the custom questions are checked, because
+		 * the questions are asked once per place and there is no way to know
+		 * how many sets to expect without it.
+		 */
+		$quantity = isset( $input['quantity'] ) ? absint( $input['quantity'] ) : 1;
+		$quantity = max( 1, min( self::MAX_PLACES, $quantity ) );
+
+		$answers = $this->validate_answers( $errors, $input, $quantity, (int) $event_id );
+
 		if ( $errors->has_errors() ) {
 			return $errors;
 		}
-
-		$quantity = isset( $input['quantity'] ) ? absint( $input['quantity'] ) : 1;
-		$quantity = max( 1, min( self::MAX_PLACES, $quantity ) );
 
 		return array(
 			'name'     => $name,
@@ -424,7 +456,76 @@ final class RegistrationService {
 			'phone'    => $phone,
 			'quantity' => $quantity,
 			'guests'   => self::guest_names( isset( $input['guests'] ) ? $input['guests'] : array(), $quantity ),
+			'answers'  => $answers,
 		);
+	}
+
+	/**
+	 * Check the custom questions.
+	 *
+	 * **Asked once, of the person booking.** The answers are stored against
+	 * their attendee row, so the storage is per person and can carry a set for
+	 * every guest later without a schema change — but the form asks once.
+	 *
+	 * Asking every guest is the right end state for dietary needs and access
+	 * requirements, and it is not this chunk. Places run to twenty and questions
+	 * to twenty, and the guest rows are already all rendered and hidden, so a
+	 * set per guest is four hundred inputs in the markup of a form that usually
+	 * books one place. Doing it properly means building the rows with script or
+	 * paginating them, and both are larger than what is being changed here.
+	 *
+	 * The important part is that validation matches what is rendered. Checking
+	 * positions the form never asked about would make a required question
+	 * unanswerable for guests two and up, and refuse the booking outright.
+	 *
+	 * Errors are added to the same WP_Error the rest of validation uses, so a
+	 * missing answer and a missing name come back together and the form can put
+	 * every message beside its own input.
+	 *
+	 * @since 26.0
+	 *
+	 * @param \WP_Error            $errors   Errors so far, added to in place.
+	 * @param array<string, mixed> $input    Submitted input.
+	 * @param int                  $quantity Places booked.
+	 * @param int                  $event_id Event id.
+	 * @return array<int, array<string, string|string[]>> Answers by position.
+	 */
+	private function validate_answers( \WP_Error $errors, array $input, $quantity, $event_id ) {
+		if ( $event_id <= 0 || ! Plugin::instance()->registry()->is_enabled( CustomFieldsModule::ID ) ) {
+			return array();
+		}
+
+		$fields = Definitions::for_event( $event_id );
+
+		if ( array() === $fields ) {
+			return array();
+		}
+
+		$submitted = isset( $input[ Answers::FIELD_PREFIX ] ) && is_array( $input[ Answers::FIELD_PREFIX ] )
+			? $input[ Answers::FIELD_PREFIX ]
+			: array();
+
+		unset( $quantity );
+
+		$position = self::ANSWER_POSITION;
+		$given    = isset( $submitted[ $position ] ) && is_array( $submitted[ $position ] )
+			? $submitted[ $position ]
+			: array();
+
+		$checked = Answers::check( $fields, $given, $position );
+
+		foreach ( $checked['errors'] as $key => $message ) {
+			$errors->add(
+				'qevm_field_required',
+				$message,
+				array(
+					'status' => 400,
+					'field'  => Answers::input_id( $position, $key ),
+				)
+			);
+		}
+
+		return array() !== $checked['answers'] ? array( $position => $checked['answers'] ) : array();
 	}
 
 	/**
@@ -516,6 +617,34 @@ final class RegistrationService {
 		}
 
 		return $people;
+	}
+
+	/**
+	 * Attach each set of answers to the person who gave it.
+	 *
+	 * Matched on the attendee's position rather than on its place in the array,
+	 * because a row that failed to write leaves a gap and answers must not slide
+	 * onto the next person along. A guest's dietary requirement landing against
+	 * somebody else is worse than it going missing.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<int, \QuickEventsManager\Registration\Attendee> $attendees Attendee rows created.
+	 * @param array<int, array<string, string|string[]>>            $answers   Answers by position.
+	 * @return void
+	 */
+	private static function store_answers( array $attendees, array $answers ) {
+		if ( ! AnswerRepository::table_exists() ) {
+			return;
+		}
+
+		foreach ( $attendees as $attendee ) {
+			$position = (int) $attendee->position();
+
+			if ( isset( $answers[ $position ] ) ) {
+				AnswerRepository::save( $attendee->id(), $answers[ $position ] );
+			}
+		}
 	}
 
 	/**

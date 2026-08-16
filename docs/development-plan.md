@@ -412,7 +412,7 @@ custom questions. Both change data shape, so they precede any UI that depends on
 | **C3.1b** | Batched, deduplicating promotion of existing flat addresses into records, on module enable | M | Split from C3.1. Matched on the whole normalised address, never the name alone |
 | **C3.2** | `qevm_organizer` CPT + same pattern | M | "Same pattern" read as *extract* the pattern, not copy it — `includes/Records/` |
 | **C3.3** | Custom field definitions — post meta JSON, admin UI, types, required, ordering | L | Definitions are config; JSON is correct here. Keys are minted, never derived from the label — see below |
-| **C3.4** | `qevm_attendee_meta` + form rendering + validation | M | Answers are reportable; JSON is not |
+| **C3.4** | `qevm_attendee_meta` + form rendering + validation | M | Answers are reportable; JSON is not. Asked once, of the booker — see below |
 | **C3.5** | Custom answers in CSV export and attendee screen; health-adjacent fields flagged and excluded by default | M | Dietary and access needs are health-adjacent |
 | **C3.6** | Data retention setting + cron sweep, with a filter | M | |
 
@@ -468,6 +468,25 @@ flagged field is absent from CSV unless explicitly included.
 > and both reveal something about health. Reserving the flag now costs a key in
 > a JSON object; adding it after people have defined fields means walking every
 > event on every site.
+>
+> **C3.4 asks the custom questions once, of the person booking.** The storage is
+> per attendee, so a set per guest is a change of form and not of schema — but
+> the form asks one set. Places run to twenty and questions to twenty, and the
+> guest rows are already all rendered and hidden, so a set each is four hundred
+> inputs in the markup of a form that usually books one place. Doing it properly
+> means building the rows with script or paginating them, and both are larger
+> than this chunk. The part that mattered was making validation match what is
+> rendered: checking positions the form never asked about would make a required
+> question unanswerable for guests two and up and refuse the booking outright.
+>
+> **The harness needed fixing in the same chunk.** `restore_schema()` drops every
+> plugin table and then calls `Installer::upgrade_schema()`, which only activates
+> the modules the option currently lists — and `setUp()` rewrites that option for
+> every test. The first test to call it therefore left every later test running
+> against a table that was not there. It showed as a wall of "table doesn't
+> exist" from the row counters rather than as a failure, which is worse. Both
+> `restore_schema()` and the integration bootstrap now create every module's
+> tables regardless of what is switched on.
 >
 > **Found while surveying for the chunk, and fixed separately:** the event
 > editor's save routine wrote `qevm_organizer_phone` from a form that never

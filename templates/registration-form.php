@@ -12,8 +12,12 @@
  * @var array|null        $result       Outcome of the previous submission.
  * @var int               $max_places   Largest booking the service will accept.
  * @var string            $consent_text Wording to agree to, or '' when consent is not asked for.
+ * @var \QuickEventsManager\CustomFields\Field[] $fields       Custom questions to ask, or an empty array.
+ * @var array<string, string|string[]>          $field_values Previously submitted answers, keyed by field key.
+ * @var array<string, string>                   $field_errors Messages, keyed by field key.
  */
 
+use QuickEventsManager\Frontend\Templates;
 use QuickEventsManager\Registration\FormHandler;
 
 defined( 'ABSPATH' ) || exit;
@@ -151,6 +155,28 @@ defined( 'ABSPATH' ) || exit;
 		 * the quantity regardless — this only keeps the request honest.
 		 */
 		?>
+		<?php
+		/*
+		 * The custom questions, asked once of the person booking. Their own
+		 * template, so a theme can restyle the questions without taking on the
+		 * whole form.
+		 */
+		if ( array() !== $fields ) {
+			$qevm_questions = Templates::render(
+				'registration-fields.php',
+				array(
+					'fields'   => $fields,
+					'position' => \QuickEventsManager\Registration\RegistrationService::ANSWER_POSITION,
+					'values'   => $field_values,
+					'errors'   => $field_errors,
+				)
+			);
+
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- registration-fields.php escapes every value it prints.
+			echo $qevm_questions;
+		}
+		?>
+
 		<fieldset class="qevm-guests" data-qevm-guests hidden>
 			<legend class="qevm-guests__legend"><?php esc_html_e( 'Who else is coming?', 'quick-events-manager' ); ?></legend>
 

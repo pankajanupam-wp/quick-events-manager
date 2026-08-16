@@ -177,17 +177,90 @@ final class Renderer {
 		Assets::enqueue_frontend();
 		Assets::enqueue_registration_form();
 
+		$result = FormHandler::current_result();
+
 		return Templates::render(
 			'registration-form.php',
 			array(
 				'event'        => $event,
 				'is_full'      => RegistrationService::is_full( $event ),
 				'remaining'    => RegistrationService::places_remaining( $event ),
-				'result'       => FormHandler::current_result(),
+				'result'       => $result,
 				'max_places'   => RegistrationService::MAX_PLACES,
 				'consent_text' => Consent::text(),
+				'fields'       => self::custom_fields( $event ),
+				'field_values' => self::submitted_answers( $result ),
+				'field_errors' => self::answer_errors( $result, $event ),
 			)
 		);
+	}
+
+	/**
+	 * The custom questions an event asks, or none.
+	 *
+	 * Gated on the module here, at the render boundary, for the same reason the
+	 * registration form itself is: three things reach this template and a check
+	 * repeated in each of them is a check that will be missed in one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event $event Event.
+	 * @return \QuickEventsManager\CustomFields\Field[]
+	 */
+	private static function custom_fields( Event $event ) {
+		if ( ! \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\CustomFields\CustomFieldsModule::ID ) ) {
+			return array();
+		}
+
+		return \QuickEventsManager\CustomFields\Definitions::for_event( $event->id() );
+	}
+
+	/**
+	 * Answers from a rejected submission, so the form comes back filled in.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed>|null $result Previous outcome.
+	 * @return array<string, string|string[]>
+	 */
+	private static function submitted_answers( $result ) {
+		$position  = RegistrationService::ANSWER_POSITION;
+		$submitted = FormHandler::value( $result, \QuickEventsManager\CustomFields\Answers::FIELD_PREFIX, array() );
+
+		if ( ! is_array( $submitted ) || ! isset( $submitted[ $position ] ) || ! is_array( $submitted[ $position ] ) ) {
+			return array();
+		}
+
+		return $submitted[ $position ];
+	}
+
+	/**
+	 * Messages for the questions a rejected submission got wrong.
+	 *
+	 * Errors are carried against the input's id, which is unique per guest.
+	 * The template asks by field key, so they are turned back here rather than
+	 * in the template, where the mapping would be repeated by every theme that
+	 * overrode it.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed>|null $result Previous outcome.
+	 * @param Event                     $event  Event.
+	 * @return array<string, string>
+	 */
+	private static function answer_errors( $result, Event $event ) {
+		$errors = array();
+
+		foreach ( self::custom_fields( $event ) as $field ) {
+			$id      = \QuickEventsManager\CustomFields\Answers::input_id( RegistrationService::ANSWER_POSITION, $field->key() );
+			$message = FormHandler::error( $result, $id );
+
+			if ( '' !== $message ) {
+				$errors[ $field->key() ] = $message;
+			}
+		}
+
+		return $errors;
 	}
 
 	/**

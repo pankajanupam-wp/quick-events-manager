@@ -7,6 +7,7 @@
 
 namespace QuickEventsManager\CustomFields;
 
+use QuickEventsManager\Install\Installer;
 use QuickEventsManager\Modules\Module;
 
 use QuickEventsManager\Domain\ModuleLevel;
@@ -104,17 +105,23 @@ final class CustomFieldsModule implements Module {
 	}
 
 	/**
-	 * Switching on needs no setup.
+	 * Create the answers table.
 	 *
-	 * Definitions live in post meta on events that already exist, so there is
-	 * no table to create and nothing to sweep. Questions defined before the
-	 * module was last switched off are simply there again.
+	 * Definitions live in post meta and need nothing. Answers get a table, and
+	 * it is created here rather than at activation so an install that never
+	 * asks a question of its own never grows one.
+	 *
+	 * Safe to run repeatedly — `dbDelta()` compares against what is already
+	 * there — which matters because this is called again on every schema
+	 * upgrade and every time the module is switched off and on.
 	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
-	public function activate() {}
+	public function activate() {
+		Installer::run_schema( AnswerRepository::schema() );
+	}
 
 	/**
 	 * Switching off leaves every question and every answer in place.

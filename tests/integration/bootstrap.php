@@ -109,4 +109,17 @@ if ( ! defined( 'QEVM_VERSION' ) ) {
 QuickEventsManager\Install\Installer::upgrade_schema();
 QuickEventsManager\Install\Migrations\Runner::run();
 
+/*
+ * Every module's tables, once, whatever the modules option happens to say.
+ *
+ * upgrade_schema() only activates the modules that are currently enabled, and
+ * TestCase::setUp() rewrites that option for every test. A module whose table
+ * is created on enable would therefore have one only if some earlier test had
+ * switched it on — so the suite would pass or fail depending on the order it
+ * ran in. DDL commits regardless of the transaction each test wraps itself in,
+ * so creating them here once is both safe and the only way to make the run
+ * deterministic.
+ */
+( new QuickEventsManager\CustomFields\CustomFieldsModule() )->activate();
+
 require_once __DIR__ . '/TestCase.php';

@@ -272,9 +272,19 @@ booking's rows before removing the booking, `Repository::delete_for_event()` rea
 them through a join, and `Repository::update_status()` carries a cancellation and a
 reinstatement across on the transition rather than on every save.
 
-### `qevm_attendee_meta` — stage 3
+### `qevm_attendee_meta` — stage 3 *(built in C3.4)*
 
 Answers to custom registration questions.
+
+No `created_at` or `updated_at`, departing from the convention above that every table
+carries them. A row here has no life of its own: it is written with its attendee and
+removed with them, and the retention sweep works from the registration's date rather
+than the answer's. Two datetime columns per answer would record nothing anybody can
+ask a question about.
+
+A choose-any question stores one row per choice. That is what makes "how many people
+need step-free access" a `COUNT` rather than a search through serialised text, and it
+is the whole reason answers are a table while definitions are JSON.
 
 ```sql
 CREATE TABLE {prefix}qevm_attendee_meta (

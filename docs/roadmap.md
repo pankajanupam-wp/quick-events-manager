@@ -40,7 +40,11 @@ A month grid as its own module. Reads the same query layer the list uses. Needs 
 
 **Definitions are built.** Ten field types, required flags, help text, ordering and a sensitive flag, stored as JSON in `_qevm_registration_fields` on each event and edited from a box on the event editor. Keys are minted rather than derived from the label, so renaming a question never orphans the answers already given to it.
 
-Still to come: storing the answers in `qevm_attendee_meta`, rendering the questions on the form, and feeding them to the CSV export and the attendee screen.
+**Answers are built too.** They are stored in `qevm_attendee_meta`, one row per answer and one row per choice on a choose-any question, so counting how many people need step-free access is a `COUNT` rather than a search through serialised text. The questions render on the form, and every value is checked against its own definition before it is written — a choice question accepts only the choices it offered.
+
+The questions are asked once, of the person booking. Asking each guest is a change of form rather than of schema, since the answers already hang off the attendee row.
+
+Still to come: feeding the answers to the CSV export and the attendee screen, with the sensitive ones left out by default.
 
 ### 3. Email templates
 
