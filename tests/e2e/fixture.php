@@ -21,6 +21,7 @@ use QuickEventsManager\CustomFields\CustomFieldsModule;
 use QuickEventsManager\CustomFields\Definitions;
 use QuickEventsManager\CustomFields\Field;
 use QuickEventsManager\Domain\FieldType;
+use QuickEventsManager\Calendar\CalendarModule;
 use QuickEventsManager\Modules\Registry;
 use QuickEventsManager\Registration\RegistrationModule;
 
@@ -40,7 +41,7 @@ $modules  = (array) get_option( QEVM_OPTION_MODULES, array() );
 $registry = new Registry();
 $changed  = false;
 
-foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID ) as $required ) {
+foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID, CalendarModule::ID ) as $required ) {
 	if ( in_array( $required, $modules, true ) ) {
 		continue;
 	}
@@ -52,7 +53,7 @@ foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID ) as $required )
 if ( $changed ) {
 	update_option( QEVM_OPTION_MODULES, $modules );
 
-	foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID ) as $required ) {
+	foreach ( array( RegistrationModule::ID, CustomFieldsModule::ID, CalendarModule::ID ) as $required ) {
 		$module = $registry->get( $required );
 
 		if ( null !== $module ) {
@@ -123,6 +124,30 @@ Definitions::save(
  * fixture reusable without weakening that check for anybody else.
  */
 \QuickEventsManager\Registration\Repository::delete_for_event( (int) $event_id );
+
+/*
+ * A page carrying the calendar shortcode, so the grid and the list can be
+ * scanned and driven in a browser. Until this existed the calendar markup had
+ * never been through axe at all — there was nowhere to put it.
+ */
+$calendar_slug = 'qevm-calendar-fixture';
+$calendar_page = get_page_by_path( $calendar_slug, OBJECT, 'page' );
+
+$calendar = array(
+	'post_type'    => 'page',
+	'post_status'  => 'publish',
+	'post_name'    => $calendar_slug,
+	'post_title'   => 'Calendar fixture',
+	'post_content' => '[qevm_event_calendar]',
+);
+
+if ( $calendar_page instanceof WP_Post ) {
+	$calendar['ID'] = $calendar_page->ID;
+
+	wp_update_post( wp_slash( $calendar ), true );
+} else {
+	wp_insert_post( wp_slash( $calendar ), true );
+}
 
 /*
  * A second event that has already happened, for the closed-registration screen.

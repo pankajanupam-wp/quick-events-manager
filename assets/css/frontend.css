@@ -382,3 +382,160 @@
 	height: 1px;
 	overflow: hidden;
 }
+
+/* Calendar
+   ---------------------------------------------------------------------- */
+
+.qevm-calendar__nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+	justify-content: space-between;
+	margin-block-end: 1rem;
+}
+
+.qevm-calendar__caption,
+.qevm-calendar caption.qevm-calendar__caption {
+	text-align: start;
+	caption-side: top;
+	margin-block-end: 0.75rem;
+}
+
+.qevm-calendar__month {
+	display: block;
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.qevm-calendar__summary {
+	display: block;
+	font-size: 0.875rem;
+	opacity: 0.8;
+}
+
+/*
+ * The grid scrolls inside its own box rather than pushing the page sideways.
+ * Seven columns of dates has a floor below which cells stop being tappable, and
+ * a calendar that makes the whole page scroll horizontally takes the article
+ * text with it.
+ */
+.qevm-calendar__grid {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+
+.qevm-calendar__grid th,
+.qevm-calendar__grid td {
+	border: 1px solid rgba( 0, 0, 0, 0.12 );
+	padding: 0.35rem;
+	vertical-align: top;
+	text-align: start;
+}
+
+.qevm-calendar__grid th {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	text-align: center;
+}
+
+.qevm-calendar__grid abbr {
+	text-decoration: none;
+	border: 0;
+}
+
+.qevm-calendar__day {
+	height: 5.5rem;
+}
+
+.qevm-calendar__day--empty {
+	background: rgba( 0, 0, 0, 0.03 );
+}
+
+.qevm-calendar__day--today {
+	outline: 2px solid currentColor;
+	outline-offset: -2px;
+}
+
+/*
+ * A focused day has to be obvious. The cells are only focusable once the
+ * script has added a roving tabindex, and a focus ring that is hard to see is
+ * the difference between arrow keys being useful and being disorienting.
+ */
+.qevm-calendar__day:focus-visible {
+	outline: 3px solid currentColor;
+	outline-offset: -3px;
+}
+
+.qevm-calendar__date {
+	display: block;
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+.qevm-calendar__events {
+	list-style: none;
+	margin: 0.25rem 0 0;
+	padding: 0;
+	font-size: 0.8125rem;
+}
+
+.qevm-calendar__event + .qevm-calendar__event {
+	margin-block-start: 0.25rem;
+}
+
+.qevm-calendar__time,
+.qevm-calendar__where {
+	display: block;
+	font-size: 0.8125rem;
+	opacity: 0.8;
+}
+
+.qevm-calendar__days {
+	margin: 0;
+}
+
+.qevm-calendar__day-heading {
+	font-weight: 600;
+	margin-block-start: 1rem;
+	padding-block-end: 0.25rem;
+	border-block-end: 1px solid rgba( 0, 0, 0, 0.12 );
+}
+
+.qevm-calendar--list dd {
+	margin-inline-start: 0;
+}
+
+.qevm-calendar__alternative {
+	margin-block-start: 1rem;
+}
+
+@media ( max-width: 600px ) {
+	/*
+	 * Cells grow to fit rather than keeping a fixed height, so a month with a
+	 * busy week is tall instead of clipped.
+	 *
+	 * The first version of this hid the event lists at this width and left a
+	 * dot behind, which is a common calendar pattern and was wrong here: the
+	 * titles are links, and clipping them visually leaves them in the tab order
+	 * while invisible. Somebody navigating by keyboard would have watched focus
+	 * disappear into nothing. Removing them outright would have taken them from
+	 * screen readers too. A tall grid is the honest answer, and the list view is
+	 * one link away and offered on every calendar for anybody who wants it.
+	 */
+	.qevm-calendar__day {
+		height: auto;
+		min-height: 2.75rem;
+	}
+
+	.qevm-calendar__grid th,
+	.qevm-calendar__grid td {
+		padding: 0.2rem;
+	}
+
+	.qevm-calendar__events,
+	.qevm-calendar__time {
+		font-size: 0.75rem;
+	}
+}

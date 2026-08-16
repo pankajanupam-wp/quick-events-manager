@@ -241,11 +241,13 @@ final class Renderer {
 		$view  = self::calendar_view( $requested_view );
 
 		Assets::enqueue_frontend();
+		Assets::enqueue_calendar();
 
 		return Templates::render(
 			'list' === $view ? 'calendar-list.php' : 'calendar-month.php',
 			array(
 				'month'    => $month,
+				'view'     => $view,
 				'list_url' => self::calendar_url( $month, 'list' ),
 				'grid_url' => self::calendar_url( $month, 'grid' ),
 			)

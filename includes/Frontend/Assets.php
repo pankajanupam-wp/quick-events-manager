@@ -34,6 +34,14 @@ final class Assets {
 	const FORM_HANDLE = 'qevm-registration';
 
 	/**
+	 * Handle for the calendar's script.
+	 *
+	 * Loaded only on pages that render a calendar. Everything it does is an
+	 * enhancement over markup that works without it.
+	 */
+	const CALENDAR_HANDLE = 'qevm-calendar';
+
+	/**
 	 * Hook into asset loading.
 	 *
 	 * @since 26.0
@@ -103,6 +111,30 @@ final class Assets {
 		self::register_form_script();
 
 		wp_enqueue_script( self::FORM_HANDLE );
+	}
+
+	/**
+	 * Enqueue the calendar's navigation and keyboard script.
+	 *
+	 * Called by the renderer when a calendar is actually output, so a site with
+	 * the module switched on but no calendar on any page never loads it.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public static function enqueue_calendar() {
+		if ( ! wp_script_is( self::CALENDAR_HANDLE, 'registered' ) ) {
+			wp_register_script(
+				self::CALENDAR_HANDLE,
+				QEVM_URL . 'assets/js/calendar.js',
+				array(),
+				QEVM_VERSION,
+				true
+			);
+		}
+
+		wp_enqueue_script( self::CALENDAR_HANDLE );
 	}
 
 	/**

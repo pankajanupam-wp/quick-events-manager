@@ -355,3 +355,157 @@ test.describe( 'Closed registration', () => {
 		await expectNoViolations( page, 'a closed registration notice' );
 	} );
 } );
+
+/*
+ * The calendar.
+ *
+ * Everything here is an enhancement over markup that already works, so the
+ * tests come in pairs: the behaviour with script, and the same journey with
+ * script switched off.
+ */
+const CALENDAR = '/qevm-calendar-fixture/';
+
+test.describe( 'Calendar', () => {
+	test( 'the month grid', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		await expect( page.locator( '.qevm-calendar__grid' ) ).toBeVisible();
+
+		await expectNoViolations( page, 'the calendar grid' );
+	} );
+
+	test( 'the list view', async ( { page } ) => {
+		await page.goto( `${ CALENDAR }?qevm_view=list` );
+
+		await expect( page.locator( '.qevm-calendar--list' ) ).toBeVisible();
+		await expect( page.locator( '.qevm-calendar__grid' ) ).toHaveCount( 0 );
+
+		await expectNoViolations( page, 'the calendar list' );
+	} );
+
+	test( 'stepping to the next month does not reload the page', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const before = await page.locator( '.qevm-calendar__month' ).textContent();
+
+		/*
+		 * A marker on the window. A full navigation throws it away, so if it
+		 * survives the click then the month was swapped in place.
+		 */
+		await page.evaluate( () => {
+			window.__qevmStillHere = true;
+		} );
+
+		await page.click( '[data-qevm-calendar-next]' );
+
+		await expect( page.locator( '.qevm-calendar__month' ) ).not.toHaveText( before.trim() );
+
+		expect( await page.evaluate( () => window.__qevmStillHere ) ).toBe( true );
+	} );
+
+	test( 'the new month is announced', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		// Empty at load, or it would announce nothing when written to.
+		await expect( page.locator( '[data-qevm-calendar-status]' ) ).toHaveText( '' );
+
+		await page.click( '[data-qevm-calendar-next]' );
+
+		await expect( page.locator( '[data-qevm-calendar-status]' ) ).not.toHaveText( '' );
+	} );
+
+	test( 'the address bar keeps up, and Back works', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const first = await page.locator( '.qevm-calendar__month' ).textContent();
+
+		await page.click( '[data-qevm-calendar-next]' );
+		await expect( page ).toHaveURL( /qevm_month=\d{4}-\d{2}/ );
+
+		await page.goBack();
+
+		await expect( page.locator( '.qevm-calendar__month' ) ).toHaveText( first.trim() );
+	} );
+
+	test( 'the chosen view survives moving month', async ( { page } ) => {
+		await page.goto( `${ CALENDAR }?qevm_view=list` );
+
+		await page.click( '[data-qevm-calendar-next]' );
+
+		await expect( page.locator( '.qevm-calendar--list' ) ).toBeVisible();
+		await expect( page.locator( '.qevm-calendar__grid' ) ).toHaveCount( 0 );
+	} );
+
+	test( 'arrow keys move between days', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const days = page.locator( '[data-qevm-day]' );
+
+		await days.first().focus();
+
+		const from = await days.first().getAttribute( 'data-qevm-day' );
+
+		await page.keyboard.press( 'ArrowRight' );
+
+		const to = await page.evaluate( () =>
+			document.activeElement.getAttribute( 'data-qevm-day' )
+		);
+
+		expect( to ).not.toBe( null );
+		expect( to ).not.toBe( from );
+	} );
+
+	test( 'only one day is in the tab order at a time', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const tabbable = await page.locator( '[data-qevm-day][tabindex="0"]' ).count();
+
+		expect( tabbable ).toBe( 1 );
+	} );
+
+	test( 'usable at 320px without sideways scrolling', async ( { page } ) => {
+		await page.setViewportSize( { width: 320, height: 800 } );
+		await page.goto( CALENDAR );
+
+		const overflows = await page.evaluate(
+			() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+		);
+
+		expect( overflows ).toBe( false );
+
+		await expectNoViolations( page, 'the calendar at 320px' );
+	} );
+} );
+
+test.describe( 'Calendar without JavaScript', () => {
+	test.use( { javaScriptEnabled: false } );
+
+	test( 'months are still reachable', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		const before = await page.locator( '.qevm-calendar__month' ).textContent();
+
+		await page.click( '[data-qevm-calendar-next]' );
+
+		await expect( page.locator( '.qevm-calendar__month' ) ).not.toHaveText( before.trim() );
+	} );
+
+	test( 'the list view is reachable from the grid', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		await page.click( '.qevm-calendar__alternative a' );
+
+		await expect( page.locator( '.qevm-calendar--list' ) ).toBeVisible();
+	} );
+
+	test( 'no day is focusable without the script that moves between them', async ( { page } ) => {
+		await page.goto( CALENDAR );
+
+		/*
+		 * The roving tabindex is added by script. Rendering it in PHP would put
+		 * thirty cells in the tab order for somebody who has no way to move
+		 * between them with the arrows.
+		 */
+		expect( await page.locator( '[data-qevm-day][tabindex]' ).count() ).toBe( 0 );
+	} );
+} );

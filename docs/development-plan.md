@@ -569,7 +569,7 @@ flagged field is absent from CSV unless explicitly included.
 | --- | --- | :-: | --- |
 | **C4.1** | Month grid — real `<table>` with `scope`, announced changes | L | The accessibility test the whole standard rests on. Arrow-key navigation moved to C4.3 — see below |
 | **C4.2** | **List view as a first-class equivalent**, not a fallback | M | Highest-value accessibility decision in the release. What "equivalent" had to mean is below |
-| **C4.3** | Previous/next navigation without a page reload; mobile layout | M | |
+| **C4.3** | Previous/next navigation without a page reload; mobile layout; arrow keys from C4.1 | M | Pulled the `[qevm_event_calendar]` shortcode forward from C4.4 — see below |
 | **C4.4** | Calendar block + `[qevm_event_calendar]` shortcode, one renderer | M | |
 
 **Gate:** axe-core clean · fully keyboard navigable · the list view returns the same
@@ -621,11 +621,36 @@ events as the grid for the same range · usable on a 360px viewport.
 > empty month therefore says so in words, because an empty list looks like a
 > page that failed to load.
 >
-> **Not yet covered: axe on the calendar markup.** There is no way to put the
-> grid on a page until the shortcode and block land in C4.4, so the browser
-> scan of it belongs to that chunk. The markup is asserted in PHP — a real
-> `<table>`, a `<caption>`, seven `scope="col"` headers — but that is not the
-> same thing and is not counted as if it were.
+> **Closed at C4.3.** The shortcode was pulled forward for exactly this reason;
+> the calendar is now scanned in a browser, grid and list, including at 320px.
+>
+> **C4.3 pulled the shortcode forward from C4.4, deliberately and out of
+> order.** C4.3 is navigation and keyboard behaviour, none of which can be
+> driven in a browser without a page that shows a calendar. Leaving the
+> shortcode until C4.4 would have meant shipping the script unverified and
+> taking it on trust, which is how the C3.4 form handler defect happened. The
+> block, which is the larger half of C4.4, stays where it is.
+>
+> **The new month is fetched from the URL the link points at**, not from a
+> fragment endpoint. A fragment endpoint would be faster and would be a second
+> render path — and two paths that were meant to agree and quietly stopped is
+> the failure this project has now had twice. Fetching the page the link would
+> have loaded makes them the same path by definition.
+>
+> **The live region is the opposite case to the form's error summary**, and the
+> difference is worth stating because getting it the wrong way round is silent.
+> A region that already holds its text when the page parses announces nothing —
+> there is no change — which is why the form moves focus instead. A region that
+> is empty at parse and written into later *is* announced, which is right here,
+> because focus should stay on the button somebody is stepping through months
+> with.
+>
+> **A mobile layout mistake caught before it shipped.** The first version hid
+> the event lists below 600px and left a dot behind — a common calendar pattern,
+> and wrong here, because the titles are links: clipping them visually leaves
+> them in the tab order while invisible, so keyboard focus would have vanished
+> into nothing. Removing them outright would have taken them from screen readers
+> too. The cells grow instead.
 
 ---
 

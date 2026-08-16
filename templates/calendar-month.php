@@ -8,6 +8,7 @@
  *
  * @var \QuickEventsManager\Calendar\Month $month     The month being shown.
  * @var string                             $list_url  Link to the same range as a list.
+ * @var string                             $view      Which view is showing: grid | list.
  *
  * @package QuickEventsManager
  */
@@ -21,6 +22,51 @@ $qevm_weekdays = \QuickEventsManager\Calendar\Month::weekdays();
 $qevm_count    = $month->event_count();
 ?>
 <div class="qevm-calendar" data-qevm-calendar>
+	<?php
+	/*
+	 * Real links, not buttons. Without script they navigate, which is the whole
+	 * no-JavaScript story for this feature; with script they are intercepted.
+	 * Building them as buttons and adding href-less click handlers would mean
+	 * the calendar simply stopped at the current month for anybody whose script
+	 * failed to load.
+	 *
+	 * rel="prev"/"next" because that is what they are, and it costs nothing.
+	 */
+	?>
+	<nav class="qevm-calendar__nav" aria-label="<?php esc_attr_e( 'Calendar months', 'quick-events-manager' ); ?>">
+		<a class="qevm-calendar__nav-link" rel="prev" data-qevm-calendar-prev
+			href="<?php echo esc_url( \QuickEventsManager\Frontend\Renderer::calendar_url( $month->previous(), $view ) ); ?>">
+			<span aria-hidden="true">&larr;</span>
+			<?php echo esc_html( $month->previous()->label() ); ?>
+		</a>
+
+		<a class="qevm-calendar__nav-link" data-qevm-calendar-today
+			href="<?php echo esc_url( \QuickEventsManager\Frontend\Renderer::calendar_url( \QuickEventsManager\Calendar\Month::current(), $view ) ); ?>">
+			<?php esc_html_e( 'This month', 'quick-events-manager' ); ?>
+		</a>
+
+		<a class="qevm-calendar__nav-link" rel="next" data-qevm-calendar-next
+			href="<?php echo esc_url( \QuickEventsManager\Frontend\Renderer::calendar_url( $month->next(), $view ) ); ?>">
+			<?php echo esc_html( $month->next()->label() ); ?>
+			<span aria-hidden="true">&rarr;</span>
+		</a>
+	</nav>
+
+	<?php
+	/*
+	 * Empty at load, filled after a month is swapped in.
+	 *
+	 * This is the opposite case to the registration form's error summary, and
+	 * the difference is worth being explicit about because getting it the wrong
+	 * way round is silent. A region that already has its text when the page
+	 * parses announces nothing — there is no change to report — which is why the
+	 * form moves focus instead. A region that is empty at parse and is written
+	 * into later is announced, and is the right tool here: focus stays on the
+	 * button so somebody stepping through months can keep pressing it.
+	 */
+	?>
+	<p class="screen-reader-text" aria-live="polite" data-qevm-calendar-status></p>
+
 	<?php
 	/*
 	 * A real <caption> rather than a heading above the table. It is what a

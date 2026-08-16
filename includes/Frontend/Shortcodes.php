@@ -31,6 +31,31 @@ final class Shortcodes {
 		add_shortcode( 'qevm_event_list', array( $this, 'event_list' ) );
 		add_shortcode( 'qevm_event_details', array( $this, 'event_details' ) );
 		add_shortcode( 'qevm_event_registration', array( $this, 'registration_form' ) );
+
+		/*
+		 * Registered here rather than with the block in C4.4, deliberately and
+		 * out of order. C4.3 is the calendar's navigation and keyboard
+		 * behaviour, none of which can be driven in a browser without a page
+		 * that shows a calendar — so leaving the shortcode until later would
+		 * have meant shipping the script unverified and taking it on trust.
+		 * The block, which is the larger half of that chunk, stays where it is.
+		 */
+		add_shortcode( 'qevm_event_calendar', array( $this, 'calendar' ) );
+	}
+
+	/**
+	 * `[qevm_event_calendar]`
+	 *
+	 * Attributes: `month` as `YYYY-MM`, `view` as grid or list. Both are also
+	 * read from the URL, so a link to one month in one view works.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
+	 * @return string
+	 */
+	public function calendar( $atts = array() ) {
+		return Renderer::calendar( is_array( $atts ) ? $atts : array() );
 	}
 
 	/**
