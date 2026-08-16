@@ -173,6 +173,43 @@ definition before they are written — a choice question accepts only the choice
 offers — and a hook that let that be bypassed would put values in the export that were
 never on the screen.
 
+## Data retention
+
+Off unless the site owner sets a period under **Events → Settings → Privacy**. Zero, the default, keeps registrations for ever.
+
+### `qevm_retention_delete_event` (filter)
+
+Whether one event's registrations are deleted by the retention sweep. Return `false` to keep them — an AGM whose attendance has to be minuted, a course whose certificates depend on the list.
+
+The event is named rather than the registration because retention is a decision about an event's records as a whole.
+
+```php
+add_filter(
+	'qevm_retention_delete_event',
+	function ( $delete, $event_id ) {
+		return has_term( 'agm', 'qevm_event_category', $event_id ) ? false : $delete;
+	},
+	10,
+	2
+);
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$delete` | `bool` | Whether to delete |
+| `$event_id` | `int` | Event id |
+| `$days` | `int` | Retention period in days |
+| `$cutoff` | `string` | UTC datetime everything older than is being removed |
+
+### `qevm_retention_swept_event` (action)
+
+Fires after an event's registrations have been deleted by the sweep. This is the only record that it happened — nothing is written to the database, deliberately, because a log of who was removed is the personal data the feature exists to be rid of. Hook this if you want your own audit trail, and think about what you put in it.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$event_id` | `int` | Event id |
+| `$removed` | `int` | Registrations deleted |
+
 ## Front end
 
 ### `qevm_template_path` (filter)

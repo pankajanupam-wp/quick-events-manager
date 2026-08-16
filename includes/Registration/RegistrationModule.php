@@ -95,6 +95,7 @@ final class RegistrationModule implements Module {
 		( new Waitlist() )->register();
 		( new Emails() )->register();
 		( new \QuickEventsManager\Privacy\Privacy() )->register();
+		( new \QuickEventsManager\Privacy\Retention() )->register();
 
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();
@@ -130,7 +131,17 @@ final class RegistrationModule implements Module {
 	 *
 	 * @return void
 	 */
-	public function deactivate() {}
+	public function deactivate() {
+		/*
+		 * The retention sweep comes off the schedule with the module. Leaving a
+		 * cron event that deletes attendee data behind after somebody switched
+		 * registration off would be the plugin still destroying records for a
+		 * feature the site is no longer using.
+		 *
+		 * This removes nothing. Every row stays where it is.
+		 */
+		\QuickEventsManager\Privacy\Retention::unschedule();
+	}
 
 	/**
 	 * The registrations table definition.

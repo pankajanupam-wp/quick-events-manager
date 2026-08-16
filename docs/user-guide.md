@@ -106,6 +106,21 @@ Tick **The answer is sensitive** for anything health-adjacent — dietary needs,
 
 Renaming a question later is safe. Answers stay attached to it however much you reword it.
 
+## Deleting old registrations automatically
+
+Under **Events → Settings → Privacy** there is **Delete registrations after**. It is **0 by default, which keeps everything for ever**, and nothing is deleted until you change it.
+
+Set a number of days and once a day the plugin removes the registrations for any event that finished that long ago, along with its attendees and their answers. It cannot be undone and no copy is kept.
+
+Two things about how it counts:
+
+- **From when the event ended, not from when somebody registered.** Somebody booking eleven months early is not deleted before they arrive.
+- **An event with no date is never touched.** There is no answer to how long ago it finished.
+
+The shortest period you can set is 7 days. If you need to keep one event's list — an AGM whose attendance is minuted, a course whose certificates depend on it — a developer can exclude it with the `qevm_retention_delete_event` filter.
+
+Switching the registration feature off, or deactivating the plugin, stops the deletions. Neither removes anything that is already there.
+
 ## Copying an event
 
 A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.

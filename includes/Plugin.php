@@ -183,15 +183,22 @@ final class Plugin {
 	/**
 	 * Plugin deactivation.
 	 *
-	 * Removes the rewrite rules this plugin added and nothing else. No user
-	 * data is touched — that is uninstall.php's job, and only when the site
-	 * owner deletes the plugin outright.
+	 * Removes the rewrite rules this plugin added and takes the retention sweep
+	 * off cron. No user data is touched — that is uninstall.php's job, and only
+	 * when the site owner deletes the plugin outright.
 	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
 	public static function deactivate() {
+		/*
+		 * The retention sweep is a cron event that deletes attendee data. A
+		 * deactivated plugin must not keep doing that, and WordPress does not
+		 * clear a plugin's scheduled events for it.
+		 */
+		Privacy\Retention::unschedule();
+
 		flush_rewrite_rules();
 	}
 }

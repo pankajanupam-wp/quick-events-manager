@@ -8,6 +8,7 @@
 namespace QuickEventsManager\Admin;
 
 use QuickEventsManager\Privacy\Consent;
+use QuickEventsManager\Privacy\Retention;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -149,6 +150,14 @@ final class Settings {
 			self::SLUG,
 			'qevm_privacy'
 		);
+
+		add_settings_field(
+			Retention::SETTING,
+			__( 'Delete registrations after', 'quick-events-manager' ),
+			array( $this, 'render_retention_days' ),
+			self::SLUG,
+			'qevm_privacy'
+		);
 	}
 
 	/**
@@ -164,6 +173,14 @@ final class Settings {
 			'archive_per_page'   => 10,
 			'notification_email' => '',
 			'consent_text'       => __( 'I agree to my details being stored so the organiser can contact me about this event.', 'quick-events-manager' ),
+
+			/*
+			 * Zero, meaning keep forever, and it has to stay zero. A plugin
+			 * update that started deleting a site's attendee history because a
+			 * retention feature appeared would be the worst thing this codebase
+			 * could do to somebody.
+			 */
+			'retention_days'     => 0,
 		);
 	}
 
@@ -231,7 +248,33 @@ final class Settings {
 			'archive_per_page'   => $per_page,
 			'notification_email' => is_email( $email ) ? $email : '',
 			'consent_text'       => $this->sanitize_consent_text( $input ),
+			'retention_days'     => $this->sanitize_retention_days( $input ),
 		);
+	}
+
+	/**
+	 * Sanitise the retention period.
+	 *
+	 * Absent means unchanged, for the same reason the consent wording does:
+	 * this field only renders when the registration module is on, and treating
+	 * a missing key as zero would quietly switch retention off for a site that
+	 * had deliberately set it — or, read the other way round, an absent key
+	 * treated as a number would switch deletion *on*. Neither is a thing a
+	 * settings save should do silently.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $input Submitted settings.
+	 * @return int
+	 */
+	private function sanitize_retention_days( array $input ) {
+		if ( ! isset( $input[ Retention::SETTING ] ) ) {
+			return (int) self::get( Retention::SETTING, 0 );
+		}
+
+		$days = absint( $input[ Retention::SETTING ] );
+
+		return 0 === $days ? 0 : max( Retention::MINIMUM_DAYS, $days );
 	}
 
 	/**
@@ -307,6 +350,36 @@ final class Settings {
 			placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>" />
 		<p class="description">
 			<?php esc_html_e( 'Leave empty to use the site administration email.', 'quick-events-manager' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the retention period field.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function render_retention_days() {
+		$days = (int) self::get( Retention::SETTING, 0 );
+		?>
+		<input type="number" id="qevm-retention-days" class="small-text"
+			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[<?php echo esc_attr( Retention::SETTING ); ?>]"
+			value="<?php echo esc_attr( (string) $days ); ?>" min="0" step="1" />
+		<?php esc_html_e( 'days', 'quick-events-manager' ); ?>
+
+		<p class="description">
+			<?php esc_html_e( '0 keeps registrations for ever, which is the default.', 'quick-events-manager' ); ?>
+		</p>
+		<p class="description">
+			<?php
+			printf(
+				/* translators: %d: Smallest retention period that can be set, in days. */
+				esc_html__( 'Set a number and every registration for an event that finished that long ago is deleted, along with its attendees and their answers. This cannot be undone and there is no copy kept. Counted from when the event ended, not from when somebody registered. The smallest period is %d days.', 'quick-events-manager' ),
+				(int) Retention::MINIMUM_DAYS
+			);
+			?>
 		</p>
 		<?php
 	}
