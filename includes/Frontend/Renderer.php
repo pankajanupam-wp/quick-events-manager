@@ -196,7 +196,15 @@ final class Renderer {
 	}
 
 	/**
-	 * Render a month of events as a grid.
+	 * Render a month of events, as a grid or as a list.
+	 *
+	 * The two views are equals rather than a feature and its fallback. They read
+	 * the same month object, so the same events are in both by construction and
+	 * not by two queries that have to be kept in step, and each links to the
+	 * other. Which one somebody is looking at travels in the URL, so choosing
+	 * the list and then stepping to the next month does not throw them back into
+	 * a grid — a "first-class equivalent" that forgets itself on every click is
+	 * a fallback with better wording.
 	 *
 	 * @since 26.0
 	 *
@@ -209,34 +217,84 @@ final class Renderer {
 		}
 
 		$atts = shortcode_atts(
-			array( 'month' => '' ),
+			array(
+				'month' => '',
+				'view'  => '',
+			),
 			$atts,
 			'qevm_event_calendar'
 		);
 
 		/*
-		 * The requested month comes from the URL as well as the attribute, so a
-		 * link to a particular month works and so does the navigation built on
-		 * top of it. Anything unparseable falls back to now rather than erroring
-		 * — a mistyped URL should show this month, not a stack trace.
+		 * The month and the view both come from the URL as well as from the
+		 * attributes, so a link to a particular month in a particular view
+		 * works and the navigation built on top of it does too. Anything
+		 * unparseable falls back rather than erroring — a mistyped URL should
+		 * show this month, not a stack trace.
 		 */
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which month to display changes nothing.
-		$requested = isset( $_GET['qevm_month'] ) ? sanitize_text_field( wp_unslash( $_GET['qevm_month'] ) ) : (string) $atts['month'];
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading which month and view to display changes nothing.
+		$requested_month = isset( $_GET['qevm_month'] ) ? sanitize_text_field( wp_unslash( $_GET['qevm_month'] ) ) : (string) $atts['month'];
+		$requested_view  = isset( $_GET['qevm_view'] ) ? sanitize_key( wp_unslash( $_GET['qevm_view'] ) ) : (string) $atts['view'];
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		$month = \QuickEventsManager\Calendar\Month::from_string( $requested );
+		$month = \QuickEventsManager\Calendar\Month::from_string( $requested_month );
+		$view  = self::calendar_view( $requested_view );
 
 		Assets::enqueue_frontend();
 
 		return Templates::render(
-			'calendar-month.php',
+			'list' === $view ? 'calendar-list.php' : 'calendar-month.php',
 			array(
 				'month'    => $month,
-				'list_url' => add_query_arg(
-					array(
-						'qevm_month' => $month->key(),
-						'qevm_view'  => 'list',
-					)
-				),
+				'list_url' => self::calendar_url( $month, 'list' ),
+				'grid_url' => self::calendar_url( $month, 'grid' ),
+			)
+		);
+	}
+
+	/**
+	 * Which of the two views to render.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $requested Requested view, from the URL or an attribute.
+	 * @return string grid | list
+	 */
+	private static function calendar_view( $requested ) {
+		if ( in_array( $requested, array( 'grid', 'list' ), true ) ) {
+			return $requested;
+		}
+
+		/**
+		 * Filters which calendar view a visitor sees when they have not chosen.
+		 *
+		 * Return 'list' to make the list the default. Some audiences are better
+		 * served by it, and a site that knows that should be able to say so
+		 * without asking every visitor to switch every time.
+		 *
+		 * @since 26.0
+		 *
+		 * @param string $view grid | list.
+		 */
+		$default = apply_filters( 'qevm_calendar_default_view', 'grid' );
+
+		return 'list' === $default ? 'list' : 'grid';
+	}
+
+	/**
+	 * A link to one month in one view, keeping the rest of the URL intact.
+	 *
+	 * @since 26.0
+	 *
+	 * @param \QuickEventsManager\Calendar\Month $month Month to link to.
+	 * @param string                             $view  grid | list.
+	 * @return string
+	 */
+	public static function calendar_url( \QuickEventsManager\Calendar\Month $month, $view ) {
+		return (string) add_query_arg(
+			array(
+				'qevm_month' => $month->key(),
+				'qevm_view'  => 'list' === $view ? 'list' : 'grid',
 			)
 		);
 	}

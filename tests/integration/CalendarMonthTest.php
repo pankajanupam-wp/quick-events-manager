@@ -265,6 +265,114 @@ final class CalendarMonthTest extends TestCase {
 	}
 
 	/**
+	 * The list holds exactly the events the grid does.
+	 *
+	 * The Stage 4 gate. Both views read the same month object, so this is true
+	 * by construction rather than by two queries kept in step — and this test is
+	 * what says the construction has not been quietly undone.
+	 *
+	 * @return void
+	 */
+	public function test_the_list_shows_the_same_events_as_the_grid() {
+		$this->enable_calendar();
+
+		$this->event_on( '2026-09-01 09:00:00', '2026-09-01 10:00:00', 'UTC', 'First' );
+		$this->event_on( '2026-09-15 18:00:00', '2026-09-15 20:00:00', 'UTC', 'Middle' );
+		$this->event_on( '2026-09-30 09:00:00', '2026-09-30 10:00:00', 'UTC', 'Last' );
+		$this->event_on( '2026-10-05 09:00:00', '2026-10-05 10:00:00', 'UTC', 'Next month' );
+
+		$grid = Renderer::calendar(
+			array(
+				'month' => '2026-09',
+				'view'  => 'grid',
+			)
+		);
+		$list = Renderer::calendar(
+			array(
+				'month' => '2026-09',
+				'view'  => 'list',
+			)
+		);
+
+		foreach ( array( 'First', 'Middle', 'Last' ) as $title ) {
+			$this->assertStringContainsString( $title, $grid, $title . ' is missing from the grid' );
+			$this->assertStringContainsString( $title, $list, $title . ' is missing from the list' );
+		}
+
+		$this->assertStringNotContainsString( 'Next month', $grid );
+		$this->assertStringNotContainsString( 'Next month', $list );
+
+		// The list is a list, not a table with different styling.
+		$this->assertStringNotContainsString( '<table', $list );
+		$this->assertStringContainsString( '<table', $grid );
+	}
+
+	/**
+	 * Each view links to the other, for the month being looked at.
+	 *
+	 * @return void
+	 */
+	public function test_each_view_links_to_the_other_for_the_same_month() {
+		$this->enable_calendar();
+
+		$grid = Renderer::calendar(
+			array(
+				'month' => '2026-09',
+				'view'  => 'grid',
+			)
+		);
+		$list = Renderer::calendar(
+			array(
+				'month' => '2026-09',
+				'view'  => 'list',
+			)
+		);
+
+		$this->assertStringContainsString( 'qevm_view=list', $grid );
+		$this->assertStringContainsString( 'qevm_month=2026-09', $grid );
+
+		$this->assertStringContainsString( 'qevm_view=grid', $list );
+		$this->assertStringContainsString( 'qevm_month=2026-09', $list );
+	}
+
+	/**
+	 * A site can make the list the default without touching a template.
+	 *
+	 * @return void
+	 */
+	public function test_a_filter_can_make_the_list_the_default() {
+		$this->enable_calendar();
+
+		$this->assertStringContainsString( '<table', Renderer::calendar( array( 'month' => '2026-09' ) ) );
+
+		add_filter( 'qevm_calendar_default_view', static fn () => 'list' );
+
+		$this->assertStringNotContainsString( '<table', Renderer::calendar( array( 'month' => '2026-09' ) ) );
+	}
+
+	/**
+	 * An empty month says so rather than showing nothing.
+	 *
+	 * A grid can be empty and still look like a calendar. An empty list looks
+	 * like something failed to load.
+	 *
+	 * @return void
+	 */
+	public function test_an_empty_month_says_so_in_the_list() {
+		$this->enable_calendar();
+
+		$list = Renderer::calendar(
+			array(
+				'month' => '2030-01',
+				'view'  => 'list',
+			)
+		);
+
+		$this->assertStringContainsString( 'no events', $list );
+		$this->assertStringContainsString( 'January 2030', $list );
+	}
+
+	/**
 	 * How many blank cells a grid starts with.
 	 *
 	 * @param array<int, array<int, mixed>> $weeks Weeks.

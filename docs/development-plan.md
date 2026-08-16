@@ -568,7 +568,7 @@ flagged field is absent from CSV unless explicitly included.
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
 | **C4.1** | Month grid — real `<table>` with `scope`, announced changes | L | The accessibility test the whole standard rests on. Arrow-key navigation moved to C4.3 — see below |
-| **C4.2** | **List view as a first-class equivalent**, not a fallback | M | Highest-value accessibility decision in the release |
+| **C4.2** | **List view as a first-class equivalent**, not a fallback | M | Highest-value accessibility decision in the release. What "equivalent" had to mean is below |
 | **C4.3** | Previous/next navigation without a page reload; mobile layout | M | |
 | **C4.4** | Calendar block + `[qevm_event_calendar]` shortcode, one renderer | M | |
 
@@ -598,6 +598,28 @@ events as the grid for the same range · usable on a 360px viewport.
 > the next morning in UTC, and it fails as it should. The test now also asserts
 > that its own fixture still spans a UTC date boundary, so it cannot quietly
 > lose its meaning again.
+>
+> **C4.2 — what "first-class equivalent" had to mean in practice.** Three
+> things, none of which are the markup:
+>
+> 1. **The same events, by construction.** Both views render from the same
+>    `Month` object rather than from two queries that have to be kept in step.
+>    The gate's criterion is then true because there is only one answer, and the
+>    test exists to say the construction has not been quietly undone — proved by
+>    giving the list its own narrower slice and watching it fail.
+> 2. **The choice survives navigation.** The view travels in the URL, so
+>    choosing the list and stepping to the next month does not land back in a
+>    grid. A view that forgets itself on every click is a fallback with better
+>    wording.
+> 3. **Either can be the default.** `qevm_calendar_default_view` lets a site
+>    that knows its audience commit to the list, rather than asking every
+>    visitor to switch every time.
+>
+> The one place the list deliberately differs is that it omits days with nothing
+> on them. A grid shows every date because the shape is the information; a list
+> reading "2 September, no events" thirty times is a list nobody finishes. An
+> empty month therefore says so in words, because an empty list looks like a
+> page that failed to load.
 >
 > **Not yet covered: axe on the calendar markup.** There is no way to put the
 > grid on a page until the shortcode and block land in C4.4, so the browser

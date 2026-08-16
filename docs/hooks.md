@@ -147,6 +147,24 @@ Everything else is copied, including meta this plugin does not own. A Duplicate 
 | `$skipped` | `string[]` | Meta keys to leave behind |
 | `$from` | `int` | Original post id |
 
+## Calendar
+
+### `qevm_calendar_default_view` (filter)
+
+Which view a visitor sees before they have chosen one. `'grid'` by default; return `'list'` to make the list the default.
+
+The two views are equals, not a feature and its fallback — they read the same month, so they always hold the same events, and each links to the other. A site that knows its audience is better served by the list should be able to say so once rather than asking every visitor to switch every time.
+
+```php
+add_filter( 'qevm_calendar_default_view', function () {
+	return 'list';
+} );
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$view` | `string` | `grid` or `list` |
+
 ## Registration questions
 
 ### `qevm_registration_fields` (filter)
