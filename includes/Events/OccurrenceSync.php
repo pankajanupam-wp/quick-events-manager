@@ -125,7 +125,7 @@ final class OccurrenceSync {
 	 * @since 26.0
 	 *
 	 * @param int $event_id Event id.
-	 * @return array{inserted: int, updated: int, deleted: int, unchanged: int}
+	 * @return array{inserted: int, updated: int, deleted: int, unchanged: int, cancelled: int}
 	 */
 	public static function sync( $event_id ) {
 		$event_id = (int) $event_id;
@@ -134,6 +134,7 @@ final class OccurrenceSync {
 			'updated'   => 0,
 			'deleted'   => 0,
 			'unchanged' => 0,
+			'cancelled' => 0,
 		);
 
 		if ( $event_id <= 0 ) {
@@ -156,7 +157,7 @@ final class OccurrenceSync {
 		 * @since 26.0
 		 *
 		 * @param int                                                          $event_id Event id.
-		 * @param array{inserted: int, updated: int, deleted: int, unchanged: int} $result What changed.
+		 * @param array{inserted: int, updated: int, deleted: int, unchanged: int, cancelled: int} $result What changed.
 		 */
 		do_action( 'qevm_occurrences_synced', $event_id, $result );
 
@@ -166,9 +167,10 @@ final class OccurrenceSync {
 	/**
 	 * The occurrence rows an event's meta implies.
 	 *
-	 * One row for a one-off event. Recurrence expands this into many in stage 6,
-	 * which is why it is a separate method returning a list rather than a single
-	 * row built inline.
+	 * One row for a one-off event, and one per generated date for a recurring
+	 * one. Which of the two is decided by whether the event has a rule that both
+	 * parses and validates — an unreadable rule leaves the event with the single
+	 * date it started as, rather than with none.
 	 *
 	 * @since 26.0
 	 *
@@ -192,6 +194,12 @@ final class OccurrenceSync {
 		$start_local = '' !== $event->start_local() ? $event->start_local() : $start_utc;
 		$end_local   = '' !== $event->end_local() ? $event->end_local() : $start_local;
 
+		$recurring = self::build_recurring( (int) $event_id, $event, $start_local, $end_local );
+
+		if ( array() !== $recurring ) {
+			return $recurring;
+		}
+
 		/*
 		 * An end before the start is meaningless and would make every range
 		 * query answer "already finished". Treat it as an unstated end rather
@@ -204,17 +212,78 @@ final class OccurrenceSync {
 
 		return array(
 			array(
-				'event_id'     => (int) $event_id,
-				'series_uuid'  => '',
-				'start_utc'    => $start_utc,
-				'end_utc'      => $end_utc,
-				'start_local'  => $start_local,
-				'end_local'    => $end_local,
-				'timezone'     => $event->timezone(),
-				'all_day'      => $event->is_all_day() ? 1 : 0,
-				'is_exception' => 0,
-				'status'       => OccurrenceStatus::Scheduled->value,
+				'event_id'      => (int) $event_id,
+				'series_uuid'   => '',
+				'recurrence_id' => '',
+				'start_utc'     => $start_utc,
+				'end_utc'       => $end_utc,
+				'start_local'   => $start_local,
+				'end_local'     => $end_local,
+				'timezone'      => $event->timezone(),
+				'all_day'       => $event->is_all_day() ? 1 : 0,
+				'is_exception'  => 0,
+				'status'        => OccurrenceStatus::Scheduled->value,
 			),
+		);
+	}
+
+	/**
+	 * The rows a recurring event's rule produces, or none if it has no rule.
+	 *
+	 * Returning an empty array for "not recurring" rather than null, because the
+	 * caller's next step is the single-row path either way, and a rule that
+	 * generates nothing usable should land there too. An event whose rule is
+	 * unreadable, or whose rule produces no dates at all, keeps the one date it
+	 * was created with — which is visible and fixable, unlike an event that
+	 * quietly vanishes from every listing.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int    $event_id    Event id.
+	 * @param Event  $event       The event.
+	 * @param string $start_local Local start, `Y-m-d H:i:s`.
+	 * @param string $end_local   Local end, `Y-m-d H:i:s`.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function build_recurring( $event_id, Event $event, $start_local, $end_local ) {
+		/*
+		 * The module gate, and it is here rather than on the event's meta on
+		 * purpose. An event can carry a rule from a previous life — the module was
+		 * on and has been switched off, or the rule arrived through the REST API —
+		 * and gating on "does this event have a rule" would keep generating for
+		 * those. This method is the one place every generation passes through.
+		 *
+		 * C3.4 made exactly this mistake with the registration form: the gate was
+		 * on the per-event meta, and the form rendered with the module off.
+		 */
+		if ( ! \QuickEventsManager\Recurrence\RecurrenceModule::is_enabled() ) {
+			return array();
+		}
+
+		$rule = \QuickEventsManager\Recurrence\Series::rule_for_event( $event_id );
+
+		if ( null === $rule ) {
+			return array();
+		}
+
+		/*
+		 * Minted here rather than by the editor, so a series has an identifier
+		 * however its rule arrived — the block editor, the REST API, WP-CLI or a
+		 * site's own code. Idempotent, and it never replaces an existing value.
+		 */
+		$series = \QuickEventsManager\Recurrence\Series::ensure( $event_id );
+
+		return \QuickEventsManager\Recurrence\Generator::expand(
+			$rule,
+			array(
+				'event_id'    => $event_id,
+				'series_uuid' => $series,
+				'start_local' => $start_local,
+				'end_local'   => $end_local,
+				'timezone'    => $event->timezone(),
+				'all_day'     => $event->is_all_day(),
+			),
+			\QuickEventsManager\Recurrence\Exclusions::for_event( $event_id )
 		);
 	}
 }

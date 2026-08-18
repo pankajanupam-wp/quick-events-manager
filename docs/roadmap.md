@@ -91,6 +91,12 @@ An alternative to the built-in gateways for sites that already run Woo: an event
 
 Modelled as a series with a parent and generated occurrences, not as unrelated copies. Editing one occurrence versus the whole series is the hard part, and getting it wrong is what makes recurring events miserable in most calendar software.
 
+**The edit semantics were written down before any code** — [docs/recurrence.md](recurrence.md), reviewed, with [ADR-0015](adr/0015-recurrence-identity-and-overrides.md) behind it. Writing that spec found a latent bug in the occurrence reconciler: it identified rows by their start time, which stops identifying anything the moment one occurrence can be moved, so a moved date was silently destroyed on the next unrelated save of the event. Occurrences now carry a `recurrence_id` — the slot the rule generated, which never changes however far the date moves.
+
+**The rule domain and generation are built.** Rules are stored as RFC 5545 RRULE strings, so the `.ics` export is a copy rather than a translation and a series can be imported from another calendar. Daily, weekly with named weekdays, monthly by date or by weekday position — "the last Friday" — and yearly. Generation happens in the event's own timezone in wall-clock time, so an 18:00 meeting is 18:00 every week and its UTC value moves across a daylight saving boundary rather than the other way round. Bounded three ways: the rule's own ending, a two-year horizon, and a ceiling of 730 dates, with a daily task walking the horizon forward so a series never quietly runs out.
+
+Still to come: the edit semantics themselves, and the admin UI.
+
 ## Before release
 
 Independent of the features above:
