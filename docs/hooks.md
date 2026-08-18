@@ -558,7 +558,61 @@ add_action(
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `$event_id` | `int` | The event whose dates were rebuilt |
-| `$result` | `array` | What changed: `inserted`, `updated`, `deleted`, `unchanged` |
+| `$result` | `array` | What changed: `inserted`, `updated`, `deleted`, `unchanged`, `cancelled` |
+
+### `qevm_occurrence_is_protected` (filter)
+
+Whether a date the recurrence rule has stopped producing must be kept rather than removed. Return `true` and the date is marked cancelled instead of deleted.
+
+The registration module answers this for any date with bookings on it, because deleting such a date destroys the only link between a booking and what it was for — the organiser finds out when twelve people arrive. Cancelling keeps the record and the attendee list and leaves telling them to the person who made the change.
+
+An occurrence marked `is_exception` is kept without asking: it is a decision somebody made by hand, and a rule change should not throw it away silently.
+
+```php
+add_filter(
+	'qevm_occurrence_is_protected',
+	function ( $keep, $occurrence ) {
+		if ( $keep ) {
+			return true;
+		}
+
+		return my_plugin_has_something_attached_to( $occurrence->id() );
+	},
+	10,
+	2
+);
+```
+
+Respect an incoming `true` rather than overwriting it, so that several answers can coexist.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$keep` | `bool` | Whether something has already claimed it |
+| `$occurrence` | `QuickEventsManager\Events\Occurrence` | The date about to be removed |
+
+### Editing one date of a series
+
+Four actions fire when "this occurrence" scope is used. **None of them sends any email**, and that is deliberate: the queue makes telling two hundred attendees trivially easy, which is exactly why it must not happen as a side effect of an organiser correcting one date. These hooks are where a site adds that if it wants it; the admin screen offers it as a next step instead.
+
+| Hook | Fires when | Parameters |
+| --- | --- | --- |
+| `qevm_occurrence_moved` | One date is moved | `$occurrence_id`, `$from` (UTC), `$to` (UTC) |
+| `qevm_occurrence_cancelled` | One date is called off | `$occurrence_id`, `$event_id` |
+| `qevm_occurrence_reinstated` | A called-off date is put back on | `$occurrence_id`, `$event_id` |
+| `qevm_occurrence_restored` | A date is handed back to its rule | `$occurrence_id`, `$event_id` |
+
+```php
+add_action(
+	'qevm_occurrence_moved',
+	function ( $occurrence_id, $from, $to ) {
+		error_log( sprintf( 'Date %d moved from %s to %s.', $occurrence_id, $from, $to ) );
+	},
+	10,
+	3
+);
+```
+
+Restoring is the undo for all of them, and nothing stores an "original" to restore from: clearing `is_exception` hands the row back to the rule, and the regeneration rewrites it from the slot that was on the row all along.
 
 Fires on every save of an event, including saves that changed nothing — in which case
 every count is zero except `unchanged`. It also fires during

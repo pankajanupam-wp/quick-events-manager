@@ -845,16 +845,161 @@ semantics written during implementation are recurrence edit semantics done wrong
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C6.1** | **Write the spec**: "this occurrence" / "this and following" / "all" — every case, including registrations already attached | M | Doc only. Reviewed before C6.2 starts |
-| **C6.2** | Recurrence rule domain — parsing, validation, `series_uuid` | L | |
-| **C6.3** | Occurrence generation with a bounded horizon + exclusion dates | L | Generated in the event's own timezone, so 18:00 stays 18:00 across DST |
-| **C6.4** | Edit semantics implementation + `is_exception` handling | XL | The hard part. Split if it grows |
+| **C6.1** | **Write the spec**: "this occurrence" / "this and following" / "all" — every case, including registrations already attached | M | **Done** — [docs/recurrence.md](recurrence.md) + [ADR-0015](adr/0015-recurrence-identity-and-overrides.md). Found a latent bug in the reconciler and a schema addition; see below |
+| **C6.2** | Recurrence rule domain — parsing, validation, `series_uuid` | L | **Done.** RRULE as the stored form; `recurrence_id` column and the version bump in the same change, per ADR-0015 |
+| **C6.3** | Occurrence generation with a bounded horizon + exclusion dates | L | **Done.** Generated in the event's own timezone, so 18:00 stays 18:00 across DST. Recurrence became a module here; see below |
+| **C6.4** | Edit semantics implementation + `is_exception` handling | XL | **Split, as the definition allowed for.** See the three rows below |
+| **C6.4a** | Reconciler identity: match on `recurrence_id`, preserve exceptions, cancel-not-delete for booked dates | L | **Done.** Fixes the defect C6.1 found |
+| **C6.4b** | Single-occurrence edits — move one date, call one off | M | **Done.** Plus reinstate and restore, which are the undo — see below |
+| **C6.4c** | "This and following": split the series, re-point occurrences, keep both tables agreeing | L | |
 | **C6.5** | Recurrence admin UI | L | |
+| **C6.6** | Attach a booking to an occurrence — pick a date on the form, count capacity per date | L | Surfaced by C6.4a. Without it, `occurrence_id` stays `0` and capacity is per series, contradicting docs/recurrence.md §6 |
+
+> **C6.1 — the spec's own definition understated it.** "Every case, including
+> registrations already attached" is the right list of *situations*, and the hard
+> question turned out to be one it does not name: **what identifies an occurrence.**
+>
+> `OccurrenceRepository::replace_for_event()` reconciles by `start_utc`, with a comment
+> saying the start "is what identifies a date within an event". That is true for a
+> one-off event and false the moment a single occurrence can be moved, because moving it
+> changes the field being used to recognise it. A moved occurrence reads as two facts —
+> a date the event no longer has, and a new one — so it is deleted and reinserted, and
+> the organiser's override disappears on the next unrelated save of the event.
+>
+> **It cannot be seen today.** `registrations.occurrence_id` and
+> `attendees.occurrence_id` have existed since C1.5 and C1.6 and are still written as `0`
+> on every insert, so nothing points at an occurrence row and destroying one is
+> invisible. Stage 6 is where those columns start carrying values — the identity bug and
+> the feature that makes identity matter arrive together.
+>
+> Every check in the gate below passes with the bug present, because each acts on an
+> occurrence and then looks at it immediately, which is exactly the window in which it
+> cannot be seen. The gate gains "an exception survives an unrelated save".
+>
+> The fix is a `recurrence_id` column holding the slot the rule generated, matched on
+> instead of the start time — RFC 5545's `RECURRENCE-ID`, borrowed by name. It lands in
+> C6.2 with a `QEVM_DB_VERSION` bump in the same change, which C5.1 has just demonstrated
+> is easy to forget.
+>
+> **C6.2 — the rule is stored as an RRULE string**, not a serialised array. It is legible
+> in the database, so a support question can be answered by looking; it is what an `.ics`
+> export has to emit, so that export becomes a copy rather than a translation; and it is
+> what every other calendar already speaks, so importing a series is parsing rather than
+> mapping. The cost is that a stored value can be malformed in ways an array cannot, which
+> is why parsing returns null rather than a partly-filled object and why validation is a
+> separate step: "can I read this" and "should this be allowed to generate dates" are
+> different questions, and `FREQ=WEEKLY;BYDAY=2TU` answers yes to the first and no to the
+> second.
+>
+> Reading is deliberately strict. One unreadable weekday fails the whole rule rather than
+> being dropped, because `BYDAY=MO,XX,FR` quietly becoming Mondays and Fridays is a rule
+> that parses, validates and generates the wrong dates with nothing anywhere saying so.
+>
+> **Two more decisions the definition left open**, both in ADR-0015 rather than settled
+> mid-implementation: a per-occurrence edit changes *when* a date happens or *whether* it
+> happens and nothing else, because there is nowhere to put a per-occurrence title; and a
+> split re-points occurrence rows rather than regenerating them, because regenerating
+> gives every date from the split onward a new row id and orphans every registration
+> attached to it in one statement. A split also has to rewrite `registrations.event_id`,
+> which is the kind of two-table disagreement neither table can show on its own — so
+> that is in the gate too.
+
+> **C6.3 — recurrence had to become a module, and the definition never said so.**
+> [ADR-0009](adr/0009-module-architecture.md) makes every feature a module that is off by
+> default, and the roadmap says in as many words that somebody publishing a list of
+> meetups should not be handed recurrence rules. C6.3 is the first chunk that registers
+> hooks and changes what a save does, so it is where the module had to exist.
+>
+> **The gate is at the generator, not at the event's meta.** An event can carry a rule
+> from a previous life — the module was on and has been switched off, or the rule arrived
+> through the REST API — so "does this event have a rule" is the wrong question.
+> `OccurrenceSync::build_recurring()` is the one place every generation passes through.
+> This is the same mistake C3.4 made with the registration form, where the gate was on the
+> per-event meta and the form rendered with the module off.
+>
+> **PHP's DST behaviour was measured, and the C6.1 spec was half wrong about it.** The
+> spec said PHP's answers were neither of the two the plugin wants. In fact for an
+> ambiguous time PHP already picks the earlier of the two, which is what is wanted; only
+> the non-existent time differs, where PHP gives `03:30` and the spec calls for `03:00`.
+> So one rule is implemented and one is inherited — and the inherited one is pinned by a
+> test that asserts PHP's own behaviour as well as the plugin's, because inheriting
+> behaviour is only safe if you find out when it changes.
+>
+> **Two of my own tests were wrong before the code was.** One asserted that consecutive
+> weekly occurrences are 604800 seconds apart in UTC; across a clock change they are
+> 601200, which is the entire point of generating in wall-clock time. The other expected
+> `COUNT=3` on a yearly rule to produce three dates when only two are inside a two-year
+> horizon. Both were fixed by making the assertion say what should happen rather than by
+> loosening it — the first now steps local dates, and the second asserts the third date
+> appears once the horizon reaches it, which is a better test than the one I set out to
+> write.
+>
+> **The horizon cursor is a position, not an event id.** An id cursor needs a
+> "WHERE ID > n" that `WP_Query` cannot express, and filtering ids in PHP after the query
+> has applied its `LIMIT` leaves the first batch filtered down to nothing and the walk
+> never advancing past it. Caught by reading the code back before writing the test.
+
+> **C6.4 split into three, which its own definition allowed for.** "All" scope needed
+> almost no new code and is not a fourth: changing a rule already regenerates, and
+> changing a title already touches nothing, because those fields live on the post every
+> occurrence reads from.
+>
+> **C6.4a closed the defect C6.1 predicted, and the sabotage confirmed the prediction
+> exactly.** Reverting the reconciler to `start_utc` matching fails
+> `test_a_moved_date_survives_an_unrelated_save` and nothing else about the identity
+> change; letting the rule overwrite an exception, or protecting nothing, fails five tests
+> between them.
+>
+> **`is_exception` now has a precise meaning:** the rule no longer owns this row's times or
+> status. It still owns everything else — which series the row belongs to, its timezone,
+> whether it is all day — so a moved date still follows the series in every respect except
+> the one somebody overrode.
+>
+> **Booked dates are protected through a filter, not a query.** `OccurrenceRepository` must
+> not know what a registration is, so it asks `qevm_occurrence_is_protected` and the
+> registration module answers. With registration switched off nothing answers, which is
+> correct rather than a gap: there are no bookings to protect. That is the dependency
+> direction [ADR-0009](adr/0009-module-architecture.md) requires, and there is a test that
+> the answer really is "no" with the module off rather than the filter merely being absent.
+>
+> **C6.4b added two operations the definition did not name, because "move" and "call off"
+> without an undo is a trap.** `restore()` hands a date back to its rule, and `reinstate()`
+> puts a called-off date back on. Both are small, and the mechanism is the part worth
+> knowing: **nothing stores an "original" to restore from.** Clearing `is_exception` gives
+> the rule ownership of the row again and the regeneration rewrites it from the slot that
+> has been on the row since it was generated. That falls straight out of ADR-0015 and is
+> the clearest evidence the identity model is the right one.
+>
+> `reinstate()` decides between the two. A date that was only ever cancelled goes back to
+> the rule completely — leaving it flagged as an exception would freeze it against every
+> future rule change for no reason. A date that was moved *and then* cancelled keeps its
+> moved time, because that time is still what the organiser asked for.
+>
+> Restoring a date the rule no longer produces removes it, and that is the honest answer
+> rather than an oversight: a date the series does not have is not one the series can hold
+> on somebody's behalf. If it has bookings on it, C6.4a's protection cancels it instead.
+>
+> **Editing a date sends nothing.** Asserted rather than assumed — the test hooks
+> `pre_wp_mail` and also checks the queue is empty, because since C5.2 mail leaves through
+> the queue and a test watching only `wp_mail()` would no longer see it.
+>
+> **A gap this chunk surfaced and did not close.** `registrations.occurrence_id` is still
+> written as `0` by every booking, because nothing asks a visitor *which date of a series*
+> they are booking — that form does not exist. So docs/recurrence.md §6's "capacity is per
+> occurrence" is not yet true in code: a booking on a recurring event counts against the
+> series as a whole. The reconciler's protection is real and tested regardless of how the
+> row got its `occurrence_id`, but the contradiction is live and needs its own chunk rather
+> than being folded quietly into the recurrence UI. Added as **C6.6** below.
 
 **Gate:** a weekly series for 52 weeks generates 52 occurrences · editing one leaves 51
 untouched and marks it `is_exception` · "this and following" splits the series
 correctly and both halves share the `series_uuid` · registrations survive an edit to
 their occurrence · generation is bounded.
+
+**Added by C6.1:** an exception survives an unrelated save of the event ·
+`registrations.event_id` agrees with the occurrence's `event_id` after a split · a date
+with registrations on it is cancelled rather than deleted when the rule stops generating
+it · 18:00 stays 18:00 across a real DST transition in a zone that has one.
 
 ---
 
