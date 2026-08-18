@@ -25,6 +25,7 @@ why, and the consequences we accepted — including the bad ones.
 | [0012](0012-direction-independent-css.md) | Direction-independent CSS instead of an RTL stylesheet | accepted |
 | [0013](0013-accessibility-testing.md) | Accessibility is verified in a real browser | accepted |
 | [0014](0014-venue-records-with-flat-fallback.md) | Venue records never become the only copy of an address | accepted |
+| [0015](0015-recurrence-identity-and-overrides.md) | An occurrence is identified by its slot, not by its time | accepted |
 
 ## Writing a new one
 
