@@ -76,6 +76,32 @@ final class Occurrence {
 	}
 
 	/**
+	 * The slot the recurrence rule generated this row for.
+	 *
+	 * `''` for a one-off event's row, which no rule generated.
+	 *
+	 * This, and not `start_utc`, is what identifies a generated row. Moving an
+	 * occurrence changes when it happens; it does not change which slot in the
+	 * series it is. See docs/adr/0015-recurrence-identity-and-overrides.md.
+	 *
+	 * @since 26.0
+	 */
+	public function recurrence_id(): string {
+		$value = $this->get( 'recurrence_id', '' );
+
+		return is_string( $value ) ? $value : '';
+	}
+
+	/**
+	 * Whether a recurrence rule generated this row.
+	 *
+	 * @since 26.0
+	 */
+	public function is_generated(): bool {
+		return '' !== $this->recurrence_id();
+	}
+
+	/**
 	 * Series identifier, empty until recurrence lands.
 	 *
 	 * @since 26.0

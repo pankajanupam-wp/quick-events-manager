@@ -125,6 +125,7 @@ CREATE TABLE {prefix}qevm_occurrences (
     id            bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     event_id      bigint(20) unsigned NOT NULL,
     series_uuid   char(36)     NOT NULL DEFAULT '',
+    recurrence_id datetime         NULL DEFAULT NULL,
     start_utc     datetime     NOT NULL,
     end_utc       datetime     NOT NULL,
     start_local   datetime     NOT NULL,
@@ -168,6 +169,22 @@ without a rebuild path is a table that eventually drifts with no way back.
 
 `series_uuid` and `is_exception` are created empty in stage 1 and used in stage 6.
 They cost nothing now and avoid altering a large table later.
+
+`recurrence_id` was not anticipated in stage 1 and is added in C6.2 (schema version 7).
+It holds the UTC start of the slot the recurrence rule generated, and it is what a
+generated row is **identified by**. Reconciliation used to match on `start_utc`, which
+stops identifying anything the moment a single occurrence can be moved — moving it changes
+the field being matched on, so the row is deleted and reinserted and the override is lost
+on the next unrelated save. See
+[ADR-0015](adr/0015-recurrence-identity-and-overrides.md) and
+[docs/recurrence.md](recurrence.md) §2, which has the run that demonstrates it.
+
+**Nullable, and never an empty string.** `''` is not a datetime: MySQL in strict mode
+rejects it, and without strict mode stores `0000-00-00 00:00:00` — a value that is not
+NULL, compares equal to nothing, and cannot be read back as a date. Either way the row
+stops being matchable, which is the one thing the column exists to make possible.
+`OccurrenceRepository::normalise()` converts an empty value to NULL for exactly this
+reason, and an integration test asserts the stored value is NULL rather than a zero date.
 
 ### `qevm_registrations` — stage 1 *(altered in C1.6)*
 

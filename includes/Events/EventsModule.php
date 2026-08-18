@@ -148,6 +148,14 @@ final class EventsModule implements Module {
 	 * recurrence lands in stage 6. They cost nothing now and save altering a
 	 * large table later.
 	 *
+	 * recurrence_id was not anticipated in stage 1 and is added in C6.2. It holds
+	 * the UTC start of the slot the rule generated, and it is what a row is
+	 * identified by — because `start_utc` stops identifying anything the moment a
+	 * single occurrence can be moved, which is exactly what stage 6 adds. It is
+	 * nullable rather than defaulted so a one-off event's row is distinguishable
+	 * from a generated one that happens to start at the epoch. See
+	 * docs/adr/0015-recurrence-identity-and-overrides.md.
+	 *
 	 * @since 26.0
 	 *
 	 * @return string CREATE TABLE statement for dbDelta().
@@ -160,6 +168,7 @@ final class EventsModule implements Module {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			event_id bigint(20) unsigned NOT NULL,
 			series_uuid char(36) NOT NULL DEFAULT '',
+			recurrence_id datetime DEFAULT NULL,
 			start_utc datetime NOT NULL,
 			end_utc datetime NOT NULL,
 			start_local datetime NOT NULL,

@@ -45,6 +45,7 @@ final class OccurrenceRepository {
 	private const WRITABLE = array(
 		'event_id',
 		'series_uuid',
+		'recurrence_id',
 		'start_utc',
 		'end_utc',
 		'start_local',
@@ -566,3 +567,17 @@ final class OccurrenceRepository {
 		);
 	}
 }
+		/*
+		 * recurrence_id is the one nullable column, and it must not go through
+		 * the loop above. An empty string is not a datetime: MySQL in strict mode
+		 * rejects it outright, and without strict mode stores `0000-00-00
+		 * 00:00:00`, which is a value that compares equal to nothing, is not
+		 * NULL, and cannot be read back as a date. Either way the row stops being
+		 * matchable, which is the whole reason the column exists.
+		 */
+		if ( array_key_exists( 'recurrence_id', $row ) ) {
+			$value = is_scalar( $row['recurrence_id'] ) ? trim( (string) $row['recurrence_id'] ) : '';
+
+			$row['recurrence_id'] = '' !== $value ? $value : null;
+		}
+

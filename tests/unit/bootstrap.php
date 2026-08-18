@@ -448,6 +448,69 @@ function wp_salt( $scheme = 'auth' ) {
 }
 
 /**
+ * A version 4 UUID.
+ *
+ * Genuinely random rather than fixed, unlike wp_salt() above. Two calls to this
+ * must not agree: the whole point of a series uuid is that a second series gets
+ * a different one, and a stub returning a constant would make a test that checks
+ * two series are distinct pass while proving the opposite.
+ *
+ * @return string
+ */
+function wp_generate_uuid4() {
+	return sprintf(
+		'%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+		random_int( 0, 0xffff ),
+		random_int( 0, 0xffff ),
+		random_int( 0, 0xffff ),
+		random_int( 0, 0x0fff ) | 0x4000,
+		random_int( 0, 0x3fff ) | 0x8000,
+		random_int( 0, 0xffff ),
+		random_int( 0, 0xffff ),
+		random_int( 0, 0xffff )
+	);
+}
+
+/**
+ * Whether a string is a UUID, optionally of a given version.
+ *
+ * @param mixed    $uuid    Value to test.
+ * @param int|null $version Version to require.
+ * @return bool
+ */
+function wp_is_uuid( $uuid, $version = null ) {
+	if ( ! is_string( $uuid ) ) {
+		return false;
+	}
+
+	if ( is_numeric( $version ) ) {
+		if ( 4 !== (int) $version ) {
+			return false;
+		}
+
+		$regex = '/^[0-9a-f]{8}\-[0-9a-f]{4}\-4[0-9a-f]{3}\-[89ab][0-9a-f]{3}\-[0-9a-f]{12}$/';
+	} else {
+		$regex = '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}$/';
+	}
+
+	return (bool) preg_match( $regex, $uuid );
+}
+
+/**
+ * Remove post meta.
+ *
+ * @param int    $post_id    Post id.
+ * @param string $meta_key   Meta key.
+ * @param mixed  $meta_value Ignored; present to match core.
+ * @return bool
+ */
+function delete_post_meta( $post_id, $meta_key, $meta_value = '' ) {
+	unset( WP_Stub_State::$meta[ $post_id ][ $meta_key ] );
+
+	return true;
+}
+
+/**
  * Capability check. Always granted in unit tests.
  *
  * @param string $capability Capability.
@@ -827,7 +890,7 @@ define( 'YEAR_IN_SECONDS', 365 * DAY_IN_SECONDS );
  * the whole plugin, which a unit test of a date helper has no business doing.
  */
 define( 'QEVM_VERSION', '26.0' );
-define( 'QEVM_DB_VERSION', 6 );
+define( 'QEVM_DB_VERSION', 7 );
 define( 'QEVM_FILE', ABSPATH . 'quick-events-manager.php' );
 define( 'QEVM_PATH', ABSPATH );
 define( 'QEVM_URL', 'https://example.test/wp-content/plugins/quick-events-manager/' );

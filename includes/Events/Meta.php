@@ -107,6 +107,18 @@ final class Meta {
 	const REGISTRATION_ENABLED = '_qevm_registration_enabled';
 
 	/**
+	 * Recurrence, written by the Recurrence module.
+	 *
+	 * The rule is stored as an RFC 5545 RRULE string; see
+	 * QuickEventsManager\Recurrence\Rule for why a string rather than an array.
+	 * The series uuid groups an event with the other half of itself after a
+	 * "this and following" split.
+	 */
+	const RECURRENCE_RULE       = '_qevm_recurrence_rule';
+	const SERIES_UUID           = '_qevm_series_uuid';
+	const RECURRENCE_EXCLUSIONS = '_qevm_recurrence_exclusions';
+
+	/**
 	 * The format every stored datetime uses.
 	 */
 	const FORMAT = 'Y-m-d H:i:s';
@@ -153,120 +165,135 @@ final class Meta {
 		$boolean = array( __CLASS__, 'sanitize_boolean' );
 
 		return array(
-			self::START_UTC            => array(
+			self::START_UTC             => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
 			),
-			self::END_UTC              => array(
+			self::END_UTC               => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
 			),
-			self::START_LOCAL          => array(
+			self::START_LOCAL           => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
 			),
-			self::END_LOCAL            => array(
+			self::END_LOCAL             => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
 			),
-			self::TIMEZONE             => array(
+			self::TIMEZONE              => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => array( __CLASS__, 'sanitize_timezone' ),
 			),
-			self::ALL_DAY              => array(
+			self::ALL_DAY               => array(
 				'type'     => 'boolean',
 				'default'  => false,
 				'sanitize' => $boolean,
 			),
-			self::IS_ONLINE            => array(
+			self::IS_ONLINE             => array(
 				'type'     => 'boolean',
 				'default'  => false,
 				'sanitize' => $boolean,
 			),
-			self::ONLINE_URL           => array(
+			self::ONLINE_URL            => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => 'esc_url_raw',
 			),
-			self::VENUE_NAME           => array(
+			self::VENUE_NAME            => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::VENUE_ADDRESS        => array(
+			self::VENUE_ADDRESS         => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::VENUE_CITY           => array(
+			self::VENUE_CITY            => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::VENUE_REGION         => array(
+			self::VENUE_REGION          => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::VENUE_POSTAL         => array(
+			self::VENUE_POSTAL          => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::VENUE_COUNTRY        => array(
+			self::VENUE_COUNTRY         => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::VENUE_ID             => array(
+			self::VENUE_ID              => array(
 				'type'     => 'integer',
 				'default'  => 0,
 				'sanitize' => 'absint',
 			),
-			self::ORGANIZER_ID         => array(
+			self::ORGANIZER_ID          => array(
 				'type'     => 'integer',
 				'default'  => 0,
 				'sanitize' => 'absint',
 			),
-			self::ORGANIZER_NAME       => array(
+			self::ORGANIZER_NAME        => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::ORGANIZER_EMAIL      => array(
+			self::ORGANIZER_EMAIL       => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => 'sanitize_email',
 			),
-			self::ORGANIZER_PHONE      => array(
+			self::ORGANIZER_PHONE       => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => $text,
 			),
-			self::ORGANIZER_URL        => array(
+			self::ORGANIZER_URL         => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => 'esc_url_raw',
 			),
-			self::CAPACITY             => array(
+			self::CAPACITY              => array(
 				'type'     => 'integer',
 				'default'  => 0,
 				'sanitize' => 'absint',
 			),
-			self::REGISTRATION_CLOSES  => array(
+			self::REGISTRATION_CLOSES   => array(
 				'type'     => 'string',
 				'default'  => '',
 				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
 			),
-			self::REGISTRATION_ENABLED => array(
+			self::REGISTRATION_ENABLED  => array(
 				'type'     => 'boolean',
 				'default'  => false,
 				'sanitize' => $boolean,
+			),
+			self::RECURRENCE_RULE       => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_rrule' ),
+			),
+			self::SERIES_UUID           => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_uuid' ),
+			),
+			self::RECURRENCE_EXCLUSIONS => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( \QuickEventsManager\Recurrence\Exclusions::class, 'sanitize' ),
 			),
 		);
 	}
@@ -338,6 +365,62 @@ final class Meta {
 	 */
 	public static function sanitize_boolean( $value ) {
 		return (bool) filter_var( $value, FILTER_VALIDATE_BOOLEAN );
+	}
+
+	/**
+	 * Keep a recurrence rule only if it parses and validates.
+	 *
+	 * A rule that cannot be read is stored as '' rather than kept as typed. The
+	 * alternative is a value that sits in the database looking like a rule,
+	 * generates nothing, and gives the organiser an event that repeats in the
+	 * editor and not on the site.
+	 *
+	 * Normalised through the rule object on the way in, so what is stored is the
+	 * canonical form — `FREQ` first, parts in RFC order, no stray whitespace.
+	 * Two identical rules typed differently then compare equal as strings, which
+	 * is what makes "did the rule change" answerable without parsing.
+	 *
+	 * One parameter, deliberately. WordPress calls a sanitise callback as
+	 * `( $value, $meta_key, $meta_type )`, and a callback that declares a second
+	 * parameter receives the meta key in it — which is how
+	 * `'sanitize_callback' => 'sanitize_title'` fatals a REST route. The
+	 * regression is locked down in tests/unit/RegressionTest.php.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string Canonical RRULE, or ''.
+	 */
+	public static function sanitize_rrule( $value ) {
+		if ( ! is_string( $value ) || '' === trim( $value ) ) {
+			return '';
+		}
+
+		$rule = \QuickEventsManager\Recurrence\Rule::from_string( $value );
+
+		if ( null === $rule || is_wp_error( $rule->validate() ) ) {
+			return '';
+		}
+
+		return $rule->to_string();
+	}
+
+	/**
+	 * Keep a uuid only if it looks like one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_uuid( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+
+		$value = strtolower( trim( $value ) );
+
+		return wp_is_uuid( $value, 4 ) ? $value : '';
 	}
 
 	/**
