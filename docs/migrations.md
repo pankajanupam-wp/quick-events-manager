@@ -147,6 +147,34 @@ Schema versions with no migration behind them:
 | 2 | Adds the `qevm_occurrences` table (C1.2). Created by `dbDelta`; there is no data to convert, because occurrences are derived from post meta and get populated by the sync in C1.3 |
 | 3 | Adds the `qevm_attendees` table (C1.5). Created by `dbDelta` when the registration module is on. Nothing to convert: no site has taken a booking yet, and rows for existing registrations are created by C1.7 |
 | 5 | Adds `KEY status_end (status, end_utc)` to `qevm_occurrences` (C1.12). A new index under a new name, which `dbDelta` adds by itself; no rows change. Found by the Stage 1 gate — every existing index led with `start_utc`, so the archive's `end_utc >= now` had nothing to seek and scanned the table |
+| 6 | Adds the `qevm_email_queue` table (C5.1). Created by `dbDelta` when the registration module is on, since registration is the only thing that sends mail today. Nothing to convert: mail used to go out inside the request and left no rows behind. **The bump belongs to C5.1 and was missed there** — see below |
+
+| 7 | Adds `recurrence_id datetime NULL` to `qevm_occurrences` (C6.2). A new nullable column, which `dbDelta` adds by itself; no rows change, and every existing row keeps NULL, which is correct — no rule generated them. Bumped in the same change as the column, which is the discipline version 6 was written to enforce |
+
+#### 6 — the bump C5.1 forgot
+
+Worth recording because it is the second time this exact hole has opened, and the
+first time was version 2.
+
+A module's tables are created by its `activate()`, which runs **when the module is
+switched on** — so a site that enabled registration before the queue existed never
+gets the table. `Installer::upgrade_schema()` is the mechanism that fixes that: it
+re-runs `activate()` on every enabled module, and it only runs when
+`Runner::needs_upgrade()` is true, which means when `QEVM_DB_VERSION` has moved.
+C5.1 added the table and left the constant at 5, so on any site already running the
+plugin, `needs_upgrade()` answered false and the table was never created.
+
+Every test passed throughout, in both suites, because both build their schema from
+scratch — the integration harness recreates every table each run, so it can only
+ever see the fresh-install path. The bug is only reachable by *upgrading*, and it
+was found by rendering the compose box on the long-lived dev site, where it reported
+"queued: 0" for two real recipients.
+
+The rule in the table at the top of this document already covered it: a new table
+needs no migration and **does** need the bump. What was missing was anything
+enforcing it, and a test cannot easily enforce "this release added a table" — so what
+stands in its place is running an upgrade against a site that has data on it, before
+calling a stage done.
 
 ### 1 — Legacy post type
 

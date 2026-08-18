@@ -200,6 +200,22 @@ Notifications go to your site's admin email unless you set a different one under
 
 Email templates are editable under the email templates module. If your emails are not arriving at all, that is almost always the host rather than this plugin — an SMTP plugin usually fixes it.
 
+### Emailing everybody
+
+At the bottom of the attendee screen there is an **Email everybody** box, for the message you need to send the day before: the venue has moved, bring a coat, here is the joining link.
+
+Choose who it goes to. By default that is confirmed places only — people on the waiting list are left out, because "see you tomorrow" reaching somebody who has not got a place is worse than not writing to them at all. You can include the waiting list, or everybody still registered. People who cancelled are never included.
+
+A few things worth knowing:
+
+- **The search box and status filter above do not affect who it goes to.** The audience you pick in the box is the audience, so filtering the list to one name and then writing a message does not quietly send to one person.
+- **Each person is emailed once**, however many bookings they made.
+- **Guests booked by somebody else are reached through whoever booked them**, because that is the only address on the booking.
+- You can use the same `{placeholders}` as the templates, so `Hi {attendee_name}` writes to each person by name.
+- **Send yourself a test first.** It is the only way to notice a mistyped placeholder before four hundred people read it.
+
+Mail goes out in the background over the next few minutes rather than all at once, so the page comes back straight away. Under the box is a **Delivery** panel saying how many have gone, how many are waiting and how many failed, listing the addresses that did not work and why. While messages are still waiting you can withdraw them; that catches whatever has not gone yet and leaves booking confirmations alone. Anything already sent is gone — there is no unsend.
+
 ## Add to calendar
 
 Every event page has an **Add to calendar** button that downloads an `.ics` file, plus a Google Calendar link. These work in Apple Calendar, Outlook, Google Calendar and anything else that reads iCalendar.

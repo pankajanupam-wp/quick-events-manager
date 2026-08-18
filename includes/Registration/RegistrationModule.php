@@ -102,6 +102,7 @@ final class RegistrationModule implements Module {
 
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();
+			( new \QuickEventsManager\Email\BroadcastForm() )->register();
 			( new Exporter() )->register();
 			( new EventMetaBox() )->register();
 		}

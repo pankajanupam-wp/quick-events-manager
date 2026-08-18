@@ -23,7 +23,8 @@ A plugin this size is only pleasant to use because most of it is switched off.
 - Three dynamic blocks and matching shortcodes
 - Free registration: capacity, automatic waiting list, closing date
 - Attendees screen: search, status filtering, CSV export
-- Confirmation and notification emails
+- Confirmation and notification emails, queued and retried rather than sent inline
+- Editable email templates, and one message to everybody registered for an event
 - Read-only REST API, GDPR export and erasure
 - The Features screen and module registry
 - Migration from 1.0, verified to preserve URLs
@@ -48,7 +49,13 @@ Answers reach the CSV export, the attendee screen and the privacy export. Questi
 
 ### 3. Email templates
 
-Editable subject and body with placeholders, and an HTML option. Replaces the plain-text builders in `Registration\Emails`, which were deliberately left simple pending this.
+**Built.** Editable subject and body with placeholders and an HTML option, behind the Level 2 **Email templates** module, replacing the plain-text builders in `Registration\Emails` that were deliberately left simple pending this. A template that has never been edited is not stored at all, so the built-in wording keeps improving for every site that never touched it.
+
+The renderer keeps the template's own markup and escapes every value substituted into it, by format — `esc_html()` into HTML, tags stripped for plain text. The template is written by somebody holding a capability; `{attendee_name}` came from a public form.
+
+**Mail is queued rather than sent in the request that triggers it.** `qevm_email_queue` holds a row per recipient with its own status, attempts and error, claimed by an `UPDATE` so two workers cannot take the same message, retried with a backoff and given up on after three attempts. Attachments are produced at send time from the event the row points at, so a delayed confirmation cannot put a stale time in somebody's diary.
+
+**Emailing everybody is built on top of it.** A compose box at the bottom of the attendee screen sends one message to a chosen audience — confirmed places by default, optionally the waiting list, never anybody who cancelled — rendered per recipient so `{attendee_name}` is their name. Recipients are distinct addresses rather than bookings. Five hundred people are five hundred queue rows inserted in one request and sent over the following ticks, with a delivery panel naming whatever failed and a withdraw button for anything not yet gone.
 
 ### 4. Reusable venues and organisers
 

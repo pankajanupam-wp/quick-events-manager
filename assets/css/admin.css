@@ -129,3 +129,20 @@
 	gap: 0.25rem;
 	align-items: center;
 }
+
+/* Emailing everybody
+   ------------------------------------------------------------------------ */
+
+.qevm-broadcast {
+	max-width: 50rem;
+	margin-block-start: 2rem;
+	padding-block-start: 1rem;
+	border-block-start: 1px solid #dcdcde;
+}
+
+.qevm-broadcast-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}

@@ -19,6 +19,7 @@ It ships as one release. Nothing is published until the whole of [docs/roadmap.m
 - Free registration with capacity, automatic waiting list and a closing date
 - Attendee management with search, status filtering and CSV export
 - Confirmation emails to attendees and notifications to the organiser
+- One message to everybody registered for an event, with a chosen audience, a test send, a per-recipient delivery record and a withdraw button for anything not yet sent
 - Event List, Event Details and Event Registration blocks, with matching shortcodes
 - "Add to calendar" `.ics` downloads and Google Calendar links
 - `schema.org/Event` JSON-LD for search engines

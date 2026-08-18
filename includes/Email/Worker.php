@@ -41,6 +41,11 @@ final class Worker {
 	const TIME_BUDGET = 15;
 
 	/**
+	 * Seconds from now that a nudge asks for.
+	 */
+	const NUDGE_DELAY = 10;
+
+	/**
 	 * Hook the worker up.
 	 *
 	 * @since 26.0
@@ -76,14 +81,31 @@ final class Worker {
 	/**
 	 * Ask for a run in the near future.
 	 *
+	 * Fired once per message queued, which for a single registration is twice
+	 * and for a broadcast to five hundred attendees is five hundred times. So
+	 * the guard matters: with a run already imminent there is nothing to ask
+	 * for, and asking anyway means five hundred round trips through the cron
+	 * option for one scheduled event.
+	 *
+	 * The guard used to test `wp_next_scheduled( self::HOOK . '_soon' )` — a
+	 * hook name nothing ever schedules, so it was always false and never
+	 * guarded anything. Core's own duplicate check inside
+	 * `wp_schedule_single_event()` kept that from producing five hundred cron
+	 * entries, which is why it went unnoticed: the bug was invisible until
+	 * something queued in bulk.
+	 *
 	 * @since 26.0
 	 *
 	 * @return void
 	 */
 	public static function schedule_soon() {
-		if ( ! wp_next_scheduled( self::HOOK . '_soon' ) ) {
-			wp_schedule_single_event( time() + 10, self::HOOK );
+		$next = wp_next_scheduled( self::HOOK );
+
+		if ( $next && $next <= time() + MINUTE_IN_SECONDS ) {
+			return;
 		}
+
+		wp_schedule_single_event( time() + self::NUDGE_DELAY, self::HOOK );
 	}
 
 	/**

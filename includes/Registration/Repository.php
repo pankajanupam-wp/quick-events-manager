@@ -396,6 +396,148 @@ final class Repository {
 	}
 
 	/**
+	 * How many separate people an event can be emailed to.
+	 *
+	 * Counted by distinct address rather than by booking, because somebody who
+	 * booked twice is one person and should be told once. The number this
+	 * returns is what a "email 137 people" button says, so it has to be
+	 * produced by the same rule the send uses — which is why both this and
+	 * recipients_for_event() share audience_clause() rather than each writing
+	 * their own WHERE.
+	 *
+	 * `LOWER()` rather than trusting the column collation. The default on this
+	 * table folds case already, but a site that created it under a binary
+	 * collation would otherwise send twice to the same person spelled two ways.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int      $event_id Event id.
+	 * @param string[] $statuses Statuses to include.
+	 * @return int
+	 */
+	public static function count_recipients( $event_id, array $statuses ) {
+		global $wpdb;
+
+		$audience = self::audience_clause( $event_id, $statuses );
+
+		if ( array() === $audience['params'] || ! self::table_exists() ) {
+			return 0;
+		}
+
+		$clause = $audience['clause'];
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $clause is built from literals in audience_clause(); its values are bound below.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT( DISTINCT LOWER( booker_email ) ) FROM %i WHERE {$clause}",
+				array_merge( array( self::table() ), $audience['params'] )
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * One booking per person to email, oldest first.
+	 *
+	 * The earliest booking wins the address, which is what makes paging through
+	 * this stable: `MIN(id)` is fixed for a given set of rows, so page two
+	 * cannot repeat somebody page one already had.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int      $event_id Event id.
+	 * @param string[] $statuses Statuses to include.
+	 * @param int      $limit    How many to take.
+	 * @param int      $offset   How many to skip.
+	 * @return Registration[]
+	 */
+	public static function recipients_for_event( $event_id, array $statuses, $limit, $offset = 0 ) {
+		global $wpdb;
+
+		$audience = self::audience_clause( $event_id, $statuses );
+
+		if ( array() === $audience['params'] || ! self::table_exists() ) {
+			return array();
+		}
+
+		$clause = $audience['clause'];
+		$table  = self::table();
+
+		$params = array_merge(
+			array( $table, $table ),
+			$audience['params'],
+			array( max( 1, (int) $limit ), max( 0, (int) $offset ) )
+		);
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $clause is literals from audience_clause(); $params is assembled at runtime and unwrapped by prepare().
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT r.* FROM %i r
+				 JOIN (
+					SELECT MIN( id ) AS id
+					FROM %i
+					WHERE {$clause}
+					GROUP BY LOWER( booker_email )
+				 ) first ON first.id = r.id
+				 ORDER BY r.id ASC
+				 LIMIT %d OFFSET %d",
+				$params
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		return array_map(
+			static function ( $row ) {
+				return new Registration( $row );
+			},
+			(array) $rows
+		);
+	}
+
+	/**
+	 * The WHERE clause behind both recipient queries.
+	 *
+	 * Bookings with no address are excluded here rather than skipped later, so
+	 * the count and the send agree about them. A manually entered booking can
+	 * have an empty email — the organiser took it over the phone — and counting
+	 * somebody the queue will never accept produces a "sent to 40 people"
+	 * notice for 39 emails.
+	 *
+	 * An empty status list returns empty params, which every caller reads as
+	 * "no audience" and stops. That is deliberate: defaulting an unrecognised
+	 * audience to *everybody* is the failure mode worth designing out.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int      $event_id Event id.
+	 * @param string[] $statuses Statuses to include.
+	 * @return array{clause: string, params: array<int, mixed>}
+	 */
+	private static function audience_clause( $event_id, array $statuses ) {
+		$valid = array_values(
+			array_intersect(
+				array_map( 'strval', $statuses ),
+				RegistrationStatus::values()
+			)
+		);
+
+		if ( array() === $valid || (int) $event_id <= 0 ) {
+			return array(
+				'clause' => '',
+				'params' => array(),
+			);
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $valid ), '%s' ) );
+
+		return array(
+			'clause' => "event_id = %d AND booker_email <> '' AND status IN ( {$placeholders} )",
+			'params' => array_merge( array( (int) $event_id ), $valid ),
+		);
+	}
+
+	/**
 	 * Count registrations matching a filter.
 	 *
 	 * @since 26.0

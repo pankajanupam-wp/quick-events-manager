@@ -709,10 +709,47 @@ events as the grid for the same range · usable on a 360px viewport.
 | **C5.1** | `qevm_email_queue` + cron worker + batching + retry + per-recipient status | L | `wp_mail()` is synchronous; 500 recipients in one request is a timeout |
 | **C5.2** | Route existing confirmation and notification mail through the queue | M | Nearly lost a rule the tests caught — see below |
 | **C5.3** | Email templates — editable subject and body, placeholders, HTML option | L | Replaces the plain-text builders left deliberately simple. Templates override rather than replace — see below |
-| **C5.4** | Email all attendees, through the queue | M | |
+| **C5.4** | Email all attendees, through the queue | M | Broadcasts needed their own queue context, and found a guard that had never guarded anything — see below |
 
 **Gate:** 500 recipients send without a timeout, with a per-recipient record of what
 was sent and what failed · a failed send is retried and visible, not silent.
+
+**Gate run: passed.** Against a real WordPress and a real MySQL, on an event with 500
+confirmed registrations and a mailer set to refuse three specific addresses:
+
+| | |
+| --- | --- |
+| Queueing 500 | 0.21s, 1008 queries, nothing sent inside the request |
+| Draining | 497 sent, 3 failed, nobody sent to twice |
+| Per-recipient record | 500 rows, 500 distinct bodies, every sent row carrying its own `sent_at` |
+| First failure | still `pending`, 1 attempt, `wp_mail() returned false.`, retry 5 minutes out |
+| After the last attempt | all 3 `failed` with 3 attempts, listed by address on the screen |
+
+> **The first budget probe proved nothing, and passed.** "500 recipients send without a
+> timeout" rests on the worker stopping when its budget is gone and leaving the rest for
+> the next tick. With a `pre_wp_mail` filter that returns instantly, a run drains 500
+> messages in 0.14s and the budget is never reached — so the check went green having
+> never exercised the thing it was named after. The same shape as the empty calendar in
+> Stage 4 and the fixture that asked no questions in Stage 3.
+>
+> Rewritten with a mailer that sleeps 0.1s per send, so 200 messages is 10s of work
+> against a 3s budget. It then showed the run stopping at 29 sent in 3.09s with 160 left
+> queued, and a second run continuing rather than repeating.
+>
+> **Even that needed a second attempt.** The first version used a 2s budget, which with
+> a 20-message batch at 0.1s a send lands *exactly* on a batch boundary — where the
+> guarded and unguarded versions stop at the same moment. It passed with the inner
+> deadline check deleted. Moved to a 3s budget so the deadline falls mid-batch, and the
+> difference is now plain: **3.09s with the check, 4.25s without**, a 42% overrun on a
+> job that runs inside somebody's page load. Both `Worker::run()` deadline checks are
+> load-bearing and only the inner one is hard to see.
+
+One number recorded rather than fixed: queueing 500 messages costs **1008 queries**,
+because `Queue::table_exists()` runs a `SHOW TABLES` per call and `Queue::add()` calls it
+every time. `Repository::table_exists()` memoises its positive answer for exactly this
+reason. Not changed here — the memo would make the "queue table is missing" test model
+something that cannot happen in production, a table vanishing mid-request — so it goes to
+the Stage 10 performance pass with the measurement attached.
 
 > **C5.3 — templates override, they do not replace.** A template that has never
 > been edited is not stored at all, and the built-in wording is what gets sent.
@@ -758,6 +795,45 @@ was sent and what failed · a failed send is retried and visible, not silent.
 > them being right rather than them being in the way: mail no longer leaves
 > during the request that triggered it, and a test that still observed the send
 > there was testing something that no longer happens.
+>
+> **C5.4 — a broadcast needs its own queue context.** The obvious thing was to
+> queue a message to attendees against `event` and the event's id, which is
+> where the confirmations already sit. Then withdrawing a broadcast — the
+> button that exists because somebody spots the typo twenty seconds after
+> pressing send — would also cancel every unsent booking confirmation for that
+> event, silently, as a side effect of fixing a sentence. Broadcasts go on as
+> `broadcast` with the same id instead, and a test asserts the confirmations
+> survive a withdrawal. Sharing the context makes it fail.
+>
+> **The audience is chosen, never inherited.** The attendee screen above the
+> compose box has a search box and a status filter. Reading the audience from
+> those would mean an organiser who searched for one name and then wrote a
+> message emailed one person, with nothing on screen saying so. The audience is
+> a field in the form and nothing else feeds it — and the number on the button
+> comes from the same clause the send uses, so it is a fact rather than an
+> estimate.
+>
+> **Recipients are people, not bookings.** Distinct addresses, folded to lower
+> case rather than trusting the column collation, so somebody who booked twice
+> hears once. Cancelled bookings are in no audience at all: that address was
+> given to arrange a place that no longer exists.
+>
+> **A guard that had never guarded anything.** `Worker::schedule_soon()` fires
+> once per message queued, and its guard tested `wp_next_scheduled( HOOK .
+> '_soon' )` — a hook name nothing ever schedules, so it was always false. Core's
+> own duplicate check inside `wp_schedule_single_event()` meant this produced no
+> visible symptom, which is why it survived C5.1 and C5.2: with two messages per
+> booking there was nothing to see. A broadcast queues five hundred at once, and
+> five hundred round trips through the cron option is where an invisible bug
+> becomes a slow one. The guard now tests the real hook and returns when a run
+> is already due within the minute.
+>
+> **A test send is in the chunk and was not in its definition.** Sending is the
+> only action in this admin that cannot be undone, and a test to your own
+> address is the only way to find out that `{attendee_nmae}` is a typo before
+> four hundred people read it. It goes through the queue like everything else,
+> under its own context so it neither shows up in the delivery counts nor is
+> swept up by withdraw.
 
 ---
 

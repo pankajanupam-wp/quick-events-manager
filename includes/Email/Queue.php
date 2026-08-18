@@ -297,6 +297,114 @@ final class Queue {
 	}
 
 	/**
+	 * How many messages are in each state, for one or more contexts.
+	 *
+	 * Takes a list of context types because the question an organiser asks is
+	 * about an *event* — "did my mail go out" — and an event's mail is spread
+	 * across more than one context: confirmations queued against `event`, and
+	 * anything broadcast to its attendees. Both carry the same context id, so
+	 * one query answers for both.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string|string[] $types Context type, or several.
+	 * @param int             $id    Context id.
+	 * @return array<string, int>
+	 */
+	public static function counts_for_context( $types, $id ) {
+		global $wpdb;
+
+		$types = self::context_types( $types );
+
+		if ( array() === $types || ! self::table_exists() ) {
+			return array();
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+		$params       = array_merge( array( self::table() ), $types, array( (int) $id ) );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom table; the placeholder list is generated from a count, and every value is bound.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT status, COUNT(*) AS total FROM %i
+				 WHERE context_type IN ( {$placeholders} ) AND context_id = %d
+				 GROUP BY status",
+				$params
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		$counts = array();
+
+		foreach ( (array) $rows as $row ) {
+			$counts[ (string) $row['status'] ] = (int) $row['total'];
+		}
+
+		return $counts;
+	}
+
+	/**
+	 * The messages that were given up on, newest first.
+	 *
+	 * A count of failures tells somebody there is a problem. This tells them
+	 * *whose* mail did not arrive, which is the only form of that information
+	 * they can act on — the answer to "did Priya get it" is a name and an
+	 * address, not the number four.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string|string[] $types Context type, or several.
+	 * @param int             $id    Context id.
+	 * @param int             $limit How many to return.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function failures_for_context( $types, $id, $limit = 20 ) {
+		global $wpdb;
+
+		$types = self::context_types( $types );
+
+		if ( array() === $types || ! self::table_exists() ) {
+			return array();
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+
+		$params = array_merge(
+			array( self::table() ),
+			$types,
+			array( (int) $id, EmailStatus::Failed->value, max( 1, (int) $limit ) )
+		);
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom table; the placeholder list is generated from a count, and every value is bound.
+		return (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM %i
+				 WHERE context_type IN ( {$placeholders} ) AND context_id = %d AND status = %s
+				 ORDER BY id DESC
+				 LIMIT %d",
+				$params
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+	}
+
+	/**
+	 * Normalise a context type argument to a list of non-empty strings.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string|string[] $types One type or several.
+	 * @return string[]
+	 */
+	private static function context_types( $types ) {
+		$types = array_map( 'strval', (array) $types );
+
+		return array_values( array_unique( array_filter( $types, static fn ( $type ) => '' !== $type ) ) );
+	}
+
+	/**
 	 * Everything queued against one thing, newest first.
 	 *
 	 * @since 26.0

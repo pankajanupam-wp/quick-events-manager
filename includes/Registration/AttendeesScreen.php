@@ -143,6 +143,14 @@ final class AttendeesScreen {
 		$this->render_pagination( $total, $paged, $event_id, $status, $search );
 		$this->render_add_form( $event );
 
+		/*
+		 * Below the list and below the add form, in that order, because the two
+		 * above it act on one person and this one acts on everybody. Putting a
+		 * button that emails four hundred people next to a button that emails
+		 * one is how the wrong one gets pressed.
+		 */
+		( new \QuickEventsManager\Email\BroadcastForm() )->render( $event );
+
 		echo '</div>';
 	}
 
@@ -166,11 +174,37 @@ final class AttendeesScreen {
 		$message = isset( $_GET['qevm_message'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qevm_message'] ) ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
+		$count = is_numeric( $message ) ? (int) $message : 0;
+
 		$notices = array(
-			'added'            => array( 'success', __( 'Attendee added.', 'quick-events-manager' ) ),
-			'added_waitlisted' => array( 'warning', __( 'Attendee added to the waiting list — the event is full.', 'quick-events-manager' ) ),
-			'resent'           => array( 'success', __( 'Confirmation sent again.', 'quick-events-manager' ) ),
-			'error'            => array( 'error', __( 'That did not work.', 'quick-events-manager' ) ),
+			'added'               => array( 'success', __( 'Attendee added.', 'quick-events-manager' ) ),
+			'added_waitlisted'    => array( 'warning', __( 'Attendee added to the waiting list — the event is full.', 'quick-events-manager' ) ),
+			'resent'              => array( 'success', __( 'Confirmation sent again.', 'quick-events-manager' ) ),
+			'broadcast_queued'    => array(
+				'success',
+				sprintf(
+					/* translators: %s: Number of people the message was queued for. */
+					_n( 'Message queued for %s person. It goes out over the next few minutes.', 'Message queued for %s people. It goes out over the next few minutes.', $count, 'quick-events-manager' ),
+					number_format_i18n( $count )
+				),
+			),
+			'broadcast_withdrawn' => array(
+				'success',
+				sprintf(
+					/* translators: %s: Number of messages withdrawn. */
+					_n( '%s message withdrawn before it was sent.', '%s messages withdrawn before they were sent.', $count, 'quick-events-manager' ),
+					number_format_i18n( $count )
+				),
+			),
+			'broadcast_tested'    => array(
+				'success',
+				sprintf(
+					/* translators: %s: Email address the test went to. */
+					__( 'Test queued for %s.', 'quick-events-manager' ),
+					$message
+				),
+			),
+			'error'               => array( 'error', __( 'That did not work.', 'quick-events-manager' ) ),
 		);
 
 		if ( ! isset( $notices[ $result ] ) ) {

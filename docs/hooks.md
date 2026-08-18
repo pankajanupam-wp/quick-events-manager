@@ -172,6 +172,33 @@ Fires after one queued message has been handed to `wp_mail()`, whether or not it
 | `$went` | `bool` | Whether `wp_mail()` accepted it |
 | `$recipient` | `string` | Address it was for |
 
+### `qevm_broadcast_queued` (action)
+
+Fires after a message to an event's attendees has been put on the queue, from the **Email everybody** box at the bottom of the attendee screen.
+
+Queued, not sent: nothing has left the site when this runs, and `$queued` counts rows the queue accepted rather than messages that arrived. Anything still waiting can be withdrawn until the worker reaches it.
+
+```php
+add_action(
+	'qevm_broadcast_queued',
+	function ( $event_id, $queued, $audience ) {
+		error_log( sprintf( 'Event %d: %d message(s) queued for the %s audience.', $event_id, $queued, $audience ) );
+	},
+	10,
+	3
+);
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$event_id` | `int` | Event the message is about |
+| `$queued` | `int` | Rows the queue accepted |
+| `$audience` | `string` | `confirmed`, `waiting` or `everyone` |
+
+Broadcasts are queued against the context `broadcast` with the event's id, and confirmations against `event` with the same id. That separation is deliberate: withdrawing a broadcast must not take back the booking confirmations sitting behind it in the queue.
+
+Recipients are distinct addresses rather than bookings, so somebody who booked twice is emailed once, and people who cancelled are in no audience at all.
+
 ## Calendar
 
 ### `qevm_calendar_default_view` (filter)
