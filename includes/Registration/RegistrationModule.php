@@ -100,12 +100,56 @@ final class RegistrationModule implements Module {
 
 		add_filter( 'cron_schedules', array( \QuickEventsManager\Email\Worker::class, 'add_interval' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- Five minutes, for a queue that must not leave a confirmation sitting for an hour.
 
+		/*
+		 * A date somebody has booked onto is never deleted by a rule change. The
+		 * occurrence table asks; this answers, because the domain must not reach
+		 * into a module that may not be loaded — with registration off there are
+		 * no bookings to protect and nothing answers at all.
+		 */
+		add_filter( 'qevm_occurrence_is_protected', array( __CLASS__, 'protect_booked_occurrence' ), 10, 2 );
+
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();
 			( new \QuickEventsManager\Email\BroadcastForm() )->register();
 			( new Exporter() )->register();
 			( new EventMetaBox() )->register();
 		}
+	}
+
+	/**
+	 * Keep a date that has bookings on it.
+	 *
+	 * Answers `qevm_occurrence_is_protected`. Deleting a booked date destroys the
+	 * only link between a booking and what it was for, and the organiser finds out
+	 * when twelve people arrive; the reconciler cancels it instead, which keeps the
+	 * record and the attendee list and leaves telling them to the person who made
+	 * the change.
+	 *
+	 * An earlier answer of `true` is respected rather than overwritten, so a site
+	 * or another module can protect a date this one has no opinion about.
+	 *
+	 * Both parameters are typed as loosely as a filter deserves. By the time this
+	 * runs, anything may have filtered before it — declaring the types the domain
+	 * passes would let static analysis call the checks below redundant and invite
+	 * somebody to delete them, at which point one badly behaved filter turns a
+	 * rule change into a fatal error mid-save.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $keep       Whether it must survive already.
+	 * @param mixed $occurrence The date about to be removed.
+	 * @return bool
+	 */
+	public static function protect_booked_occurrence( $keep, $occurrence ) {
+		if ( $keep ) {
+			return true;
+		}
+
+		if ( ! $occurrence instanceof \QuickEventsManager\Events\Occurrence ) {
+			return false;
+		}
+
+		return Repository::count_for_occurrence( $occurrence->id() ) > 0;
 	}
 
 	/**

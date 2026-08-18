@@ -396,6 +396,36 @@ final class Repository {
 	}
 
 	/**
+	 * How many bookings are attached to one date.
+	 *
+	 * Counts every status including cancelled, because the question this answers
+	 * is "would deleting this date destroy a record", and a cancelled booking is
+	 * still a record of somebody having held a place.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $occurrence_id Occurrence id.
+	 * @return int
+	 */
+	public static function count_for_occurrence( $occurrence_id ) {
+		global $wpdb;
+
+		$occurrence_id = (int) $occurrence_id;
+
+		if ( $occurrence_id <= 0 || ! self::table_exists() ) {
+			return 0;
+		}
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE occurrence_id = %d',
+				self::table(),
+				$occurrence_id
+			)
+		);
+	}
+
+	/**
 	 * How many separate people an event can be emailed to.
 	 *
 	 * Counted by distinct address rather than by booking, because somebody who

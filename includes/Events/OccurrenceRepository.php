@@ -377,21 +377,31 @@ final class OccurrenceRepository {
 	/**
 	 * Make an event's occurrences match the set given, preserving ids.
 	 *
-	 * Reconciles rather than deleting and reinserting, keyed on `start_utc`. A
-	 * row whose start is unchanged keeps its id, is updated in place if any
-	 * other column moved, and is left alone if nothing did.
+	 * Reconciles rather than deleting and reinserting. A row that the new set
+	 * still contains keeps its id, is updated in place if any column moved, and
+	 * is left alone if nothing did.
 	 *
-	 * The ids matter. `qevm_registrations.occurrence_id` arrives in C1.6, so
-	 * from then on a registration points at a specific date. Truncating and
-	 * reinserting on every save would hand every attendee a dangling reference
-	 * the first time an organiser corrected a typo in the event title — a
-	 * save that changed nothing about the dates at all.
+	 * The ids matter. `qevm_registrations.occurrence_id` points at a specific
+	 * date, so truncating and reinserting on every save would hand every attendee
+	 * a dangling reference the first time an organiser corrected a typo in the
+	 * event title — a save that changed nothing about the dates at all.
+	 *
+	 * **Rows are matched by the slot they came from, not by when they happen.**
+	 * A generated row carries `recurrence_id`, the start the rule produced, which
+	 * never changes however far the date is moved. Matching on `start_utc` — which
+	 * this method did until C6.4a — stops identifying anything the moment a single
+	 * occurrence can be moved: the moved row reads as two facts, a date the event
+	 * no longer has and a new one, so it is deleted and reinserted and the
+	 * organiser's edit disappears on the next unrelated save. A one-off event has
+	 * no slot and is still matched on its start.
+	 *
+	 * See docs/adr/0015-recurrence-identity-and-overrides.md.
 	 *
 	 * @since 26.0
 	 *
 	 * @param int                              $event_id    Event id.
 	 * @param array<int, array<string, mixed>> $occurrences Desired set; each needs at least start_utc and end_utc.
-	 * @return array{inserted: int, updated: int, deleted: int, unchanged: int}
+	 * @return array{inserted: int, updated: int, deleted: int, unchanged: int, cancelled: int}
 	 */
 	public static function replace_for_event( int $event_id, array $occurrences ): array {
 		$result = array(
@@ -399,6 +409,7 @@ final class OccurrenceRepository {
 			'updated'   => 0,
 			'deleted'   => 0,
 			'unchanged' => 0,
+			'cancelled' => 0,
 		);
 
 		if ( ! self::table_exists() ) {
@@ -408,8 +419,7 @@ final class OccurrenceRepository {
 		$existing = array();
 
 		foreach ( self::for_event( $event_id ) as $occurrence ) {
-			// Keyed on start, which is what identifies a date within an event.
-			$existing[ $occurrence->start_utc() ] = $occurrence;
+			$existing[ self::identity( $occurrence->recurrence_id(), $occurrence->start_utc() ) ] = $occurrence;
 		}
 
 		foreach ( $occurrences as $wanted ) {
@@ -421,7 +431,9 @@ final class OccurrenceRepository {
 				continue;
 			}
 
-			if ( ! isset( $existing[ $start ] ) ) {
+			$key = self::identity( (string) ( $wanted['recurrence_id'] ?? '' ), $start );
+
+			if ( ! isset( $existing[ $key ] ) ) {
 				if ( self::insert( $wanted ) > 0 ) {
 					++$result['inserted'];
 				}
@@ -429,8 +441,10 @@ final class OccurrenceRepository {
 				continue;
 			}
 
-			$current = $existing[ $start ];
-			unset( $existing[ $start ] );
+			$current = $existing[ $key ];
+			unset( $existing[ $key ] );
+
+			$wanted = self::respect_exception( $current, $wanted );
 
 			if ( self::differs( $current, $wanted ) ) {
 				if ( self::update( $current->id(), $wanted ) ) {
@@ -443,14 +457,111 @@ final class OccurrenceRepository {
 			++$result['unchanged'];
 		}
 
-		// Anything left in $existing is a date the event no longer has.
+		// Anything left is a slot the rule no longer produces.
 		foreach ( $existing as $stale ) {
+			if ( self::must_survive( $stale ) ) {
+				if ( OccurrenceStatus::Cancelled !== $stale->status() ) {
+					self::update( $stale->id(), array( 'status' => OccurrenceStatus::Cancelled->value ) );
+				}
+
+				++$result['cancelled'];
+
+				continue;
+			}
+
 			if ( self::delete( $stale->id() ) ) {
 				++$result['deleted'];
 			}
 		}
 
 		return $result;
+	}
+
+	/**
+	 * The key a row is recognised by.
+	 *
+	 * Prefixed, because a slot and a start are both `Y-m-d H:i:s` and an
+	 * unprefixed map would let a generated row's slot collide with a one-off
+	 * row's start time.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $recurrence_id The slot, or '' if the row was not generated.
+	 * @param string $start_utc     When it starts.
+	 * @return string
+	 */
+	private static function identity( string $recurrence_id, string $start_utc ): string {
+		return '' !== $recurrence_id ? 'slot:' . $recurrence_id : 'start:' . $start_utc;
+	}
+
+	/**
+	 * Keep an exception's own times and status through a regeneration.
+	 *
+	 * `is_exception = 1` means the rule no longer owns this row's times or its
+	 * status — an organiser has moved this one date, or called it off, and the
+	 * rule has nothing to say about it any more. Everything else the rule still
+	 * owns: which series the row belongs to, the timezone, whether it is all day.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Occurrence           $current The stored row.
+	 * @param array<string, mixed> $wanted  What the rule would write.
+	 * @return array<string, mixed>
+	 */
+	private static function respect_exception( Occurrence $current, array $wanted ): array {
+		if ( ! $current->is_exception() ) {
+			return $wanted;
+		}
+
+		foreach ( array( 'start_utc', 'end_utc', 'start_local', 'end_local', 'status', 'is_exception' ) as $own ) {
+			unset( $wanted[ $own ] );
+		}
+
+		return $wanted;
+	}
+
+	/**
+	 * Whether a row the rule has stopped producing must be kept anyway.
+	 *
+	 * Two reasons, and both end in the date being cancelled rather than removed.
+	 *
+	 * An **exception** is a decision somebody made about this date by hand.
+	 * Deleting it because the rule changed throws that away silently.
+	 *
+	 * A date with **registrations** on it is worse. Deleting it destroys the only
+	 * link between a booking and what it was for, and the organiser finds out when
+	 * twelve people arrive. Cancelling keeps the record, keeps the attendee list,
+	 * and leaves the decision about telling them with the person who made the
+	 * change.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Occurrence $occurrence The row.
+	 * @return bool
+	 */
+	private static function must_survive( Occurrence $occurrence ): bool {
+		if ( $occurrence->is_exception() ) {
+			return true;
+		}
+
+		/**
+		 * Filters whether an occurrence must be kept rather than deleted.
+		 *
+		 * A filter rather than a direct query, because this class must not know
+		 * what a registration is. The registration module answers it when it is
+		 * switched on, and nothing answers it when it is off — which is right:
+		 * with registration off there are no bookings to protect.
+		 *
+		 * That is also the dependency direction ADR-0009 requires. Modules depend
+		 * on the domain; the domain does not reach into a module that may not be
+		 * loaded.
+		 *
+		 * @since 26.0
+		 *
+		 * @param bool       $protected  Whether the row must survive.
+		 * @param Occurrence $occurrence The row about to be removed.
+		 */
+		return (bool) apply_filters( 'qevm_occurrence_is_protected', false, $occurrence );
 	}
 
 	/**
@@ -539,6 +650,20 @@ final class OccurrenceRepository {
 			}
 		}
 
+		/*
+		 * recurrence_id is the one nullable column, and it must not go through
+		 * the loop above. An empty string is not a datetime: MySQL in strict mode
+		 * rejects it outright, and without strict mode stores `0000-00-00
+		 * 00:00:00`, which is a value that compares equal to nothing, is not
+		 * NULL, and cannot be read back as a date. Either way the row stops being
+		 * matchable, which is the whole reason the column exists.
+		 */
+		if ( array_key_exists( 'recurrence_id', $row ) ) {
+			$value = is_scalar( $row['recurrence_id'] ) ? trim( (string) $row['recurrence_id'] ) : '';
+
+			$row['recurrence_id'] = '' !== $value ? $value : null;
+		}
+
 		if ( isset( $row['start_utc'] ) && empty( $row['end_utc'] ) ) {
 			$row['end_utc'] = $row['start_utc'];
 		}
@@ -567,17 +692,3 @@ final class OccurrenceRepository {
 		);
 	}
 }
-		/*
-		 * recurrence_id is the one nullable column, and it must not go through
-		 * the loop above. An empty string is not a datetime: MySQL in strict mode
-		 * rejects it outright, and without strict mode stores `0000-00-00
-		 * 00:00:00`, which is a value that compares equal to nothing, is not
-		 * NULL, and cannot be read back as a date. Either way the row stops being
-		 * matchable, which is the whole reason the column exists.
-		 */
-		if ( array_key_exists( 'recurrence_id', $row ) ) {
-			$value = is_scalar( $row['recurrence_id'] ) ? trim( (string) $row['recurrence_id'] ) : '';
-
-			$row['recurrence_id'] = '' !== $value ? $value : null;
-		}
-
