@@ -102,7 +102,11 @@ final class MetaBox {
 			return;
 		}
 
-		wp_enqueue_style( 'qevm-admin', QEVM_URL . 'assets/css/admin.css', array(), QEVM_VERSION );
+		/*
+		 * The stylesheet is Admin\Assets's job, on every screen this plugin
+		 * owns. It was enqueued here once, which is why it only ever loaded on
+		 * the editor.
+		 */
 		wp_enqueue_script( 'qevm-admin', QEVM_URL . 'assets/js/admin.js', array(), QEVM_VERSION, true );
 	}
 

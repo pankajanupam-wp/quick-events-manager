@@ -105,6 +105,7 @@ final class Plugin {
 		$this->registry()->boot();
 
 		if ( is_admin() ) {
+			( new Admin\Assets() )->register();
 			( new Admin\FeaturesScreen( $this->registry() ) )->register();
 			( new Admin\Settings() )->register();
 		}

@@ -851,9 +851,12 @@ semantics written during implementation are recurrence edit semantics done wrong
 | **C6.4** | Edit semantics implementation + `is_exception` handling | XL | **Split, as the definition allowed for.** See the three rows below |
 | **C6.4a** | Reconciler identity: match on `recurrence_id`, preserve exceptions, cancel-not-delete for booked dates | L | **Done.** Fixes the defect C6.1 found |
 | **C6.4b** | Single-occurrence edits — move one date, call one off | M | **Done.** Plus reinstate and restore, which are the undo — see below |
-| **C6.4c** | "This and following": split the series, re-point occurrences, keep both tables agreeing | L | |
-| **C6.5** | Recurrence admin UI | L | |
-| **C6.6** | Attach a booking to an occurrence — pick a date on the form, count capacity per date | L | Surfaced by C6.4a. Without it, `occurrence_id` stays `0` and capacity is per series, contradicting docs/recurrence.md §6 |
+| **C6.4c** | "This and following": split the series, re-point occurrences, keep both tables agreeing | L | **Done.** The spec was right about the hard part and silent about `COUNT`; see below |
+| **C6.5** | Recurrence admin UI | L | **Split into two, for the same reason C6.4 was.** See the rows below |
+| **C6.5a** | The **Repeats** box: build and edit a rule, skip dates | M | **Done.** Save priority is the design, not a detail; see below |
+| **C6.5b** | The dates list: every generated date, with move / call off / put back / split from here | M | **Done.** Found that the admin stylesheet was never enqueued outside the post editor; see below |
+| **C6.6** | Attach a booking to an occurrence — pick a date on the form, count capacity per date | L | **Done.** Not split, deliberately; see below. Closed the §6 contradiction and one bug nobody had noticed |
+| **C6.7** | Enqueue the admin stylesheet on the plugin's own admin pages | S | **Done.** One owner, `Admin\Assets`, deciding from the screen rather than from a list of slugs |
 
 > **C6.1 — the spec's own definition understated it.** "Every case, including
 > registrations already attached" is the right list of *situations*, and the hard
@@ -991,6 +994,159 @@ semantics written during implementation are recurrence edit semantics done wrong
 > row got its `occurrence_id`, but the contradiction is live and needs its own chunk rather
 > than being folded quietly into the recurrence UI. Added as **C6.6** below.
 
+> **C6.4c — the spec's design held, and its arithmetic did not.** Re-pointing rather than
+> regenerating is the whole chunk and needed no revision: the dates from the split point
+> on keep their row ids, so every booking attached to one survives a split without the
+> registration table being touched by the splitter at all. What §4.4 never said is that a
+> rule ending in `COUNT` has to have that count *divided*. Ten weeks split at the fifth,
+> with the count copied to both halves, is thirteen weeks. Fixed, and the test that
+> catches it fails on nothing else.
+>
+> **The cross-table check I wrote first could not see the failure it was named after.**
+> "Every booking names the same event as its own date" is an inner join, so a split that
+> deleted the dates and generated replacements left it with no rows to compare and
+> reporting no disagreement. Sabotaging the re-point is what showed that — three other
+> tests noticed, and the integrity check did not. It now also looks for bookings pointing
+> at dates that no longer exist. Five sabotages in total, each failing between one and
+> four tests and nothing else:
+>
+> | Sabotage | Tests that failed |
+> | --- | --- |
+> | Divide the halves by time instead of by slot | 2 |
+> | Copy the `COUNT` to both halves | 2 |
+> | Never end the original half | 2 |
+> | Fire no `qevm_series_split` | 1 |
+> | Regenerate the new half instead of moving the rows | 4 |
+>
+> **Splitting at the first date is refused rather than performed.** It leaves an empty
+> event holding the bookings of every date that used to be its own. What the organiser
+> means there is "all of them", which is a different scope with a different screen.
+>
+> **The split does not apply the edit**, and that is a deliberate reading of the chunk
+> rather than an omission from it. The definition is structural — split, re-point, keep
+> the tables agreeing — and keeping the edit in C6.5 is what lets the split be tested for
+> the one thing it must never do, which is lose something.
+
+> **C6.5 split into two.** "Recurrence admin UI" is two screens, not one: a box that
+> builds a rule, and a list of the dates that rule produced with the C6.4 operations
+> hanging off each one. They share no markup, no request handling and no failure modes —
+> the first is a form that saves with the post, the second is a set of nonce-guarded
+> actions that each redirect. Building them as one chunk means neither gets reviewed on
+> its own, which is the thing the plan's "if a chunk grows, split it" exists to prevent.
+>
+> **C6.5a — the save priority is the whole design.** The rule is derived from the start
+> date and read by the occurrence sync. The details box writes the start date at 10 and
+> the sync generates at 20, so this box has to save at 15: earlier and "the third
+> Wednesday" is computed from the date the event had *before* this save, later and the
+> dates are generated from the rule it had before. Both directions are pinned by a test
+> that performs a real save and checks the outcome, rather than by asserting the number
+> 15 — moving the priority to 5 or to 25 fails it, and nothing else.
+>
+> **A rule that cannot be read is refused, and the previous one is left alone.** Storing
+> a half-understood rule regenerates the whole series from it, which is a very large
+> silent change to make on the strength of a mistyped number.
+>
+> **Unticking "repeats" drops the rule and keeps the `series_uuid`.** The identifier is
+> the only thing joining an event to the other half of itself after a split, and to the
+> rows already generated from it. Minting a fresh one when somebody unticks and reticks
+> makes the two halves strangers, so `Series::forget()` is deliberately not called here.
+>
+> **A sabotage found an untested guard rather than confirming a tested one.** Deleting
+> the `validate()` call left the entire suite green: the "unreadable rule" test used a
+> misspelled frequency, which is refused earlier by `Frequency::coerce()`, so nothing
+> ever exercised the domain's own refusal of a readable-but-impossible rule. A second
+> test now covers it. The run that showed this had also been *hidden by my own grep* —
+> the filter matched `^OK` against output that begins with an ANSI colour escape, so a
+> passing sabotage printed nothing at all and read as a crash. Checking exit codes
+> replaced the pattern in C5.4 for the same reason; this time it was the pattern for
+> reading a result. Print the tail, do not filter it.
+>
+> **`Exclusions::parse()` gained line breaks**, which is a domain change made from the
+> UI rather than a UI workaround. The box takes one date a line, storage stays
+> comma-separated, and a parser that accepts only its own output format turns a pasted
+> list of holidays into one unreadable date and silently skips nothing.
+
+> **C6.5b — a screen, not a box.** A series runs to 730 dates, and 730 rows inside the
+> post editor is a page nobody can save. It also keeps "call off this date" away from the
+> screen where somebody is editing a description.
+>
+> Every button is a form with its own nonce, and **the nonce carries the occurrence id**,
+> so a form rendered for the third of June cannot be replayed against the tenth. Three
+> tests cover the refusals — no nonce, another date's nonce, and a subscriber — and each
+> fails when the corresponding check is removed.
+>
+> **Splitting lands the organiser on the new half**, not the one they were looking at.
+> They split the series in order to change what happens from that date on, and those
+> dates are now on the other screen.
+>
+> **"Booked" is read through `qevm_occurrence_is_protected`**, the same filter the
+> reconciler asks. The screen learns that a date has bookings on it without knowing that
+> registrations exist, which is the dependency direction ADR-0009 requires. With that
+> module off, nothing answers and no flag is shown.
+>
+> **A defect found while building, in another module's screen.** `assets/css/admin.css`
+> is enqueued by `Events\MetaBox` alone, on `post.php` and `post-new.php` — so the
+> attendee screen's own styles in that file (`.qevm-attendees-*`, and the broadcast box
+> added in C5.4) have never loaded on the screen they were written for. This chunk
+> enqueues the stylesheet on its own page and tests it; the attendees screen is somebody
+> else's chunk and is **left broken deliberately** rather than fixed in passing. Recorded
+> as **C6.7** below.
+>
+> **The test harness needed two things before any of this could be tested at all**, and
+> both are worth knowing: `check_admin_referer()` reads `$_REQUEST`, not `$_POST`, and
+> every handler ends in `exit`, which in a test run ends the PHP process and takes the
+> suite with it. The redirect filter throws instead, and `wp_die()` is swapped for a
+> handler that throws — installed for the whole class, not just the tests expecting a
+> refusal, because otherwise a sabotage produces "premature end of PHP process" with no
+> indication of which assertion would have failed. That happened, and the harness was
+> fixed before the sabotage was believed.
+
+> **C6.6 was not split, and that was the decision rather than the default.** Splitting it
+> into "the domain" and "the form" was the obvious move after C6.5, and it would have left
+> a reachable broken state between the two: the service refusing every booking that does
+> not name a date, and no form able to name one. A series with registration on would have
+> been unbookable for a chunk. The two halves went in together.
+>
+> **What "capacity 20" means on a series is 20 a week**, and that follows from ranking
+> within the date rather than across the event. Nothing else about insert-then-rank
+> changed — the row's own id still fixes its position, only the set it is counted against
+> is narrower.
+>
+> **Two things the definition did not name, both found by writing it:**
+>
+> - **The duplicate check had to become per date.** "That address is already registered
+>   for this event" makes a weekly class bookable exactly once. Somebody who comes every
+>   week books every week.
+> - **A series closed to new bookings the moment its first date passed.** `closed_reason()`
+>   asked `$event->has_ended()`, and on a series the event's own end time is the *first*
+>   date's — so a twelve-week class showed "this event has already happened" from week two,
+>   with eleven weeks to run. It now asks whether any date is still to come. This was not
+>   in the definition and is not recurrence-specific in appearance, which is exactly why it
+>   had survived: nothing about the registration code looks wrong until an event has more
+>   than one date.
+>
+> **An event with a single date keeps `occurrence_id = 0`, on purpose.** Its one occurrence
+> is identified by its start time, so rescheduling replaces that row — and a booking
+> pointing at it would be orphaned by an ordinary change of date. A generated date carries
+> the slot it came from and survives being moved, which is what makes it safe to attach a
+> person to. The rule is "attach to dates with a stable identity", not "attach to
+> everything".
+>
+> Ten sabotages, each failing between one and three tests: ranking across the series,
+> checking duplicates across the event, promoting across the event, accepting a booking
+> with no date, skipping the belongs-to-this-event check, dropping the date from the
+> attendee rows, reading "ended" from the event again, offering past and cancelled dates,
+> offering a picker for a single date, and dropping the field in the transport. The last of
+> those is the one worth keeping: the picker and the service were both correct while the
+> field between them was dropped, which shows up as the form asking somebody to choose a
+> date they had just chosen.
+
+> **C6.7 — the rule is "a screen this plugin owns", not a list of pages.** A list is what
+> goes stale silently the next time somebody adds a screen, which is precisely how the bug
+> arrived: the stylesheet was enqueued by the event editor, and every screen added after it
+> — attendees, the broadcast box, features, dates — inherited nothing. `Admin\Assets` asks
+> the current screen instead, and the editor keeps only its own script.
+
 **Gate:** a weekly series for 52 weeks generates 52 occurrences · editing one leaves 51
 untouched and marks it `is_exception` · "this and following" splits the series
 correctly and both halves share the `series_uuid` · registrations survive an edit to
@@ -1000,6 +1156,61 @@ their occurrence · generation is bounded.
 `registrations.event_id` agrees with the occurrence's `event_id` after a split · a date
 with registrations on it is cancelled rather than deleted when the rule stops generating
 it · 18:00 stays 18:00 across a real DST transition in a zone that has one.
+
+**Gate run: passed.** Ten checks against a real WordPress and a real MySQL, in one
+script, on fixtures it creates and removes:
+
+| | |
+| --- | --- |
+| 52 weeks generates 52 dates | 52 rows |
+| Editing one leaves 51 untouched and flags it | 51 untouched, `is_exception` set |
+| The edit survives an unrelated save | still 2027-03-18 20:00, slot intact, still scheduled, still 52 dates |
+| A registration survives an edit to its date | still points at the same occurrence |
+| A split divides the series and both halves share a uuid | 4 + 6 dates, same uuid |
+| Both tables agree after a split | 0 disagreeing, 0 orphaned |
+| A booked date the rule drops is cancelled, not deleted | status `cancelled`, booking intact |
+| Generation is bounded by the horizon | 592 rows, last inside 24 months |
+| Generation is bounded by the ceiling | exactly 730 |
+| 18:00 stays 18:00 across a real DST transition | local always 18:00, UTC 18:00 → 17:00 |
+
+> **The gate's first run reported "0 of 0 passed" and "fixtures removed".** `wp eval-file`
+> includes the script from inside a function, so the top-level result array was a local of
+> that function and every `global $qevm_results` in the helpers pointed at something else.
+> Each check ran and each result was thrown away — a green-looking report from a script
+> that had measured everything and kept nothing. Fourth stage running where the first
+> version of a verification passed without verifying.
+>
+> **Its second run failed on four orphaned registrations that belonged to the first run.**
+> The integrity query asked the whole table, so it answered for every run that ever
+> touched that database. Scoped to the events the check itself creates.
+>
+> **And the C6.1 criterion did not fail when C6.1's bug was put back.** Reverting the
+> reconciler to start-time matching, the criterion still passed: the row existed, at its
+> moved time, carrying its slot. What actually happens now is subtler than when the bug
+> was found — C6.4a's protection *cancels* the unmatchable row instead of deleting it, and
+> inserts a fresh one at the slot the rule still says. So the check was strengthened to
+> "still scheduled, and still 52 dates", and the same sabotage now reports
+> `status cancelled, 53 dates`. A criterion written against the old symptom would have
+> guarded nothing.
+>
+> **And two Stage 6 tests only passed in an empty database.** Clearing up after the gate
+> run broke them: `Horizon::recurring_event_ids()` walks *every* recurring event on the
+> site, so a test asserting "three events" or "five dates added" was asserting that nobody
+> else's series exists. Both now measure against the list the site actually has — one walks
+> from its own event's position, the other from the real total. Verified by running them
+> against a database with a foreign series in it, which is the state that exposed them.
+>
+> Tightening the second one took two attempts, and the first was wrong in the usual
+> direction. "The cursor reaches 0 after a full pass" passes with the wrap deleted
+> outright, because the *next* run finds an empty batch and resets the cursor anyway. The
+> property that distinguishes them is that the run which finishes the list is the one that
+> wraps — no pass that visits nothing. That version fails the sabotage.
+>
+> **One finding outside Stage 6, left unfixed.** Deleting an event removes its occurrence
+> rows and leaves its registrations and attendees behind, pointing at an event and dates
+> that no longer exist. `Repository::delete_for_event()` exists and nothing calls it on
+> deletion. That is not recurrence — it has been true since Stage 3 — and it is somebody's
+> chunk rather than a fix to slip into a gate run. Recorded as **C10.8**.
 
 ---
 
@@ -1076,8 +1287,9 @@ no card data touches the plugin.
 | **C10.5** | Multisite activation and uninstall tested | M | Currently untested |
 | **C10.6** | i18n sweep; `.pot` regenerated; RTL verified | M | |
 | **C10.7** | `readme.txt` rewritten for the finished plugin; screenshots in `.wordpress-org/` | M | |
-| **C10.8** | `SVN_USERNAME` / `SVN_PASSWORD` verified on the repo | S | Their absence already failed a release on a sibling plugin |
-| **C10.9** | Final review; tag `26.0` | S | Tag must equal `Stable tag` exactly, no `v` prefix |
+| **C10.8** | Delete an event's bookings when the event is deleted | S | Found by the Stage 6 gate. `deleted_post` removes the occurrence rows and leaves registrations and attendees behind, holding names and addresses nothing can reach |
+| **C10.9** | `SVN_USERNAME` / `SVN_PASSWORD` verified on the repo | S | Their absence already failed a release on a sibling plugin |
+| **C10.10** | Final review; tag `26.0` | S | Tag must equal `Stable tag` exactly, no `v` prefix |
 
 **Gate:** every acceptance criterion passes on PHP 8.1 through 8.5 with `WP_DEBUG` and
 `SCRIPT_DEBUG` on and no notices.
@@ -1093,15 +1305,15 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | 0 · Groundwork | 7 | **C0.1 ✓ · C0.2 ✓ · C0.3 ✓ · C0.4 ✓ · C0.5 ✓ · C0.6 ✓ · C0.7 ✓** — stage complete |
 | 1 · Schema foundation | 12 | **C1.1–C1.12 ✓** — stage complete. Gate failed on `EXPLAIN` first time round; C1.12 was added to fix it and the gate re-run passes |
 | 2 · Correctness gaps | 7 | **all 7 chunks complete** — gate run 2026-08-15 and passed; eight acceptance criteria were uncovered and one (AC-3.6) was an unbuilt feature |
-| 3 · Records and fields | 6 | not started |
-| 4 · Calendar | 4 | not started |
-| 5 · Communication | 4 | not started |
-| 6 · Recurring events | 5 | not started |
+| 3 · Records and fields | 7 | **C3.1a–C3.6 ✓** — stage complete. C3.1 split in two; the gate found an erasure defect |
+| 4 · Calendar | 4 | **C4.1–C4.4 ✓** — stage complete. The gate scanned an empty calendar first time round and proved nothing; re-run against one with events in it |
+| 5 · Communication | 4 | **C5.1–C5.4 ✓** — stage complete. Gate passed: 500 recipients queued in 0.21s, 497 sent, 3 failed and named. C5.1 shipped without a schema bump, which C5.4 found on a real site |
+| 6 · Recurring events | 10 | **C6.1–C6.7 ✓** — stage complete. C6.4 split in three and C6.5 in two; C6.6 and C6.7 were added by findings. Gate passed 10 of 10, after two of its own checks turned out to prove nothing |
 | 7 · Ticketing | 4 | not started |
 | 8 · Event operations | 6 | not started |
 | 9 · Commerce | 7 | not started |
-| 10 · Release readiness | 9 | not started |
-| | **71** | |
+| 10 · Release readiness | 10 | not started |
+| | **78** | |
 
 ---
 

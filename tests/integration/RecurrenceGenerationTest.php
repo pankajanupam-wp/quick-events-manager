@@ -336,9 +336,24 @@ final class RecurrenceGenerationTest extends TestCase {
 		$this->assertSame( 5, $removed );
 		$this->assertSame( $before - 5, OccurrenceRepository::count_for_event( $event_id ) );
 
-		$result = Horizon::run( 5 );
+		/*
+		 * Walk from this event's own position rather than from zero. The horizon
+		 * task walks every recurring event on the site, so a batch starting at
+		 * the beginning visits whatever else happens to exist — and this test
+		 * then measures that instead. It passed for weeks and failed the moment
+		 * a database had other series in it, reporting 47 dates added where it
+		 * expected 5.
+		 */
+		$all      = Horizon::recurring_event_ids( 0, 500 );
+		$position = array_search( $event_id, $all, true );
 
-		$this->assertGreaterThan( 0, $result['visited'] );
+		$this->assertNotFalse( $position, 'the fixture is not in the list the horizon walks' );
+
+		update_option( Horizon::CURSOR, $position );
+
+		$result = Horizon::run( 1 );
+
+		$this->assertSame( 1, $result['visited'] );
 		$this->assertSame( 5, $result['added'] );
 		$this->assertSame( $before, OccurrenceRepository::count_for_event( $event_id ) );
 	}
@@ -361,17 +376,52 @@ final class RecurrenceGenerationTest extends TestCase {
 		$second = $this->make_recurring_event( 'FREQ=WEEKLY;COUNT=3' );
 		$third  = $this->make_recurring_event( 'FREQ=WEEKLY;COUNT=3' );
 
-		$this->assertCount( 3, Horizon::recurring_event_ids( 0, 50 ) );
-		$this->assertSame( array( $second, $third ), Horizon::recurring_event_ids( 1, 50 ) );
-		$this->assertSame( array( $third ), Horizon::recurring_event_ids( 2, 50 ) );
-		$this->assertSame( array(), Horizon::recurring_event_ids( 3, 50 ) );
+		/*
+		 * Measured against the list the site actually has, not against three.
+		 * The horizon walks every recurring event there is, so asserting a
+		 * length here is asserting that nobody else's series exists — true in a
+		 * fresh database and false in any real one.
+		 */
+		$all   = Horizon::recurring_event_ids( 0, 500 );
+		$total = count( $all );
 
-		unset( $first );
+		$this->assertGreaterThanOrEqual( 3, $total );
+		$this->assertSame( array( $first, $second, $third ), array_slice( $all, -3 ), 'the three fixtures are not the end of the walk' );
 
-		// A full pass over a short list wraps the cursor back to the start.
-		Horizon::run( 5 );
+		$this->assertSame( array_slice( $all, 1 ), Horizon::recurring_event_ids( 1, 500 ) );
+		$this->assertSame( array_slice( $all, $total - 1 ), Horizon::recurring_event_ids( $total - 1, 500 ) );
+		$this->assertSame( array(), Horizon::recurring_event_ids( $total, 500 ) );
 
-		$this->assertSame( 0, (int) get_option( Horizon::CURSOR, -1 ), 'the cursor did not wrap' );
+		/*
+		 * A full pass wraps. How many runs that takes depends on how many
+		 * recurring events the site has — the argument to run() is a time
+		 * budget, not a batch size, and the batch is fixed — so the walk is
+		 * driven until it wraps rather than assumed to wrap in one go. The
+		 * bound is what makes this a test and not a loop: it must wrap within
+		 * one run per batch, plus one.
+		 */
+		$passes  = (int) ceil( $total / Horizon::BATCH_SIZE );
+		$visited = 0;
+
+		for ( $pass = 0; $pass < $passes; $pass++ ) {
+			$result  = Horizon::run();
+			$visited = (int) $result['visited'];
+
+			if ( 0 === (int) get_option( Horizon::CURSOR, -1 ) ) {
+				break;
+			}
+		}
+
+		/*
+		 * Not merely "the cursor is 0". Deleting the wrap entirely leaves the
+		 * cursor past the end, and the *next* run finds an empty batch and
+		 * resets it — so "it reaches zero eventually" passes with the wrap
+		 * removed, which is what the first version of this check did. The
+		 * property is that the pass which finishes the list is the one that
+		 * wraps: no run that visits nothing.
+		 */
+		$this->assertSame( 0, (int) get_option( Horizon::CURSOR, -1 ), 'the cursor did not wrap after a full pass over ' . $total . ' events' );
+		$this->assertGreaterThan( 0, $visited, 'the cursor only reset on a run that visited nothing' );
 	}
 
 	/**
