@@ -47,6 +47,7 @@ final class Registry {
 			new \QuickEventsManager\CustomFields\CustomFieldsModule(),
 			new \QuickEventsManager\Calendar\CalendarModule(),
 			new \QuickEventsManager\Recurrence\RecurrenceModule(),
+			new \QuickEventsManager\Tickets\TicketsModule(),
 			new \QuickEventsManager\Email\TemplatesModule(),
 		);
 

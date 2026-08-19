@@ -369,7 +369,7 @@ message recoverable: a worker that dies leaves its row in `sending`, and after t
 timeout the row is due again. `attempts` was already incremented by the claim, so a
 row that keeps killing workers still runs out of attempts rather than looping.
 
-### `qevm_ticket_types` — stage 7
+### `qevm_ticket_types` — stage 7 *(built in C7.1)*
 
 ```sql
 CREATE TABLE {prefix}qevm_ticket_types (
@@ -419,6 +419,23 @@ CREATE TABLE {prefix}qevm_orders (
     billing_name      varchar(190) NOT NULL DEFAULT '',
     billing_email     varchar(190) NOT NULL DEFAULT '',
     gateway           varchar(40)  NOT NULL DEFAULT '',
+> **As built in C7.1.** The table is exactly as described above, including the four
+> columns nothing reads yet — `occurrence_id`, `currency`, `min_per_order` and
+> `max_per_order`. Writing the schema this document already specified, rather than the
+> narrower one the chunk needed, costs nothing now and avoids altering a table that will
+> hold a row for every ticket ever sold.
+>
+> "In use" is asked of `attendees.ticket_type_id`, which has existed since stage 1 for
+> this. `TicketTypeRepository::delete()` refuses and archives instead when anything holds
+> a ticket of the type, and it says which it did rather than reporting success either
+> way.
+>
+> One thing worth deciding rather than inheriting: **`currency` per ticket type is
+> probably a modelling mistake** — a site has one currency, and two types of the same
+> event priced in different ones is not a thing anybody wants. The column is written as
+> specified and left empty, meaning "the site's own". Stage 9 should either use it
+> deliberately or drop it.
+
     hold_expires_utc  datetime     DEFAULT NULL,
     created_at        datetime     NOT NULL,
     updated_at        datetime     NOT NULL,

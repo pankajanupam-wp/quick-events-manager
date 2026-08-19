@@ -890,7 +890,7 @@ define( 'YEAR_IN_SECONDS', 365 * DAY_IN_SECONDS );
  * the whole plugin, which a unit test of a date helper has no business doing.
  */
 define( 'QEVM_VERSION', '26.0' );
-define( 'QEVM_DB_VERSION', 7 );
+define( 'QEVM_DB_VERSION', 8 );
 define( 'QEVM_FILE', ABSPATH . 'quick-events-manager.php' );
 define( 'QEVM_PATH', ABSPATH );
 define( 'QEVM_URL', 'https://example.test/wp-content/plugins/quick-events-manager/' );

@@ -1221,10 +1221,67 @@ to move per-type first.
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C7.1** | `qevm_ticket_types` table + repository + admin UI | L | Free types are `price_minor = 0` — same entity, no separate path |
-| **C7.2** | Per-type capacity, preserving insert-then-rank | L | The concurrency guarantee must survive the move |
+| **C7.1** | `qevm_ticket_types` table + repository + admin UI | L | **Done.** Free types are `price_minor = 0` — same entity, no separate path. Ticketing is a module; the schema is the one docs/database.md already specified |
+| **C7.2** | Per-type capacity, preserving insert-then-rank | L | **Done.** Two limits, both ranked the same way; the eight-process race runs per type and passes |
 | **C7.3** | Ticket selection on the registration form; attendee gains `ticket_type_id` | L | |
 | **C7.4** | Sale windows + early bird | M | |
+
+> **C7.1 — ticketing had to be a module, which the definition again did not say.** Same
+> as C6.3: an install that lists a few meetups should not grow a ticketing screen, and the
+> architecture's claim is that a disabled module registers no hooks, creates no tables and
+> shows no UI. `TicketsModule` is Level 3 and off by default, and its table is created
+> when it is switched on. `QEVM_DB_VERSION` moved in the same change — third time of
+> asking, and the one time it was forgotten cost a live site its email queue.
+>
+> **The schema is the one docs/database.md specified two stages ago, not the narrower one
+> this chunk needed.** Building what the chunk needs and calling the difference an
+> improvement is how a design record becomes fiction. Four columns are written and unread
+> — `occurrence_id`, `currency`, `min_per_order`, `max_per_order` — and that is cheaper
+> than altering a table holding a row for every ticket ever sold. One of them,
+> `currency`, is probably a modelling mistake; it is written as specified, left empty
+> meaning "the site's own", and flagged in database.md for Stage 9 to decide rather than
+> quietly dropped here.
+>
+> **A type somebody holds a ticket of is archived, not deleted**, and `delete()` reports
+> which it did rather than returning true either way. The gate's third criterion is
+> decided here, at the repository, rather than in whatever UI happens to call it.
+>
+> **The id in the form is a claim, not an instruction.** A row submitted with the id of
+> another event's ticket type is treated as having no id, so it is added to the event
+> being saved rather than rewriting somebody else's. Removing that check fails exactly one
+> test.
+>
+> **A sabotage passed, and the column was doing the work.** Deleting the `max( 0, … )`
+> clamp on the price left the suite green — MySQL's unsigned column quietly stores 0
+> whatever PHP hands it. On a strict-mode database, which plenty of hosts run, the same
+> insert *fails* and the ticket type is silently never created. The test now sets
+> `STRICT_ALL_TABLES` for its own session, and the sabotage fails it.
+
+> **C7.2 — where the type had to live was the whole decision.** Types are on
+> `attendees`, one row per person, which suggests counting a type's capacity from there.
+> docs/database.md rules it out in a sentence written in stage 1: attendee rows are
+> created **after** the booking resolves, precisely so that nothing in the ranking depends
+> on them. Counting them would put the count on rows written after the decision it
+> informs. So `registrations` gains `ticket_type_id`, a booking is for one kind of place,
+> and somebody wanting two kinds makes two bookings. Schema version bumped in the same
+> change.
+>
+> **The concurrency guarantee survives because nothing about it changed.** Both limits ask
+> the same question of a narrower set of rows — places taken by rows at or before this one
+> — so a row's own auto-increment id still fixes its position in every queue it is in. The
+> eight-process race now runs a second time against a ticket type with one place inside a
+> room with ten, so the only thing that can stop the eighth booking is the type's own
+> capacity: one confirmed, seven waiting.
+>
+> **A booking is confirmed only if it fits both limits**, and each direction is tested
+> separately because getting either to override the other is the failure. Deleting the
+> type limit fails five tests; making the type limit replace the event's fails one that
+> nothing else covers.
+>
+> **The suite caught the design record drifting.** `MigrationTest` compares the live
+> registrations table against the column list in docs/database.md, so adding a column
+> without documenting it failed the suite — which is exactly what that test is for, and
+> the reason C7.1's schema divergence was worth going back for.
 
 **Gate:** two ticket types with separate capacities sell out independently · the
 8-parallel-process test passes **per type** · archiving a type does not break existing

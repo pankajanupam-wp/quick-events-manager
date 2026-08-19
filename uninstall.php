@@ -103,6 +103,8 @@ function qevm_uninstall_site() {
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_attendee_meta" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_email_queue" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_ticket_types" );
 }
 
 /*
