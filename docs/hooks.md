@@ -617,3 +617,28 @@ Restoring is the undo for all of them, and nothing stores an "original" to resto
 Fires on every save of an event, including saves that changed nothing — in which case
 every count is zero except `unchanged`. It also fires during
 `wp qevm occurrence rebuild`.
+### `qevm_series_split` (action)
+
+Fires after "this and following" has split a series into two events. The dates from the split point onward have already moved to the new event, keeping their ids.
+
+```php
+add_action(
+	'qevm_series_split',
+	function ( $new_event_id, $original_event_id, $moved_occurrence_ids ) {
+		// $moved_occurrence_ids belong to $new_event_id from now on.
+	},
+	10,
+	3
+);
+```
+
+| Parameter | Type | Meaning |
+| --- | --- | --- |
+| `$new_event_id` | `int` | The new event, holding the dates from the split point on |
+| `$original_event_id` | `int` | The original, holding the dates before it |
+| `$moved_occurrence_ids` | `int[]` | Every occurrence that changed hands |
+
+**Anything storing an event id beside an occurrence id has to correct it here.** The occurrence rows moved; a table that also records which event a row belonged to is now describing the event it *used* to be part of, and nothing anywhere reports the disagreement — both tables stay internally consistent while the screens built on them quietly disagree. This is how the registration module keeps bookings with their dates, and it is why the split does not reach into that module itself: it may not be loaded.
+
+Bookings with no occurrence on them are deliberately left alone. They were made for the series as it stood, and moving them would hand somebody's place to a half of the series they never chose.
+

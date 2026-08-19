@@ -236,6 +236,40 @@ Exceptions inside the moved range keep their `is_exception` flag and their overr
 times. They were exceptions to a rule that is now a different post's rule, and their
 override is still what the organiser asked for.
 
+> **Built in C6.4c, with four things this section did not say.**
+>
+> **A `COUNT` has to be divided, not copied.** The spec says the original gains an end
+> and the new half "starts at the split point", which is complete for a rule ending in
+> `UNTIL` and wrong for one ending in `COUNT`. Ten weeks split at the fifth, with the
+> count copied to both halves, is thirteen weeks — four on the original and ten more on
+> the new one — and the organiser finds out from whoever turns up to the eleventh. The
+> new half gets `COUNT` minus however many dates stayed behind.
+>
+> **The original's ending is a second before the slot, not the day before.** "The day
+> before the split point" loses any earlier date on the split day itself, which a rule
+> producing more than one date a day has.
+>
+> **The attendees table needs nothing.** It reaches its event through its registration
+> and stores no `event_id` of its own, so the "and the same for `attendees`" above has
+> no work in it. That is the argument for not denormalising twice, not an omission.
+>
+> **Splitting at the first date is refused.** It is not a split: it leaves the original
+> holding no dates at all and the new event holding the whole series, with the bookings
+> of every date that used to be the original's. What "this and following" means on the
+> first date is "all of them", which is §4.5's scope and screen.
+>
+> The split does **not** apply the organiser's edit. It is the structural half of the
+> operation; the change they asked for is made against the new event afterwards, by the
+> screen that offered the choice. Keeping them apart is what lets the split be tested
+> for the thing it must never do — lose something — rather than only ever through an
+> edit that hides it.
+>
+> One more thing the integrity check needs, found by sabotaging the re-point rather than
+> by reading the code: comparing `registrations.event_id` against the occurrence's
+> `event_id` is an inner join, so it sees nothing at all when the dates were deleted and
+> regenerated — the very failure re-pointing prevents. A booking pointing at a date that
+> no longer exists has to be looked for separately.
+
 ### 4.5 All — rule change
 
 1. The rule is rewritten on the post.

@@ -108,6 +108,14 @@ final class RegistrationModule implements Module {
 		 */
 		add_filter( 'qevm_occurrence_is_protected', array( __CLASS__, 'protect_booked_occurrence' ), 10, 2 );
 
+		/*
+		 * A split moves dates to a new event. The bookings for those dates name
+		 * the old one until this puts them right, and nothing anywhere reports
+		 * the disagreement — both tables stay internally consistent while the
+		 * attendee screen quietly stops listing people who are still coming.
+		 */
+		add_action( 'qevm_series_split', array( __CLASS__, 'follow_series_split' ), 10, 3 );
+
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();
 			( new \QuickEventsManager\Email\BroadcastForm() )->register();
@@ -150,6 +158,34 @@ final class RegistrationModule implements Module {
 		}
 
 		return Repository::count_for_occurrence( $occurrence->id() ) > 0;
+	}
+
+	/**
+	 * Keep bookings with the dates they were made for after a split.
+	 *
+	 * Answers `qevm_series_split`. The occurrence rows changed hands and kept
+	 * their ids, so `occurrence_id` is still right on every booking; only the
+	 * `event_id` beside it is stale.
+	 *
+	 * The attendees table needs nothing. It reaches its event through its
+	 * registration and stores no event id of its own, which is the whole
+	 * argument for not denormalising twice.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $event_id  The event the dates moved to.
+	 * @param mixed $from_id   The event they came from. Unused; part of the signature.
+	 * @param mixed $moved     Occurrence ids that moved.
+	 * @return void
+	 */
+	public static function follow_series_split( $event_id, $from_id, $moved ) {
+		unset( $from_id );
+
+		if ( ! is_array( $moved ) ) {
+			return;
+		}
+
+		Repository::repoint_to_event( $moved, (int) $event_id );
 	}
 
 	/**

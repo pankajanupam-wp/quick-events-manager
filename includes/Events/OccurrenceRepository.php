@@ -375,6 +375,52 @@ final class OccurrenceRepository {
 	}
 
 	/**
+	 * Hand a set of occurrences to a different event, keeping their ids.
+	 *
+	 * What a "this and following" split runs, and the reason it is an `UPDATE`
+	 * rather than a delete and a regenerate. The rows keep their ids, so
+	 * anything pointing at a date — a booking, an attendee, a ticket — still
+	 * points at the same date afterwards, and this method never has to know
+	 * those tables exist.
+	 *
+	 * One statement rather than a loop, because a split interrupted half way
+	 * through leaves a series in two halves that each hold some of the other's
+	 * dates, which is worse than either outcome of it not running at all.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int[] $ids      Occurrence ids to move.
+	 * @param int   $event_id Event to move them to.
+	 * @return int Rows moved.
+	 */
+	public static function move_to_event( array $ids, int $event_id ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'intval', $ids ), static fn( int $id ): bool => $id > 0 ) );
+
+		if ( array() === $ids || $event_id <= 0 || ! self::table_exists() ) {
+			return 0;
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $placeholders is a generated list of %d and every value goes through prepare(); the sniff counts only the placeholders it can see in the literal.
+		$moved = (int) $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE %i SET event_id = %d WHERE id IN ( {$placeholders} )",
+				array_merge( array( self::table(), $event_id ), $ids )
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		if ( $moved > 0 ) {
+			self::invalidate_query_cache();
+		}
+
+		return $moved;
+	}
+
+	/**
 	 * Make an event's occurrences match the set given, preserving ids.
 	 *
 	 * Reconciles rather than deleting and reinserting. A row that the new set

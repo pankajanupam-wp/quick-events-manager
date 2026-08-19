@@ -426,6 +426,51 @@ final class Repository {
 	}
 
 	/**
+	 * Point the bookings for a set of dates at a different event.
+	 *
+	 * A booking stores both the date it is for and the event that date belongs
+	 * to. The second is redundant until it disagrees with the first, which is
+	 * exactly what a "this and following" split causes: the occurrence changes
+	 * hands and the booking is left naming the event it used to be part of.
+	 * Nothing shows the disagreement, because each table is still internally
+	 * consistent — the attendee screen simply stops listing people who are
+	 * still coming.
+	 *
+	 * Bookings not attached to any date are left alone. They were made for the
+	 * series as it stood, and moving them would hand somebody's place to a half
+	 * of the series they never chose.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int[] $occurrence_ids Dates that changed hands.
+	 * @param int   $event_id       Event they now belong to.
+	 * @return int Rows corrected.
+	 */
+	public static function repoint_to_event( array $occurrence_ids, $event_id ) {
+		global $wpdb;
+
+		$event_id       = (int) $event_id;
+		$occurrence_ids = array_values(
+			array_filter( array_map( 'intval', $occurrence_ids ), static fn( $id ) => $id > 0 )
+		);
+
+		if ( array() === $occurrence_ids || $event_id <= 0 || ! self::table_exists() ) {
+			return 0;
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $occurrence_ids ), '%d' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $placeholders is a generated list of %d and every value goes through prepare(); the sniff counts only the placeholders it can see in the literal.
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE %i SET event_id = %d WHERE occurrence_id IN ( {$placeholders} )",
+				array_merge( array( self::table(), $event_id ), $occurrence_ids )
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+	}
+
+	/**
 	 * How many separate people an event can be emailed to.
 	 *
 	 * Counted by distinct address rather than by booking, because somebody who

@@ -443,6 +443,35 @@ final class Rule {
 	}
 
 	/**
+	 * The same rule, ending somewhere else.
+	 *
+	 * A new rule rather than a changed one, because a rule is a value: the
+	 * generator holds one while it walks, and a setter would let a caller change
+	 * the ending underneath a walk in progress.
+	 *
+	 * What a split needs, and the only edit to a rule it makes — the first half
+	 * gains an `UNTIL` at the split point, the second keeps whatever ending the
+	 * series had and, if that ending was a `COUNT`, gets its share of it.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $until Last date, `Y-m-d H:i:s` UTC, or '' for none.
+	 * @param int    $count Total occurrences, or 0 for none.
+	 * @return self
+	 */
+	public function with_ending( string $until, int $count ): self {
+		return new self(
+			$this->frequency,
+			$this->interval,
+			$this->byday,
+			$this->monthdays,
+			$this->months,
+			$until,
+			$count
+		);
+	}
+
+	/**
 	 * Whether the rule says for itself when to stop.
 	 *
 	 * A rule that does not is still bounded, by the horizon in C6.3. This
