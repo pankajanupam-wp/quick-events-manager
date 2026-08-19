@@ -144,6 +144,7 @@ final class FormHandler {
 			'email'               => isset( $_POST['qevm_email'] ) ? wp_unslash( $_POST['qevm_email'] ) : '',
 			'phone'               => isset( $_POST['qevm_phone'] ) ? wp_unslash( $_POST['qevm_phone'] ) : '',
 			'quantity'            => isset( $_POST['qevm_quantity'] ) ? wp_unslash( $_POST['qevm_quantity'] ) : 1,
+			'occurrence_id'       => isset( $_POST['qevm_occurrence_id'] ) ? wp_unslash( $_POST['qevm_occurrence_id'] ) : 0,
 
 			/*
 			 * One name per further place, keyed by position. wp_unslash() walks
@@ -269,6 +270,7 @@ final class FormHandler {
 					'email'               => isset( $input['email'] ) ? sanitize_text_field( (string) $input['email'] ) : '',
 					'phone'               => isset( $input['phone'] ) ? sanitize_text_field( (string) $input['phone'] ) : '',
 					'quantity'            => isset( $input['quantity'] ) ? absint( $input['quantity'] ) : 1,
+					'occurrence_id'       => isset( $input['occurrence_id'] ) ? absint( $input['occurrence_id'] ) : 0,
 					'guests'              => RegistrationService::guest_names(
 						isset( $input['guests'] ) ? $input['guests'] : array(),
 						RegistrationService::MAX_PLACES

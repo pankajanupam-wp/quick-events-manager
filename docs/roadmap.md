@@ -95,7 +95,9 @@ Modelled as a series with a parent and generated occurrences, not as unrelated c
 
 **The rule domain and generation are built.** Rules are stored as RFC 5545 RRULE strings, so the `.ics` export is a copy rather than a translation and a series can be imported from another calendar. Daily, weekly with named weekdays, monthly by date or by weekday position — "the last Friday" — and yearly. Generation happens in the event's own timezone in wall-clock time, so an 18:00 meeting is 18:00 every week and its UTC value moves across a daylight saving boundary rather than the other way round. Bounded three ways: the rule's own ending, a two-year horizon, and a ceiling of 730 dates, with a daily task walking the horizon forward so a series never quietly runs out.
 
-Still to come: the edit semantics themselves, and the admin UI.
+**Editing is built.** Moving one date, calling one off and putting it back are per-occurrence edits that survive every later save of the event, because a generated row is identified by the slot the rule produced rather than by when it happens. "This and following" splits the series into two events sharing one identifier, moving the dates from the split point onward to the new one rather than regenerating them — so a place somebody booked on the ninth week is still that place afterwards.
+
+**The UI is built too**, so none of this is code-only: a **Repeats** box on the event editor builds the rule without anybody typing an RRULE, and **Events → Dates** lists every date the rule produced with move, call off, put back, reset and "split from here" beside each one. Bookings belong to a date rather than to the series: the form asks which one, capacity is counted per date, and the waiting list for the 3rd of June is not the waiting list for the 10th. Nothing on the dates screen emails anybody, which is deliberate — moving a date that two hundred people have booked is exactly when they need telling, and exactly why it must not happen as a side effect of a save.
 
 ## Before release
 

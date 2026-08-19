@@ -7,8 +7,10 @@
 
 namespace QuickEventsManager\Registration;
 
+use QuickEventsManager\Domain\OccurrenceStatus;
 use QuickEventsManager\Events\Event;
 use QuickEventsManager\Events\Meta;
+use QuickEventsManager\Events\OccurrenceRepository;
 use QuickEventsManager\CustomFields\AnswerRepository;
 use QuickEventsManager\CustomFields\Answers;
 use QuickEventsManager\CustomFields\CustomFieldsModule;
@@ -151,13 +153,19 @@ final class RegistrationService {
 			}
 		}
 
+		$occurrence_id = self::resolve_occurrence( $event, $input, $manual );
+
+		if ( is_wp_error( $occurrence_id ) ) {
+			return $occurrence_id;
+		}
+
 		$fields = $this->validate( $input, $manual, $event_id );
 
 		if ( is_wp_error( $fields ) ) {
 			return $fields;
 		}
 
-		if ( Repository::email_is_registered( $event->id(), $fields['email'] ) ) {
+		if ( Repository::email_is_registered( $event->id(), $fields['email'], $occurrence_id ) ) {
 			return new \WP_Error(
 				'qevm_already_registered',
 				__( 'That email address is already registered for this event.', 'quick-events-manager' ),
@@ -171,6 +179,7 @@ final class RegistrationService {
 		$registration = Repository::insert_with_capacity(
 			array(
 				'event_id'        => $event->id(),
+				'occurrence_id'   => $occurrence_id,
 
 				/*
 				 * Nobody, on a manual entry. The logged-in user is the
@@ -224,7 +233,8 @@ final class RegistrationService {
 		$attendees = AttendeeRepository::create_for_registration(
 			$registration->id(),
 			$registration->quantity(),
-			self::people( $fields )
+			self::people( $fields ),
+			array( 'occurrence_id' => $occurrence_id )
 		);
 
 		/*
@@ -258,6 +268,116 @@ final class RegistrationService {
 		do_action( 'qevm_registration_created', $registration, $event );
 
 		return $registration;
+	}
+
+	/**
+	 * Whether an event has no date left to book.
+	 *
+	 * Asked of the occurrence table rather than of the event's own end time,
+	 * because on a series that end time is the **first** date's. Reading it
+	 * closed a weekly class to new bookings the moment week one finished, with
+	 * eleven weeks still to run and the form replaced by "this event has
+	 * already happened".
+	 *
+	 * `next_for_event()` answers the real question — is there a date still to
+	 * come — and answers it identically for an event that has only one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event $event The event.
+	 * @return bool
+	 */
+	private static function everything_has_happened( Event $event ) {
+		if ( OccurrenceRepository::count_for_event( $event->id() ) > 0 ) {
+			return null === OccurrenceRepository::next_for_event( $event->id() );
+		}
+
+		return $event->has_ended();
+	}
+
+	/**
+	 * Which date this booking is for.
+	 *
+	 * **Asked of the occurrence table, not of the recurrence module.** Whether a
+	 * booking has a date to choose is answered by "does this event have more
+	 * than one" — which is true of a series and false of everything else,
+	 * however the dates got there and whether or not recurrence is switched on
+	 * today. Registration and recurrence are both modules, and ADR-0009 is that
+	 * modules depend on the domain rather than on each other.
+	 *
+	 * An event with a single date keeps `0`, deliberately. Its one occurrence is
+	 * identified by its start time, so moving the event by an hour replaces that
+	 * row with a different one — and a booking pointing at it would be left on a
+	 * date the organiser cancelled by rescheduling. A generated date carries the
+	 * slot it came from and survives being moved, which is exactly what makes it
+	 * safe to attach a person to.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event                $event  The event.
+	 * @param array<string, mixed> $input  Submitted fields.
+	 * @param bool                 $manual Whether an organiser is entering this.
+	 * @return int|\WP_Error
+	 */
+	private static function resolve_occurrence( Event $event, array $input, $manual ) {
+		$chosen = isset( $input['occurrence_id'] ) ? absint( $input['occurrence_id'] ) : 0;
+
+		if ( OccurrenceRepository::count_for_event( $event->id() ) <= 1 ) {
+			return 0;
+		}
+
+		if ( 0 === $chosen ) {
+			return new \WP_Error(
+				'qevm_occurrence_required',
+				__( 'Please choose which date you are booking.', 'quick-events-manager' ),
+				array(
+					'status' => 400,
+					'field'  => 'occurrence_id',
+				)
+			);
+		}
+
+		$occurrence = OccurrenceRepository::find( $chosen );
+
+		if ( null === $occurrence || $occurrence->event_id() !== $event->id() ) {
+			return new \WP_Error(
+				'qevm_occurrence_not_found',
+				__( 'That date is not one of this event\'s dates.', 'quick-events-manager' ),
+				array(
+					'status' => 404,
+					'field'  => 'occurrence_id',
+				)
+			);
+		}
+
+		if ( OccurrenceStatus::Cancelled === $occurrence->status() ) {
+			return new \WP_Error(
+				'qevm_occurrence_cancelled',
+				__( 'That date has been called off.', 'quick-events-manager' ),
+				array(
+					'status' => 409,
+					'field'  => 'occurrence_id',
+				)
+			);
+		}
+
+		/*
+		 * A date that has already happened takes no public bookings, and does
+		 * take them from an organiser — somebody entering last Tuesday's paper
+		 * sign-up sheet on Wednesday is the ordinary case, not an error.
+		 */
+		if ( ! $manual && $occurrence->has_ended() ) {
+			return new \WP_Error(
+				'qevm_occurrence_past',
+				__( 'That date has already happened.', 'quick-events-manager' ),
+				array(
+					'status' => 409,
+					'field'  => 'occurrence_id',
+				)
+			);
+		}
+
+		return $occurrence->id();
 	}
 
 	/**
@@ -300,7 +420,7 @@ final class RegistrationService {
 			return 'disabled';
 		}
 
-		if ( $event->has_ended() ) {
+		if ( self::everything_has_happened( $event ) ) {
 			return 'ended';
 		}
 
@@ -326,17 +446,21 @@ final class RegistrationService {
 	 *
 	 * @since 26.0
 	 *
-	 * @param Event $event Event to check.
+	 * Capacity is per date on an event that has several: twenty places on a
+	 * weekly class means twenty each week, not twenty for the term.
+	 *
+	 * @param Event $event         Event to check.
+	 * @param int   $occurrence_id Date to count, or 0 for the event as a whole.
 	 * @return int|null
 	 */
-	public static function places_remaining( Event $event ) {
+	public static function places_remaining( Event $event, $occurrence_id = 0 ) {
 		$capacity = (int) $event->meta( Meta::CAPACITY, 0 );
 
 		if ( $capacity <= 0 ) {
 			return null;
 		}
 
-		return max( 0, $capacity - Repository::count_taken( $event->id() ) );
+		return max( 0, $capacity - Repository::count_taken( $event->id(), (int) $occurrence_id ) );
 	}
 
 	/**
@@ -344,11 +468,12 @@ final class RegistrationService {
 	 *
 	 * @since 26.0
 	 *
-	 * @param Event $event Event to check.
+	 * @param Event $event         Event to check.
+	 * @param int   $occurrence_id Date to check, or 0 for the event as a whole.
 	 * @return bool
 	 */
-	public static function is_full( Event $event ) {
-		$remaining = self::places_remaining( $event );
+	public static function is_full( Event $event, $occurrence_id = 0 ) {
+		$remaining = self::places_remaining( $event, (int) $occurrence_id );
 
 		return null !== $remaining && $remaining <= 0;
 	}

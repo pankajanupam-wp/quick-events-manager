@@ -434,11 +434,25 @@ places each week. This follows from capacity being counted through `occurrence_i
 is stated here because the alternative — 20 places across the whole series — is what you
 get by accident if capacity keeps being read from the post.
 
-> **Not true yet.** C6.4a found that `registrations.occurrence_id` is still written as `0`
-> by every booking, because nothing asks a visitor which date of a series they are booking
-> — that form does not exist. Until it does, a booking on a recurring event counts against
-> the series as a whole, which is exactly the accident this paragraph warns about. Tracked
-> as C6.6 rather than left as a discrepancy between this document and the code.
+> **True as of C6.6.** It was not when this was written: `registrations.occurrence_id` was
+> written as `0` by every booking, because nothing asked a visitor which date of a series
+> they were booking. The form now asks whenever an event has more than one date, and the
+> ranking that decides confirmed-or-waiting counts within that date.
+>
+> Three things fell out of building it that this section had not said:
+>
+> - **The duplicate check is per date too.** "That address is already registered for this
+>   event" is right for one date and absurd for a weekly class — it would make a term
+>   bookable exactly once. Somebody who comes every week books every week.
+> - **The waiting list belongs to a date.** A cancellation on the 3rd of June frees a
+>   place on the 3rd of June; promoting somebody waiting for the 10th hands them a place
+>   they cannot use and takes it from whoever wanted that week.
+> - **An event with one date keeps `occurrence_id = 0`, deliberately.** Its single
+>   occurrence is identified by its start time, so rescheduling replaces that row with a
+>   different one — a booking pointing at it would be orphaned by an ordinary change of
+>   date. A generated date carries the slot it came from and survives being moved, which
+>   is what makes it safe to attach a person to. Zero means "this booking is for the
+>   event", not "unknown".
 
 ---
 

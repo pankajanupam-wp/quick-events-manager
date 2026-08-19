@@ -72,6 +72,22 @@ final class Registration {
 	}
 
 	/**
+	 * The date booked, or 0 when the event has only one.
+	 *
+	 * Zero is not "unknown". It means the booking is for the event rather than
+	 * for a date within it, which is every booking on an event that does not
+	 * repeat — and capacity, the waiting list and the duplicate check all read
+	 * it that way.
+	 *
+	 * @since 26.0
+	 *
+	 * @return int
+	 */
+	public function occurrence_id() {
+		return (int) $this->get( 'occurrence_id', 0 );
+	}
+
+	/**
 	 * Public reference code.
 	 *
 	 * @since 26.0

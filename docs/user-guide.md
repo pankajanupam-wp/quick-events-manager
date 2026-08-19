@@ -121,6 +121,46 @@ The shortest period you can set is 7 days. If you need to keep one event's list 
 
 Switching the registration feature off, or deactivating the plugin, stops the deletions. Neither removes anything that is already there.
 
+## Events that repeat
+
+Switch **Recurring events** on under **Events → Features**, and the event editor grows a **Repeats** box.
+
+Tick **This event repeats** and say how often: every week, every two weeks, every month, every year. A weekly event can name the days it happens on — a class on Tuesdays and Thursdays is one event, not two. A monthly one can repeat on the same date each month or on the same weekday, "the last Friday", which is usually what a monthly meetup means.
+
+Choose an ending: a date, a number of times, or none at all. Without an ending the dates are generated two years ahead and topped up daily, so a standing weekly meeting never runs out.
+
+**Skip these dates** takes one date a line, as `2026-12-25`. Holidays, and the weeks you are away.
+
+Everything is worked out in the event's own timezone, so an 18:00 class stays at 18:00 through the clocks changing.
+
+If something in the box cannot be read — a number where a date belongs — the event still saves and the repeat rule is left exactly as it was, with a note at the top of the screen saying so. Nothing silently rebuilds your dates from a typo.
+
+Unticking **This event repeats** turns the event back into a single date. Dates nobody has booked are removed; any date with a booking on it is marked cancelled instead, so the people who booked still see what happened to it.
+
+### Booking one date of a repeating event
+
+When an event has more than one date, the registration form asks which one. Somebody picks a date, and their booking belongs to it.
+
+**Capacity is per date.** Twenty places on a weekly class is twenty places each week, not twenty for the term. A date that is full still appears on the list, marked as full — booking it joins the waiting list for that date, and if somebody cancels that week, the place goes to whoever was waiting for *that* week.
+
+The same person can book several dates. Booking the same date twice is refused, booking next week as well is not.
+
+Dates that have already happened, and dates you have called off, are not offered.
+
+### Changing one date
+
+**Events → Dates** lists every date a repeating event produces. Pick the event, and each date has its own row.
+
+- **Move** — change the date or time of that one date. Every other date stays where it is.
+- **Call off** — the date stays on the list, marked as called off, rather than disappearing. Somebody who has it in their diary sees it crossed out instead of finding nothing. Bookings on it are left alone: calling off a date and refunding twelve people are two decisions.
+- **Put back** — undoes calling off.
+- **Reset to the rule** — forgets the edit and lets the repeat rule decide that date again.
+- **Split from here** — everything from this date onward becomes a second event, so you can change it without touching the dates before it. You land on the new half, which is where those changes belong. Bookings move with their dates.
+
+A date with bookings on it is marked **Booked**, so you can see what a change would affect before you make it.
+
+**None of these buttons emails anybody.** Moving a date that two hundred people have booked is exactly when they need telling — and exactly why it should not happen because you corrected a typo. Use **Email everybody** on the attendee screen when you are ready to tell them.
+
 ## Copying an event
 
 A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.

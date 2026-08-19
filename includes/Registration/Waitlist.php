@@ -104,7 +104,13 @@ final class Waitlist {
 			return;
 		}
 
-		self::promote_for_event( $registration->event_id() );
+		/*
+		 * The date the place came free on, not the event. A cancellation on the
+		 * 3rd of June frees a place on the 3rd of June, and promoting somebody
+		 * waiting for the 10th would give them a place they cannot use and take
+		 * it from the person who wanted that week.
+		 */
+		self::promote_for_event( $registration->event_id(), $registration->occurrence_id() );
 	}
 
 	/**
@@ -112,10 +118,11 @@ final class Waitlist {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $event_id Event to fill.
+	 * @param int $event_id      Event to fill.
+	 * @param int $occurrence_id Fill this date only, or 0 for the event as a whole.
 	 * @return Registration[] Bookings promoted, in the order they were.
 	 */
-	public static function promote_for_event( $event_id ) {
+	public static function promote_for_event( $event_id, $occurrence_id = 0 ) {
 		if ( self::$promoting ) {
 			return array();
 		}
@@ -128,6 +135,7 @@ final class Waitlist {
 
 		$capacity = (int) $event->meta( \QuickEventsManager\Events\Meta::CAPACITY, 0 );
 
+
 		/*
 		 * An uncapped event has no waiting list to work through: nothing is
 		 * ever waitlisted, because nothing is ever full. Returning early also
@@ -139,7 +147,7 @@ final class Waitlist {
 			return array();
 		}
 
-		$candidates = self::candidates( $event_id );
+		$candidates = self::candidates( $event_id, (int) $occurrence_id );
 
 		if ( empty( $candidates ) ) {
 			return array();
@@ -159,7 +167,7 @@ final class Waitlist {
 				 * count. The authority on how many places are taken is the
 				 * table, and a promotion is a write to it.
 				 */
-				$free = $capacity - Repository::count_taken( $event_id );
+				$free = $capacity - Repository::count_taken( $event_id, (int) $occurrence_id );
 
 				if ( $free <= 0 || $candidate->quantity() > $free ) {
 					// Strict FIFO: the queue stops here, it does not step over.
@@ -203,17 +211,19 @@ final class Waitlist {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $event_id Event id.
+	 * @param int $event_id      Event id.
+	 * @param int $occurrence_id Only those waiting for this date, or 0 for all.
 	 * @return Registration[]
 	 */
-	public static function candidates( $event_id ) {
+	public static function candidates( $event_id, $occurrence_id = 0 ) {
 		$candidates = Repository::for_event(
 			(int) $event_id,
 			array(
-				'status'   => RegistrationStatus::Waitlisted->value,
-				'orderby'  => 'id',
-				'order'    => 'ASC',
-				'per_page' => self::MAX_PROMOTIONS,
+				'status'        => RegistrationStatus::Waitlisted->value,
+				'occurrence_id' => (int) $occurrence_id,
+				'orderby'       => 'id',
+				'order'         => 'ASC',
+				'per_page'      => self::MAX_PROMOTIONS,
 			)
 		);
 
@@ -227,9 +237,10 @@ final class Waitlist {
 		 *
 		 * @since 26.0
 		 *
-		 * @param Registration[] $candidates Waitlisted bookings, oldest first.
-		 * @param int            $event_id   Event id.
+		 * @param Registration[] $candidates    Waitlisted bookings, oldest first.
+		 * @param int            $event_id      Event id.
+		 * @param int            $occurrence_id Date being filled, or 0 for the event.
 		 */
-		return apply_filters( 'qevm_waitlist_candidates', $candidates, (int) $event_id );
+		return apply_filters( 'qevm_waitlist_candidates', $candidates, (int) $event_id, (int) $occurrence_id );
 	}
 }

@@ -9,6 +9,8 @@ namespace QuickEventsManager\Frontend;
 
 use QuickEventsManager\Admin\Settings;
 use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
+use QuickEventsManager\Events\OccurrenceRepository;
 use QuickEventsManager\Events\Query;
 use QuickEventsManager\Privacy\Consent;
 use QuickEventsManager\Registration\CancellationHandler;
@@ -179,12 +181,23 @@ final class Renderer {
 
 		$result = FormHandler::current_result();
 
+		$dates = self::bookable_dates( $event );
+
 		return Templates::render(
 			'registration-form.php',
 			array(
 				'event'        => $event,
-				'is_full'      => RegistrationService::is_full( $event ),
-				'remaining'    => RegistrationService::places_remaining( $event ),
+				'dates'        => $dates,
+
+				/*
+				 * On a series these two are questions about a date, and no date
+				 * has been chosen yet — so the form says nothing about how full
+				 * anything is, and each option carries its own state instead.
+				 * Answering for the event as a whole would put "3 places left"
+				 * above a list of twelve weeks with twenty places each.
+				 */
+				'is_full'      => array() === $dates && RegistrationService::is_full( $event ),
+				'remaining'    => array() === $dates ? RegistrationService::places_remaining( $event ) : null,
 				'result'       => $result,
 				'max_places'   => RegistrationService::MAX_PLACES,
 				'consent_text' => Consent::text(),
@@ -193,6 +206,48 @@ final class Renderer {
 				'field_errors' => self::answer_errors( $result, $event ),
 			)
 		);
+	}
+
+	/**
+	 * The dates somebody may choose between, or none when there is no choice.
+	 *
+	 * Empty for an event with a single date, which is the signal the form uses
+	 * to leave the picker out altogether — one date is not a choice, and asking
+	 * somebody to pick from a list of one is a question with a wrong answer
+	 * available.
+	 *
+	 * Full dates stay on the list. A full date takes waiting-list bookings, and
+	 * removing it would leave somebody staring at a gap in the weeks with no
+	 * way to ask for the place if one comes free.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event $event The event.
+	 * @return array<int, array{id: int, label: string, full: bool}>
+	 */
+	private static function bookable_dates( Event $event ) {
+		$occurrences = OccurrenceRepository::for_event( $event->id() );
+
+		if ( count( $occurrences ) <= 1 ) {
+			return array();
+		}
+
+		$now   = Meta::now_utc();
+		$dates = array();
+
+		foreach ( $occurrences as $occurrence ) {
+			if ( ! $occurrence->is_listable() || $occurrence->has_ended( $now ) ) {
+				continue;
+			}
+
+			$dates[] = array(
+				'id'    => $occurrence->id(),
+				'label' => $occurrence->format_start(),
+				'full'  => RegistrationService::is_full( $event, $occurrence->id() ),
+			);
+		}
+
+		return $dates;
 	}
 
 	/**

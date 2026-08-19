@@ -125,18 +125,18 @@ final class Repository {
 		$now = gmdate( 'Y-m-d H:i:s' );
 
 		$row = array(
-			'event_id'      => (int) $data['event_id'],
-			'occurrence_id' => isset( $data['occurrence_id'] ) ? (int) $data['occurrence_id'] : 0,
-			'user_id'       => isset( $data['user_id'] ) ? (int) $data['user_id'] : 0,
-			'code'          => self::generate_code(),
-			'status'        => RegistrationStatus::Pending->value,
-			'booker_name'   => (string) $data['name'],
-			'booker_email'  => (string) $data['email'],
-			'booker_phone'  => isset( $data['phone'] ) ? (string) $data['phone'] : '',
-			'quantity'      => isset( $data['quantity'] ) ? max( 1, (int) $data['quantity'] ) : 1,
-			'fields'        => isset( $data['fields'] ) && ! empty( $data['fields'] ) ? wp_json_encode( $data['fields'] ) : null,
-			'created_at'    => $now,
-			'updated_at'    => $now,
+			'event_id'       => (int) $data['event_id'],
+			'occurrence_id'  => isset( $data['occurrence_id'] ) ? (int) $data['occurrence_id'] : 0,
+			'user_id'        => isset( $data['user_id'] ) ? (int) $data['user_id'] : 0,
+			'code'           => self::generate_code(),
+			'status'         => RegistrationStatus::Pending->value,
+			'booker_name'    => (string) $data['name'],
+			'booker_email'   => (string) $data['email'],
+			'booker_phone'   => isset( $data['phone'] ) ? (string) $data['phone'] : '',
+			'quantity'       => isset( $data['quantity'] ) ? max( 1, (int) $data['quantity'] ) : 1,
+			'fields'         => isset( $data['fields'] ) && ! empty( $data['fields'] ) ? wp_json_encode( $data['fields'] ) : null,
+			'created_at'     => $now,
+			'updated_at'     => $now,
 		);
 
 		/*
@@ -160,7 +160,7 @@ final class Repository {
 
 		$id = (int) $wpdb->insert_id;
 
-		$status = self::resolve_status( $id, (int) $data['event_id'], $capacity );
+		$status = self::resolve_status( $id, (int) $data['event_id'], $capacity, (int) $row['occurrence_id'] );
 
 		/*
 		 * set_status(), not update_status(). This is a row learning its initial
@@ -184,12 +184,24 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $id       Registration id.
-	 * @param int $event_id Event id.
-	 * @param int $capacity Places available, 0 for unlimited.
+	 * A booking that names a date is ranked **within that date**. Twenty places
+	 * on a weekly class means twenty places each week, which is what an
+	 * organiser means by it and what a person booking the 3rd of June expects
+	 * — counting the whole series against one capacity would sell out a term in
+	 * the first fortnight.
+	 *
+	 * A booking with no date is ranked across the event, which is every booking
+	 * on an event that has only one date to be on.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $id            Registration id.
+	 * @param int $event_id      Event id.
+	 * @param int $capacity      Places available, 0 for unlimited.
+	 * @param int $occurrence_id Date booked, or 0.
 	 * @return RegistrationStatus
 	 */
-	private static function resolve_status( $id, $event_id, $capacity ) {
+	private static function resolve_status( $id, $event_id, $capacity, $occurrence_id = 0 ) {
 		global $wpdb;
 
 		if ( $capacity <= 0 ) {
@@ -197,6 +209,25 @@ final class Repository {
 		}
 
 		$statuses = RegistrationStatus::occupying_values();
+
+		if ( $occurrence_id > 0 ) {
+			// Two fixed placeholders: the occupying statuses are a constant, not user input.
+			$taken = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+					 WHERE occurrence_id = %d AND id <= %d AND status IN ( %s, %s )',
+					self::table(),
+					$occurrence_id,
+					$id,
+					$statuses[0],
+					$statuses[1]
+				)
+			);
+
+			return $taken <= $capacity
+				? RegistrationStatus::Confirmed
+				: RegistrationStatus::Waitlisted;
+		}
 
 		// Two fixed placeholders: the occupying statuses are a constant, not user input.
 		$taken = (int) $wpdb->get_var(
@@ -217,21 +248,36 @@ final class Repository {
 	}
 
 	/**
-	 * Places taken for an event.
+	 * Places taken, for an event or for one of its dates.
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $event_id Event id.
+	 * @param int $event_id      Event id.
+	 * @param int $occurrence_id Count only this date, or 0 for the whole event.
 	 * @return int
 	 */
-	public static function count_taken( $event_id ) {
+	public static function count_taken( $event_id, $occurrence_id = 0 ) {
 		global $wpdb;
 
 		if ( ! self::table_exists() ) {
 			return 0;
 		}
 
-		$statuses = RegistrationStatus::occupying_values();
+		$statuses      = RegistrationStatus::occupying_values();
+		$occurrence_id = (int) $occurrence_id;
+
+		if ( $occurrence_id > 0 ) {
+			return (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+					 WHERE occurrence_id = %d AND status IN ( %s, %s )',
+					self::table(),
+					$occurrence_id,
+					$statuses[0],
+					$statuses[1]
+				)
+			);
+		}
 
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
@@ -246,22 +292,44 @@ final class Repository {
 	}
 
 	/**
-	 * Whether an address is already registered for an event.
+	 * Whether an address is already registered for an event, or for one date.
 	 *
 	 * Cancelled registrations do not count, so someone who cancelled can sign
 	 * up again.
 	 *
+	 * **Scoped to the date when there is one**, and that is the point of the
+	 * argument rather than a convenience. Somebody who comes to the Tuesday
+	 * class every week is booking the same event over and over; refusing the
+	 * second week as a duplicate would make a weekly class bookable exactly
+	 * once, which is worse than useless.
+	 *
 	 * @since 26.0
 	 *
-	 * @param int    $event_id Event id.
-	 * @param string $email    Email address.
+	 * @param int    $event_id      Event id.
+	 * @param string $email         Email address.
+	 * @param int    $occurrence_id Date booked, or 0 for the whole event.
 	 * @return bool
 	 */
-	public static function email_is_registered( $event_id, $email ) {
+	public static function email_is_registered( $event_id, $email, $occurrence_id = 0 ) {
 		global $wpdb;
 
 		if ( ! self::table_exists() ) {
 			return false;
+		}
+
+		$occurrence_id = (int) $occurrence_id;
+
+		if ( $occurrence_id > 0 ) {
+			return (bool) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i
+					 WHERE occurrence_id = %d AND booker_email = %s AND status != %s',
+					self::table(),
+					$occurrence_id,
+					$email,
+					RegistrationStatus::Cancelled->value
+				)
+			);
 		}
 
 		return (bool) $wpdb->get_var(
@@ -385,7 +453,7 @@ final class Repository {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return array_map(
 			static function ( $row ) {
@@ -508,7 +576,7 @@ final class Repository {
 				array_merge( array( self::table() ), $audience['params'] )
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 	}
 
 	/**
@@ -560,7 +628,7 @@ final class Repository {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return array_map(
 			static function ( $row ) {
@@ -638,7 +706,7 @@ final class Repository {
 				array_merge( array( self::table() ), $filter['params'] )
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return $count;
 	}
@@ -673,6 +741,13 @@ final class Repository {
 		if ( '' !== $status && in_array( $status, RegistrationStatus::values(), true ) ) {
 			$where[]  = 'status = %s';
 			$params[] = $status;
+		}
+
+		$occurrence_id = isset( $args['occurrence_id'] ) ? (int) $args['occurrence_id'] : 0;
+
+		if ( $occurrence_id > 0 ) {
+			$where[]  = 'occurrence_id = %d';
+			$params[] = $occurrence_id;
 		}
 
 		$search = isset( $args['search'] ) ? (string) $args['search'] : '';

@@ -7,6 +7,7 @@
  * @package QuickEventsManager
  *
  * @var \QuickEventsManager\Events\Event $event Event being registered for.
+ * @var array<int, array{id: int, label: string, full: bool}> $dates Dates to choose between, or empty when there is only one.
  * @var bool              $is_full      Whether every place is taken.
  * @var int|null          $remaining    Places left, or null when uncapped.
  * @var array|null        $result       Outcome of the previous submission.
@@ -130,6 +131,47 @@ defined( 'ABSPATH' ) || exit;
 			<input type="tel" id="qevm-phone" name="qevm_phone" autocomplete="tel"
 				value="<?php echo esc_attr( (string) FormHandler::value( $result, 'phone' ) ); ?>" />
 		</p>
+
+		<?php if ( array() !== $dates ) : ?>
+			<?php $qevm_error = FormHandler::error( $result, 'occurrence_id' ); ?>
+			<p class="qevm-field">
+				<label for="qevm-date"><?php esc_html_e( 'Which date', 'quick-events-manager' ); ?> <span class="qevm-required" aria-hidden="true">*</span></label>
+				<select id="qevm-date" name="qevm_occurrence_id" required
+					<?php
+					if ( '' !== $qevm_error ) {
+						echo 'aria-invalid="true" aria-describedby="qevm-date-error"';
+					}
+					?>
+					>
+					<option value=""><?php esc_html_e( 'Choose a date', 'quick-events-manager' ); ?></option>
+					<?php foreach ( $dates as $qevm_date ) : ?>
+						<option value="<?php echo esc_attr( (string) $qevm_date['id'] ); ?>"
+							<?php selected( (string) $qevm_date['id'], (string) FormHandler::value( $result, 'occurrence_id' ) ); ?>>
+							<?php
+							/*
+							 * A full date stays on the list and says so. It
+							 * still takes bookings — they join the waiting list
+							 * — and leaving it out would show somebody a gap in
+							 * the weeks with no way to ask for a place.
+							 */
+							echo $qevm_date['full']
+								? esc_html(
+									sprintf(
+										/* translators: %s: A date, e.g. "3 June 2026 6:00 pm". */
+										__( '%s — full, join the waiting list', 'quick-events-manager' ),
+										$qevm_date['label']
+									)
+								)
+								: esc_html( $qevm_date['label'] );
+							?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+				<?php if ( '' !== $qevm_error ) : ?>
+					<span class="qevm-field__error" id="qevm-date-error"><?php echo esc_html( $qevm_error ); ?></span>
+				<?php endif; ?>
+			</p>
+		<?php endif; ?>
 
 		<p class="qevm-field">
 			<label for="qevm-quantity"><?php esc_html_e( 'Number of places', 'quick-events-manager' ); ?></label>
