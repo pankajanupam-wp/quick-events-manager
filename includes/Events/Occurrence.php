@@ -198,6 +198,36 @@ final class Occurrence {
 	}
 
 	/**
+	 * The local start, formatted for reading.
+	 *
+	 * The stored value is already wall-clock in the event's own zone, so it is
+	 * handed to date_i18n() as UTC. Anything else shifts a time that was never
+	 * in the site's timezone to begin with, and an 18:00 class in Kolkata is
+	 * listed at 13:30 to an administrator in London.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $format PHP date format, or '' for the site's own.
+	 * @return string
+	 */
+	public function format_start( string $format = '' ): string {
+		$local = $this->start_local();
+		$time  = '' !== $local ? strtotime( $local . ' UTC' ) : false;
+
+		if ( false === $time ) {
+			return '';
+		}
+
+		if ( '' === $format ) {
+			$format = $this->is_all_day()
+				? (string) get_option( 'date_format' )
+				: (string) get_option( 'date_format' ) . ' ' . (string) get_option( 'time_format' );
+		}
+
+		return (string) date_i18n( $format, $time, true );
+	}
+
+	/**
 	 * Whether this date should appear in listings.
 	 *
 	 * @since 26.0

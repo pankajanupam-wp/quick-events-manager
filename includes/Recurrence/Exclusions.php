@@ -64,7 +64,15 @@ final class Exclusions {
 	public static function parse( string $stored ): array {
 		$dates = array();
 
-		foreach ( explode( ',', $stored ) as $piece ) {
+		/*
+		 * Line breaks as well as commas. Storage is comma-separated, but what
+		 * arrives here is often typed or pasted — a list of holidays, one a
+		 * line — and a parser that accepts only its own output format turns
+		 * that into a single unreadable date and silently skips nothing.
+		 */
+		$pieces = preg_split( '/[\r\n,]+/', $stored );
+
+		foreach ( is_array( $pieces ) ? $pieces : array() as $piece ) {
 			$date = self::normalise( $piece );
 
 			if ( '' !== $date ) {

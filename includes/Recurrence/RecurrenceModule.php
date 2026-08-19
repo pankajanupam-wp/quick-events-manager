@@ -104,6 +104,11 @@ final class RecurrenceModule implements Module {
 	 */
 	public function register() {
 		( new Horizon() )->register();
+
+		if ( is_admin() ) {
+			( new RepeatBox() )->register();
+			( new DatesScreen() )->register();
+		}
 	}
 
 	/**
