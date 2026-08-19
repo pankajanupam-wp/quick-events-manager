@@ -159,6 +159,12 @@ final class RegistrationService {
 			return $occurrence_id;
 		}
 
+		$ticket_type = self::resolve_ticket_type( $event, $input );
+
+		if ( is_wp_error( $ticket_type ) ) {
+			return $ticket_type;
+		}
+
 		$fields = $this->validate( $input, $manual, $event_id );
 
 		if ( is_wp_error( $fields ) ) {
@@ -180,6 +186,16 @@ final class RegistrationService {
 			array(
 				'event_id'        => $event->id(),
 				'occurrence_id'   => $occurrence_id,
+				'ticket_type_id'  => null !== $ticket_type ? $ticket_type->id() : 0,
+
+				/*
+				 * The type's own capacity travels with the booking rather than
+				 * being looked up inside the ranking. The repository's job is to
+				 * count rows; deciding which limits apply is this service's, and
+				 * keeping that split is what stopped the ranking query growing a
+				 * join to a table another module owns.
+				 */
+				'ticket_capacity' => null !== $ticket_type ? $ticket_type->capacity() : 0,
 
 				/*
 				 * Nobody, on a manual entry. The logged-in user is the
@@ -234,7 +250,10 @@ final class RegistrationService {
 			$registration->id(),
 			$registration->quantity(),
 			self::people( $fields ),
-			array( 'occurrence_id' => $occurrence_id )
+			array(
+				'occurrence_id'  => $occurrence_id,
+				'ticket_type_id' => null !== $ticket_type ? $ticket_type->id() : 0,
+			)
 		);
 
 		/*
@@ -268,6 +287,69 @@ final class RegistrationService {
 		do_action( 'qevm_registration_created', $registration, $event );
 
 		return $registration;
+	}
+
+	/**
+	 * Which kind of place this booking is for.
+	 *
+	 * Null when the event offers no types, which is every event until somebody
+	 * switches ticketing on and creates one. A type is required as soon as one
+	 * exists, for the same reason a date is required as soon as there are
+	 * several: the choice is real, and guessing it on somebody's behalf is how a
+	 * concession ticket becomes a full-price one.
+	 *
+	 * Asked of the ticket types table rather than of the ticketing module.
+	 * Registration and ticketing are both modules, and ADR-0009 is that modules
+	 * depend on the domain, not on each other — so the question is "does this
+	 * event have types", which the table answers whether or not the module is
+	 * switched on today.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event                $event The event.
+	 * @param array<string, mixed> $input Submitted fields.
+	 * @return \QuickEventsManager\Tickets\TicketType|null|\WP_Error
+	 */
+	private static function resolve_ticket_type( Event $event, array $input ) {
+		$offered = \QuickEventsManager\Tickets\TicketTypeRepository::for_event( $event->id(), true );
+
+		if ( array() === $offered ) {
+			return null;
+		}
+
+		$chosen = isset( $input['ticket_type_id'] ) ? absint( $input['ticket_type_id'] ) : 0;
+
+		if ( 0 === $chosen ) {
+			return new \WP_Error(
+				'qevm_ticket_type_required',
+				__( 'Please choose which kind of place you are booking.', 'quick-events-manager' ),
+				array(
+					'status' => 400,
+					'field'  => 'ticket_type_id',
+				)
+			);
+		}
+
+		foreach ( $offered as $type ) {
+			if ( $type->id() === $chosen ) {
+				return $type;
+			}
+		}
+
+		/*
+		 * Not found among what is on offer, which covers three different
+		 * mistakes — another event's type, one that has been archived since the
+		 * page was loaded, and one that never existed. They get one message:
+		 * telling somebody which of those it was tells an attacker as well.
+		 */
+		return new \WP_Error(
+			'qevm_ticket_type_unavailable',
+			__( 'That kind of place is not available for this event.', 'quick-events-manager' ),
+			array(
+				'status' => 409,
+				'field'  => 'ticket_type_id',
+			)
+		);
 	}
 
 	/**
@@ -449,18 +531,37 @@ final class RegistrationService {
 	 * Capacity is per date on an event that has several: twenty places on a
 	 * weekly class means twenty each week, not twenty for the term.
 	 *
-	 * @param Event $event         Event to check.
-	 * @param int   $occurrence_id Date to count, or 0 for the event as a whole.
+	 * @param Event $event          Event to check.
+	 * @param int   $occurrence_id  Date to count, or 0 for the event as a whole.
+	 * @param int   $ticket_type_id Kind of place to count, or 0 for all of them.
 	 * @return int|null
 	 */
-	public static function places_remaining( Event $event, $occurrence_id = 0 ) {
+	public static function places_remaining( Event $event, $occurrence_id = 0, $ticket_type_id = 0 ) {
 		$capacity = (int) $event->meta( Meta::CAPACITY, 0 );
+		$ticket   = $ticket_type_id > 0
+			? \QuickEventsManager\Tickets\TicketTypeRepository::find( (int) $ticket_type_id )
+			: null;
 
-		if ( $capacity <= 0 ) {
-			return null;
+		$remaining = null;
+
+		if ( $capacity > 0 ) {
+			$remaining = max( 0, $capacity - Repository::count_taken( $event->id(), (int) $occurrence_id ) );
 		}
 
-		return max( 0, $capacity - Repository::count_taken( $event->id(), (int) $occurrence_id ) );
+		if ( null !== $ticket && $ticket->capacity() > 0 ) {
+			$of_this_kind = max(
+				0,
+				$ticket->capacity() - Repository::count_taken( $event->id(), (int) $occurrence_id, $ticket->id() )
+			);
+
+			/*
+			 * The tighter of the two, because a booking has to fit both. Four
+			 * member places left in a room with two seats free is two.
+			 */
+			$remaining = null === $remaining ? $of_this_kind : min( $remaining, $of_this_kind );
+		}
+
+		return $remaining;
 	}
 
 	/**
@@ -468,12 +569,13 @@ final class RegistrationService {
 	 *
 	 * @since 26.0
 	 *
-	 * @param Event $event         Event to check.
-	 * @param int   $occurrence_id Date to check, or 0 for the event as a whole.
+	 * @param Event $event          Event to check.
+	 * @param int   $occurrence_id  Date to check, or 0 for the event as a whole.
+	 * @param int   $ticket_type_id Kind of place to check, or 0 for all of them.
 	 * @return bool
 	 */
-	public static function is_full( Event $event, $occurrence_id = 0 ) {
-		$remaining = self::places_remaining( $event, (int) $occurrence_id );
+	public static function is_full( Event $event, $occurrence_id = 0, $ticket_type_id = 0 ) {
+		$remaining = self::places_remaining( $event, (int) $occurrence_id, (int) $ticket_type_id );
 
 		return null !== $remaining && $remaining <= 0;
 	}

@@ -195,6 +195,7 @@ CREATE TABLE {prefix}qevm_registrations (
     id               bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     event_id         bigint(20) unsigned NOT NULL,
     occurrence_id    bigint(20) unsigned NOT NULL DEFAULT 0,
+    ticket_type_id   bigint(20) unsigned NOT NULL DEFAULT 0,
     order_id         bigint(20) unsigned NOT NULL DEFAULT 0,
     user_id          bigint(20) unsigned NOT NULL DEFAULT 0,
     code             varchar(32)  NOT NULL,
@@ -210,8 +211,9 @@ CREATE TABLE {prefix}qevm_registrations (
     cancelled_at     datetime     DEFAULT NULL,
     PRIMARY KEY  (id),
     UNIQUE KEY   code (code),
-    KEY occ_status   (occurrence_id, status),
-    KEY event_status (event_id, status),
+    KEY occ_status    (occurrence_id, status),
+    KEY ticket_status (ticket_type_id, status),
+    KEY event_status  (event_id, status),
     KEY event_email  (event_id, booker_email),
     KEY user_id      (user_id),
     KEY order_id     (order_id)
@@ -242,6 +244,20 @@ moment. Neither is ever taken from the request — what was agreed to is whateve
 site was showing.
 
 `order_id` is reserved in stage 1, used in stage 9.
+
+**`ticket_type_id` is added in C7.2**, and it is on the booking rather than only on the
+people for one reason: **capacity is ranked here.** The insert-then-rank routine counts
+places on this table, and attendee rows are written afterwards precisely so that nothing
+in the ranking depends on them. Counting a ticket type's capacity from `attendees` would
+put the count on rows created after the decision it informs, which is the race this
+design exists to avoid. So a booking is for one kind of place; somebody wanting two kinds
+makes two bookings.
+
+A booking is ranked against **both** limits — the event's or date's capacity, and its
+ticket type's — and is confirmed only if it fits both. Twelve seats with four kept for
+members means the fifth member waits while the room is half empty, and the thirteenth
+person waits whatever ticket they hold. `KEY ticket_status` exists so the second count is
+an index lookup rather than a scan.
 
 ### `qevm_attendees` — stage 1 *(built in C1.5)*
 
@@ -403,22 +419,6 @@ paid are the same entity, which is what stops free events needing a separate cod
 `status = 'archived'`. Historical orders keep their own snapshot regardless (below),
 but the reference stays resolvable.
 
-### `qevm_orders` — stage 9
-
-```sql
-CREATE TABLE {prefix}qevm_orders (
-    id                bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-    order_number      varchar(32)  NOT NULL,
-    user_id           bigint(20) unsigned NOT NULL DEFAULT 0,
-    status            varchar(20)  NOT NULL DEFAULT 'pending',
-    currency          char(3)      NOT NULL,
-    subtotal_minor    bigint(20)   NOT NULL DEFAULT 0,
-    tax_minor         bigint(20)   NOT NULL DEFAULT 0,
-    total_minor       bigint(20)   NOT NULL DEFAULT 0,
-    refunded_minor    bigint(20)   NOT NULL DEFAULT 0,
-    billing_name      varchar(190) NOT NULL DEFAULT '',
-    billing_email     varchar(190) NOT NULL DEFAULT '',
-    gateway           varchar(40)  NOT NULL DEFAULT '',
 > **As built in C7.1.** The table is exactly as described above, including the four
 > columns nothing reads yet — `occurrence_id`, `currency`, `min_per_order` and
 > `max_per_order`. Writing the schema this document already specified, rather than the
@@ -436,6 +436,22 @@ CREATE TABLE {prefix}qevm_orders (
 > specified and left empty, meaning "the site's own". Stage 9 should either use it
 > deliberately or drop it.
 
+### `qevm_orders` — stage 9
+
+```sql
+CREATE TABLE {prefix}qevm_orders (
+    id                bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    order_number      varchar(32)  NOT NULL,
+    user_id           bigint(20) unsigned NOT NULL DEFAULT 0,
+    status            varchar(20)  NOT NULL DEFAULT 'pending',
+    currency          char(3)      NOT NULL,
+    subtotal_minor    bigint(20)   NOT NULL DEFAULT 0,
+    tax_minor         bigint(20)   NOT NULL DEFAULT 0,
+    total_minor       bigint(20)   NOT NULL DEFAULT 0,
+    refunded_minor    bigint(20)   NOT NULL DEFAULT 0,
+    billing_name      varchar(190) NOT NULL DEFAULT '',
+    billing_email     varchar(190) NOT NULL DEFAULT '',
+    gateway           varchar(40)  NOT NULL DEFAULT '',
     hold_expires_utc  datetime     DEFAULT NULL,
     created_at        datetime     NOT NULL,
     updated_at        datetime     NOT NULL,

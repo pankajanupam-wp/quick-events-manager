@@ -57,6 +57,7 @@ final class CapacityRaceTest extends TestCase {
 	protected function tearDown(): void {
 		if ( $this->event_id > 0 ) {
 			Repository::delete_for_event( $this->event_id );
+			\QuickEventsManager\Tickets\TicketTypeRepository::delete_for_event( $this->event_id );
 			wp_delete_post( $this->event_id, true );
 
 			$this->event_id = 0;
@@ -117,6 +118,80 @@ final class CapacityRaceTest extends TestCase {
 	}
 
 	/**
+	 * Eight processes going for one ticket type oversell nothing either.
+	 *
+	 * The gate's second criterion, and the reason C7.2 is worth its own chunk:
+	 * moving capacity from one column to two is exactly the kind of change that
+	 * quietly turns a race-proof count into a racy one. The room here is roomy —
+	 * ten places — so the only thing that can stop the eighth booking is the
+	 * ticket type's own capacity of one, counted the same way and under the same
+	 * concurrency.
+	 *
+	 * @return void
+	 */
+	public function test_eight_simultaneous_bookings_of_one_ticket_type_oversell_nothing() {
+		global $wpdb;
+
+		$this->event_id = $this->make_event( array( 'capacity' => 10 ) );
+
+		if ( ! \QuickEventsManager\Tickets\TicketTypeRepository::table_exists() ) {
+			( new \QuickEventsManager\Tickets\TicketsModule() )->activate();
+		}
+
+		update_option( QEVM_OPTION_MODULES, array( \QuickEventsManager\Registration\RegistrationModule::ID, \QuickEventsManager\Tickets\TicketsModule::ID ) );
+
+		$type_id = \QuickEventsManager\Tickets\TicketTypeRepository::insert(
+			$this->event_id,
+			array(
+				'name'     => 'One only',
+				'capacity' => 1,
+			)
+		);
+
+		$this->assertGreaterThan( 0, $type_id, 'the fixture created no ticket type' );
+
+		// The children are other connections; they can only see committed rows.
+		$this->commit_fixtures();
+
+		$results = $this->race( $this->event_id, $type_id );
+
+		$this->assertCount( self::RACERS, $results, 'every process should have reported' );
+
+		$confirmed  = array_keys( $results, RegistrationStatus::Confirmed->value, true );
+		$waitlisted = array_keys( $results, RegistrationStatus::Waitlisted->value, true );
+
+		$this->assertCount(
+			1,
+			$confirmed,
+			'one place of that type existed, so exactly one booking may hold it: ' . wp_json_encode( $results )
+		);
+		$this->assertCount(
+			self::RACERS - 1,
+			$waitlisted,
+			'everybody else belongs on the waiting list for that type: ' . wp_json_encode( $results )
+		);
+
+		$this->assertSame(
+			1,
+			Repository::count_taken( $this->event_id, 0, $type_id ),
+			'a ticket type with one place must never end up with two taken'
+		);
+
+		// The room itself had nine places to spare, and none of them were the reason.
+		$this->assertSame(
+			1,
+			(int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE event_id = %d AND status = %s',
+					Repository::table(),
+					$this->event_id,
+					RegistrationStatus::Confirmed->value
+				)
+			)
+		);
+	}
+
+	/**
 	 * Every racer still gets a booking, and every booking still gets its person.
 	 *
 	 * Losing the race is a waiting list entry, not an error page — and the
@@ -158,10 +233,11 @@ final class CapacityRaceTest extends TestCase {
 	/**
 	 * Start every process, hold them to one instant, and collect what they say.
 	 *
-	 * @param int $event_id Event to book.
+	 * @param int $event_id       Event to book.
+	 * @param int $ticket_type_id  Ticket type to book, or 0 when the event has none.
 	 * @return array<int, string> One status per process, in start order.
 	 */
-	private function race( $event_id ) {
+	private function race( $event_id, $ticket_type_id = 0 ) {
 		$script = __DIR__ . '/fixtures/book-one-place.php';
 		$start  = microtime( true ) + self::RUN_UP;
 
@@ -170,13 +246,14 @@ final class CapacityRaceTest extends TestCase {
 
 		for ( $i = 0; $i < self::RACERS; $i++ ) {
 			$command = sprintf(
-				'%s %s %s %d %s %s',
+				'%s %s %s %d %s %s %d',
 				escapeshellarg( PHP_BINARY ),
 				escapeshellarg( $script ),
 				escapeshellarg( ABSPATH ),
 				$event_id,
 				escapeshellarg( 'racer' . $i . '@example.com' ),
-				escapeshellarg( (string) $start )
+				escapeshellarg( (string) $start ),
+				(int) $ticket_type_id
 			);
 
 			/*

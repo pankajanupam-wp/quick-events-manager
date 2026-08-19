@@ -151,6 +151,7 @@ final class MigrationTest extends TestCase {
 				'id',
 				'event_id',
 				'occurrence_id',
+				'ticket_type_id',
 				'order_id',
 				'user_id',
 				'code',

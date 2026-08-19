@@ -110,7 +110,7 @@ final class Waitlist {
 		 * waiting for the 10th would give them a place they cannot use and take
 		 * it from the person who wanted that week.
 		 */
-		self::promote_for_event( $registration->event_id(), $registration->occurrence_id() );
+		self::promote_for_event( $registration->event_id(), $registration->occurrence_id(), $registration->ticket_type_id() );
 	}
 
 	/**
@@ -118,11 +118,12 @@ final class Waitlist {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $event_id      Event to fill.
-	 * @param int $occurrence_id Fill this date only, or 0 for the event as a whole.
+	 * @param int $event_id       Event to fill.
+	 * @param int $occurrence_id  Fill this date only, or 0 for the event as a whole.
+	 * @param int $ticket_type_id Fill this kind of place only, or 0 for all of them.
 	 * @return Registration[] Bookings promoted, in the order they were.
 	 */
-	public static function promote_for_event( $event_id, $occurrence_id = 0 ) {
+	public static function promote_for_event( $event_id, $occurrence_id = 0, $ticket_type_id = 0 ) {
 		if ( self::$promoting ) {
 			return array();
 		}
@@ -134,7 +135,17 @@ final class Waitlist {
 		}
 
 		$capacity = (int) $event->meta( \QuickEventsManager\Events\Meta::CAPACITY, 0 );
+		$ticket   = $ticket_type_id > 0
+			? \QuickEventsManager\Tickets\TicketTypeRepository::find( (int) $ticket_type_id )
+			: null;
 
+		/*
+		 * A place freed on a capped ticket type is worth filling even on an
+		 * event with no overall capacity — "twenty members, anybody else
+		 * welcome" is a real thing to want. So the early return below asks
+		 * whether *either* limit exists, not just the event's.
+		 */
+		$ticket_capacity = null !== $ticket ? $ticket->capacity() : 0;
 
 		/*
 		 * An uncapped event has no waiting list to work through: nothing is
@@ -143,11 +154,11 @@ final class Waitlist {
 		 * promotion storm — everybody waiting is promoted by the pass that
 		 * runs on the next cancellation, one at a time, each with an email.
 		 */
-		if ( $capacity <= 0 ) {
+		if ( $capacity <= 0 && $ticket_capacity <= 0 ) {
 			return array();
 		}
 
-		$candidates = self::candidates( $event_id, (int) $occurrence_id );
+		$candidates = self::candidates( $event_id, (int) $occurrence_id, (int) $ticket_type_id );
 
 		if ( empty( $candidates ) ) {
 			return array();
@@ -166,8 +177,20 @@ final class Waitlist {
 				 * Re-read on every iteration rather than decrementing a local
 				 * count. The authority on how many places are taken is the
 				 * table, and a promotion is a write to it.
+				 *
+				 * The tighter of the two limits wins: a booking that fits the
+				 * ticket type but not the room is not one that can be promoted.
 				 */
-				$free = $capacity - Repository::count_taken( $event_id, (int) $occurrence_id );
+				$free = $capacity > 0
+					? $capacity - Repository::count_taken( $event_id, (int) $occurrence_id )
+					: PHP_INT_MAX;
+
+				if ( $ticket_capacity > 0 ) {
+					$free = min(
+						$free,
+						$ticket_capacity - Repository::count_taken( $event_id, (int) $occurrence_id, (int) $ticket_type_id )
+					);
+				}
 
 				if ( $free <= 0 || $candidate->quantity() > $free ) {
 					// Strict FIFO: the queue stops here, it does not step over.
@@ -211,19 +234,21 @@ final class Waitlist {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $event_id      Event id.
-	 * @param int $occurrence_id Only those waiting for this date, or 0 for all.
+	 * @param int $event_id       Event id.
+	 * @param int $occurrence_id  Only those waiting for this date, or 0 for all.
+	 * @param int $ticket_type_id Only those waiting for this kind of place, or 0 for all.
 	 * @return Registration[]
 	 */
-	public static function candidates( $event_id, $occurrence_id = 0 ) {
+	public static function candidates( $event_id, $occurrence_id = 0, $ticket_type_id = 0 ) {
 		$candidates = Repository::for_event(
 			(int) $event_id,
 			array(
-				'status'        => RegistrationStatus::Waitlisted->value,
-				'occurrence_id' => (int) $occurrence_id,
-				'orderby'       => 'id',
-				'order'         => 'ASC',
-				'per_page'      => self::MAX_PROMOTIONS,
+				'status'         => RegistrationStatus::Waitlisted->value,
+				'occurrence_id'  => (int) $occurrence_id,
+				'ticket_type_id' => (int) $ticket_type_id,
+				'orderby'        => 'id',
+				'order'          => 'ASC',
+				'per_page'       => self::MAX_PROMOTIONS,
 			)
 		);
 
@@ -237,10 +262,11 @@ final class Waitlist {
 		 *
 		 * @since 26.0
 		 *
-		 * @param Registration[] $candidates    Waitlisted bookings, oldest first.
-		 * @param int            $event_id      Event id.
-		 * @param int            $occurrence_id Date being filled, or 0 for the event.
+		 * @param Registration[] $candidates     Waitlisted bookings, oldest first.
+		 * @param int            $event_id       Event id.
+		 * @param int            $occurrence_id  Date being filled, or 0 for the event.
+		 * @param int            $ticket_type_id Kind of place being filled, or 0 for all.
 		 */
-		return apply_filters( 'qevm_waitlist_candidates', $candidates, (int) $event_id, (int) $occurrence_id );
+		return apply_filters( 'qevm_waitlist_candidates', $candidates, (int) $event_id, (int) $occurrence_id, (int) $ticket_type_id );
 	}
 }

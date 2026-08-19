@@ -127,6 +127,7 @@ final class Repository {
 		$row = array(
 			'event_id'       => (int) $data['event_id'],
 			'occurrence_id'  => isset( $data['occurrence_id'] ) ? (int) $data['occurrence_id'] : 0,
+			'ticket_type_id' => isset( $data['ticket_type_id'] ) ? (int) $data['ticket_type_id'] : 0,
 			'user_id'        => isset( $data['user_id'] ) ? (int) $data['user_id'] : 0,
 			'code'           => self::generate_code(),
 			'status'         => RegistrationStatus::Pending->value,
@@ -160,7 +161,14 @@ final class Repository {
 
 		$id = (int) $wpdb->insert_id;
 
-		$status = self::resolve_status( $id, (int) $data['event_id'], $capacity, (int) $row['occurrence_id'] );
+		$status = self::resolve_status(
+			$id,
+			(int) $data['event_id'],
+			$capacity,
+			(int) $row['occurrence_id'],
+			(int) $row['ticket_type_id'],
+			isset( $data['ticket_capacity'] ) ? (int) $data['ticket_capacity'] : 0
+		);
 
 		/*
 		 * set_status(), not update_status(). This is a row learning its initial
@@ -195,56 +203,98 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $id            Registration id.
-	 * @param int $event_id      Event id.
-	 * @param int $capacity      Places available, 0 for unlimited.
-	 * @param int $occurrence_id Date booked, or 0.
+	 * @param int $id              Registration id.
+	 * @param int $event_id        Event id.
+	 * @param int $capacity        Places available on the event or date, 0 for unlimited.
+	 * @param int $occurrence_id   Date booked, or 0.
+	 * @param int $ticket_type_id  Kind of place booked, or 0.
+	 * @param int $ticket_capacity Places of that kind, 0 for as many as the event allows.
 	 * @return RegistrationStatus
 	 */
-	private static function resolve_status( $id, $event_id, $capacity, $occurrence_id = 0 ) {
-		global $wpdb;
+	private static function resolve_status( $id, $event_id, $capacity, $occurrence_id = 0, $ticket_type_id = 0, $ticket_capacity = 0 ) {
+		/*
+		 * Two limits, and a booking has to fit both. Twelve places on the
+		 * evening and four of them reserved for members means the fifth member
+		 * waits even though the room is half empty, and the thirteenth person
+		 * waits whichever ticket they hold.
+		 *
+		 * Each is the same question asked of a narrower set of rows, and each is
+		 * asked the same way it was before ticket types existed: count the
+		 * places taken by rows at or before this one. That is what preserves the
+		 * concurrency guarantee — the row's own auto-increment id still fixes
+		 * its position in every queue it is in, so two simultaneous bookings get
+		 * different ids and exactly one of them is position N of each.
+		 */
+		$limits = array();
 
-		if ( $capacity <= 0 ) {
-			return RegistrationStatus::Confirmed;
+		if ( $capacity > 0 ) {
+			$limits[] = $occurrence_id > 0
+				? array( 'occurrence_id', $occurrence_id, $capacity )
+				: array( 'event_id', $event_id, $capacity );
 		}
+
+		if ( $ticket_capacity > 0 && $ticket_type_id > 0 ) {
+			$limits[] = array( 'ticket_type_id', $ticket_type_id, $ticket_capacity );
+		}
+
+		foreach ( $limits as $limit ) {
+			list( $column, $value, $allowed ) = $limit;
+
+			if ( self::taken_up_to( $id, $column, (int) $value, $occurrence_id ) > $allowed ) {
+				return RegistrationStatus::Waitlisted;
+			}
+		}
+
+		return RegistrationStatus::Confirmed;
+	}
+
+	/**
+	 * Places taken by this row and everything queued before it.
+	 *
+	 * The one query the capacity decision rests on. `id <= %d` is the whole
+	 * mechanism: a row cannot change its own id, so its position in the queue is
+	 * fixed the moment it exists and no two rows share it.
+	 *
+	 * When a ticket type is being counted on an event that has dates, the count
+	 * is narrowed to the date as well — twenty member places a week is not
+	 * twenty member places a term.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int    $id            Registration id.
+	 * @param string $column        Column to scope by; one of a fixed set, never user input.
+	 * @param int    $value         Value it must equal.
+	 * @param int    $occurrence_id Narrow to this date as well, or 0.
+	 * @return int
+	 */
+	private static function taken_up_to( $id, $column, $value, $occurrence_id = 0 ) {
+		global $wpdb;
 
 		$statuses = RegistrationStatus::occupying_values();
 
-		if ( $occurrence_id > 0 ) {
-			// Two fixed placeholders: the occupying statuses are a constant, not user input.
-			$taken = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
-					 WHERE occurrence_id = %d AND id <= %d AND status IN ( %s, %s )',
-					self::table(),
-					$occurrence_id,
-					$id,
-					$statuses[0],
-					$statuses[1]
-				)
-			);
+		/*
+		 * $column is chosen from a literal list a few lines above and never
+		 * comes from a request. Interpolating an identifier is the one thing
+		 * prepare() cannot do for a column name, and the alternative — three
+		 * near-identical queries — is how one of them drifts.
+		 */
+		$narrow = 'ticket_type_id' === $column && $occurrence_id > 0 ? ' AND occurrence_id = %d' : '';
 
-			return $taken <= $capacity
-				? RegistrationStatus::Confirmed
-				: RegistrationStatus::Waitlisted;
+		$params = array( self::table(), $value, $id, $statuses[0], $statuses[1] );
+
+		if ( '' !== $narrow ) {
+			$params[] = $occurrence_id;
 		}
 
-		// Two fixed placeholders: the occupying statuses are a constant, not user input.
-		$taken = (int) $wpdb->get_var(
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $column and $narrow are literals chosen above; every value goes through prepare(), in the array form the sniff cannot count.
+		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
-				 WHERE event_id = %d AND id <= %d AND status IN ( %s, %s )',
-				self::table(),
-				$event_id,
-				$id,
-				$statuses[0],
-				$statuses[1]
+				"SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+				 WHERE {$column} = %d AND id <= %d AND status IN ( %s, %s ){$narrow}",
+				$params
 			)
 		);
-
-		return $taken <= $capacity
-			? RegistrationStatus::Confirmed
-			: RegistrationStatus::Waitlisted;
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 	}
 
 	/**
@@ -252,19 +302,48 @@ final class Repository {
 	 *
 	 * @since 26.0
 	 *
-	 * @param int $event_id      Event id.
-	 * @param int $occurrence_id Count only this date, or 0 for the whole event.
+	 * @param int $event_id       Event id.
+	 * @param int $occurrence_id  Count only this date, or 0 for the whole event.
+	 * @param int $ticket_type_id Count only this kind of place, or 0 for all of them.
 	 * @return int
 	 */
-	public static function count_taken( $event_id, $occurrence_id = 0 ) {
+	public static function count_taken( $event_id, $occurrence_id = 0, $ticket_type_id = 0 ) {
 		global $wpdb;
 
 		if ( ! self::table_exists() ) {
 			return 0;
 		}
 
-		$statuses      = RegistrationStatus::occupying_values();
-		$occurrence_id = (int) $occurrence_id;
+		$statuses       = RegistrationStatus::occupying_values();
+		$occurrence_id  = (int) $occurrence_id;
+		$ticket_type_id = (int) $ticket_type_id;
+
+		if ( $ticket_type_id > 0 ) {
+			if ( $occurrence_id > 0 ) {
+				return (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+						 WHERE ticket_type_id = %d AND occurrence_id = %d AND status IN ( %s, %s )',
+						self::table(),
+						$ticket_type_id,
+						$occurrence_id,
+						$statuses[0],
+						$statuses[1]
+					)
+				);
+			}
+
+			return (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT COALESCE( SUM( quantity ), 0 ) FROM %i
+					 WHERE ticket_type_id = %d AND status IN ( %s, %s )',
+					self::table(),
+					$ticket_type_id,
+					$statuses[0],
+					$statuses[1]
+				)
+			);
+		}
 
 		if ( $occurrence_id > 0 ) {
 			return (int) $wpdb->get_var(
@@ -748,6 +827,13 @@ final class Repository {
 		if ( $occurrence_id > 0 ) {
 			$where[]  = 'occurrence_id = %d';
 			$params[] = $occurrence_id;
+		}
+
+		$ticket_type_id = isset( $args['ticket_type_id'] ) ? (int) $args['ticket_type_id'] : 0;
+
+		if ( $ticket_type_id > 0 ) {
+			$where[]  = 'ticket_type_id = %d';
+			$params[] = $ticket_type_id;
 		}
 
 		$search = isset( $args['search'] ) ? (string) $args['search'] : '';

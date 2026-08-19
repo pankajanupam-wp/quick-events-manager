@@ -7,7 +7,7 @@
  * inserts — and then waits for a shared wall-clock instant before submitting.
  * That is what makes the race a race rather than eight bookings in a queue.
  *
- * Usage: php book-one-place.php <abspath> <event-id> <email> <start-unix-time>
+ * Usage: php book-one-place.php <abspath> <event-id> <email> <start-unix-time> [ticket-type-id]
  *
  * Prints one line: the resulting status, or `error:<code>`.
  *
@@ -24,6 +24,7 @@ $qevm_abspath = rtrim( (string) ( $argv[1] ?? '' ), '/\\' ) . '/';
 $qevm_event   = (int) ( $argv[2] ?? 0 );
 $qevm_email   = (string) ( $argv[3] ?? '' );
 $qevm_start   = (float) ( $argv[4] ?? 0 );
+$qevm_ticket  = (int) ( $argv[5] ?? 0 );
 
 if ( ! file_exists( $qevm_abspath . 'wp-load.php' ) || $qevm_event <= 0 ) {
 	fwrite( STDERR, "usage: book-one-place.php <abspath> <event-id> <email> <start-time>\n" );
@@ -59,10 +60,11 @@ if ( $qevm_wait > 0 ) {
 $qevm_result = ( new QuickEventsManager\Registration\RegistrationService() )->create(
 	$qevm_event,
 	array(
-		'name'     => 'Racer ' . $qevm_email,
-		'email'    => $qevm_email,
-		'quantity' => 1,
-		'consent'  => true,
+		'name'           => 'Racer ' . $qevm_email,
+		'email'          => $qevm_email,
+		'quantity'       => 1,
+		'consent'        => true,
+		'ticket_type_id' => $qevm_ticket,
 	)
 );
 

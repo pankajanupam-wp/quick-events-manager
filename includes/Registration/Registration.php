@@ -88,6 +88,22 @@ final class Registration {
 	}
 
 	/**
+	 * The kind of place booked, or 0 when the event offers only one.
+	 *
+	 * On the booking rather than only on the people, because capacity is ranked
+	 * here — see Repository::insert_with_capacity(). Attendee rows carry the
+	 * same value so that a roster and a check-in list can say which ticket
+	 * somebody holds without joining back.
+	 *
+	 * @since 26.0
+	 *
+	 * @return int
+	 */
+	public function ticket_type_id() {
+		return (int) $this->get( 'ticket_type_id', 0 );
+	}
+
+	/**
 	 * Public reference code.
 	 *
 	 * @since 26.0

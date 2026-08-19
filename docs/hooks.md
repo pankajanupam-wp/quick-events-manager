@@ -390,6 +390,12 @@ add_filter( 'qevm_waitlist_candidates', function ( $candidates ) {
 | --- | --- | --- |
 | `$candidates` | `QuickEventsManager\Registration\Registration[]` | Waitlisted bookings, oldest first |
 | `$event_id` | `int` | Event id |
+| `$occurrence_id` | `int` | The date being filled, or `0` for an event with only one |
+| `$ticket_type_id` | `int` | The kind of place being filled, or `0` when the event offers only one |
+
+A queue belongs to a date **and** to a ticket type. A cancelled member ticket on the 3rd of June frees a member place on the 3rd of June, and nothing else — the guest queue and the following week are separate lines.
+
+On a repeating event the queue belongs to a date. A cancellation on the 3rd of June frees a place on the 3rd of June, so only the people waiting for that date are considered — promoting somebody waiting for the 10th would hand them a place they cannot use and take it from whoever wanted that week.
 
 ### `qevm_cancellation_link_expiry` (filter)
 
@@ -614,9 +620,6 @@ add_action(
 
 Restoring is the undo for all of them, and nothing stores an "original" to restore from: clearing `is_exception` hands the row back to the rule, and the regeneration rewrites it from the slot that was on the row all along.
 
-Fires on every save of an event, including saves that changed nothing — in which case
-every count is zero except `unchanged`. It also fires during
-`wp qevm occurrence rebuild`.
 ### `qevm_series_split` (action)
 
 Fires after "this and following" has split a series into two events. The dates from the split point onward have already moved to the new event, keeping their ids.
@@ -642,3 +645,6 @@ add_action(
 
 Bookings with no occurrence on them are deliberately left alone. They were made for the series as it stood, and moving them would hand somebody's place to a half of the series they never chose.
 
+Fires on every save of an event, including saves that changed nothing — in which case
+every count is zero except `unchanged`. It also fires during
+`wp qevm occurrence rebuild`.
