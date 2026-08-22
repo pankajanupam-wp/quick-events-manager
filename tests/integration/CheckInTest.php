@@ -344,6 +344,122 @@ final class CheckInTest extends TestCase {
 	}
 
 	/**
+	 * A confirmation carries a QR code for every ticket on the booking.
+	 *
+	 * @return void
+	 */
+	public function test_a_confirmation_carries_a_ticket_for_each_person() {
+		$event_id = $this->make_event();
+		$booking  = $this->book(
+			$event_id,
+			array(
+				'quantity' => 3,
+				'email'    => 'party@example.test',
+			)
+		);
+
+		$attendees = AttendeeRepository::for_registration( $booking->id() );
+
+		$this->assertCount( 3, $attendees, 'the fixture booked the wrong number of people' );
+
+		$files = $this->attachments_for( $booking->id(), 'attendee_confirmation' );
+
+		$this->assertCount( 3, $files, 'a booking for three did not carry three tickets' );
+
+		foreach ( $attendees as $index => $attendee ) {
+			$this->assertSame( $attendee->ticket_code() . '.svg', $files[ $index ]['name'] );
+			$this->assertSame( 'image/svg+xml', $files[ $index ]['type'] );
+			$this->assertStringContainsString( '<svg', $files[ $index ]['content'] );
+			$this->assertStringContainsString( $attendee->ticket_code(), $files[ $index ]['content'] );
+		}
+	}
+
+	/**
+	 * A waiting-list notice carries none, because there is nothing to admit.
+	 *
+	 * @return void
+	 */
+	public function test_a_waitlist_notice_carries_no_ticket() {
+		$event_id = $this->make_event( array( 'capacity' => 1 ) );
+
+		$this->book( $event_id, array( 'email' => 'holder@example.test' ) );
+
+		$waiting = $this->book( $event_id, array( 'email' => 'waiting@example.test' ) );
+
+		$this->assertSame( RegistrationStatus::Waitlisted, $waiting->status() );
+		$this->assertSame( array(), $this->attachments_for( $waiting->id(), 'attendee_waitlisted' ) );
+
+		// And the organiser's copy is not somebody's ticket either.
+		$this->assertSame( array(), $this->attachments_for( $waiting->id(), 'organiser_notification' ) );
+	}
+
+	/**
+	 * With check-in switched off, confirmations carry nothing.
+	 *
+	 * @return void
+	 */
+	public function test_switching_check_in_off_stops_the_tickets() {
+		$event_id = $this->make_event();
+		$booking  = $this->book( $event_id, array( 'email' => 'plain@example.test' ) );
+
+		$this->assertNotSame( array(), $this->attachments_for( $booking->id(), 'attendee_confirmation' ) );
+
+		remove_filter( 'qevm_email_attachments', array( CheckInModule::class, 'attach_tickets' ), 10 );
+
+		$this->assertSame(
+			array(),
+			$this->attachments_for( $booking->id(), 'attendee_confirmation' ),
+			'the QR is attached by something other than the check-in module'
+		);
+	}
+
+	/**
+	 * The booking a confirmation is for reaches the queue.
+	 *
+	 * Without this the attachment filter has an event and a recipient and no
+	 * way to tell which of that address's bookings the message is about.
+	 *
+	 * @return void
+	 */
+	public function test_a_queued_confirmation_names_its_booking() {
+		$event_id = $this->make_event();
+		$booking  = $this->book( $event_id, array( 'email' => 'named@example.test' ) );
+
+		global $wpdb;
+
+		$meta = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT meta FROM %i WHERE recipient = %s ORDER BY id DESC LIMIT 1',
+				\QuickEventsManager\Email\Queue::table(),
+				'named@example.test'
+			)
+		);
+
+		$decoded = json_decode( (string) $meta, true );
+
+		$this->assertIsArray( $decoded, 'the queue row carries no meta at all' );
+		$this->assertSame( $booking->id(), (int) $decoded['registration_id'] );
+	}
+
+	/**
+	 * What the attachment filter produces for one booking.
+	 *
+	 * @param int    $registration_id Booking id.
+	 * @param string $template        Which message.
+	 * @return array<int, array<string, string>>
+	 */
+	private function attachments_for( $registration_id, $template ) {
+		return (array) apply_filters(
+			'qevm_email_attachments',
+			array(),
+			array(
+				'template' => $template,
+				'meta'     => (string) wp_json_encode( array( 'registration_id' => $registration_id ) ),
+			)
+		);
+	}
+
+	/**
 	 * One booked attendee on a plain event.
 	 *
 	 * @return \QuickEventsManager\Registration\Attendee

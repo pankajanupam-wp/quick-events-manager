@@ -115,12 +115,32 @@ final class Queue {
 				'headers'       => isset( $message['headers'] ) ? (string) wp_json_encode( (array) $message['headers'] ) : null,
 				'context_type'  => isset( $message['context_type'] ) ? (string) $message['context_type'] : '',
 				'context_id'    => isset( $message['context_id'] ) ? (int) $message['context_id'] : 0,
+
+				/*
+				 * Whatever else the sender knows about this message, as JSON.
+				 *
+				 * `context_type` and `context_id` are how a message is found
+				 * again — everything for an event, everything for a broadcast —
+				 * and they are deliberately one pair, because withdrawing a
+				 * broadcast has to be able to say which rows it means. This is
+				 * the other thing: detail a listener needs at send time and
+				 * nothing needs to search by. A confirmation carries the id of
+				 * the booking it is for, which is what lets the check-in module
+				 * attach that booking's tickets without registration knowing
+				 * anything about QR codes.
+				 */
+				'meta'          => isset( $message['meta'] ) && array() !== (array) $message['meta']
+					? (string) wp_json_encode( (array) $message['meta'] )
+					: null,
 				'status'        => EmailStatus::Pending->value,
 				'attempts'      => 0,
 				'scheduled_for' => isset( $message['scheduled_for'] ) ? (string) $message['scheduled_for'] : $now,
 				'created_at'    => $now,
 			),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s' )
+			// One per column above, in order. A short list here does not error:
+			// it shifts every type after the gap, which is how a string ends up
+			// bound as a number.
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s' )
 		);
 
 		$id = $inserted ? (int) $wpdb->insert_id : 0;
@@ -482,6 +502,7 @@ final class Queue {
 			headers text DEFAULT NULL,
 			context_type varchar(40) NOT NULL DEFAULT '',
 			context_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			meta longtext DEFAULT NULL,
 			status varchar(20) NOT NULL DEFAULT 'pending',
 			attempts tinyint(3) unsigned NOT NULL DEFAULT 0,
 			last_error text DEFAULT NULL,

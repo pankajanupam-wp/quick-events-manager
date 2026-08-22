@@ -356,6 +356,7 @@ CREATE TABLE {prefix}qevm_email_queue (
     headers        text         DEFAULT NULL,
     context_type   varchar(40)  NOT NULL DEFAULT '',
     context_id     bigint(20) unsigned NOT NULL DEFAULT 0,
+    meta           longtext     DEFAULT NULL,
     status         varchar(20)  NOT NULL DEFAULT 'pending',
     attempts       tinyint(3) unsigned NOT NULL DEFAULT 0,
     last_error     text         DEFAULT NULL,
@@ -384,6 +385,14 @@ The claim also pushes `scheduled_for` forward, which is what makes an abandoned
 message recoverable: a worker that dies leaves its row in `sending`, and after the
 timeout the row is due again. `attempts` was already incremented by the claim, so a
 row that keeps killing workers still runs out of attempts rather than looping.
+
+**`meta` is added in C8.3**, and it is not a second context. `context_type` and
+`context_id` are how a message is *found again* — every message for an event, every
+message in a broadcast — which is what withdrawing an unsent broadcast searches on, and
+they stay one pair for that reason. `meta` is detail a listener needs when the message is
+finally sent and nothing needs to search by: a confirmation carries the id of the booking
+it is for, which is what lets the check-in module attach that booking's tickets without
+the registration module knowing that QR codes exist.
 
 ### `qevm_ticket_types` — stage 7 *(built in C7.1)*
 
@@ -704,6 +713,13 @@ destroy data.
 | **Deactivate** | Nothing is removed. Cron events are unscheduled. Rewrite rules flushed. |
 | **Module switched off** | Nothing is removed. The table stays. Switching it back on finds the data intact. |
 | **Uninstall** | Removes plugin data **only if** the site owner ticked *Delete all data on uninstall*. Default is off. |
+
+> **Not true today, and it is the most serious contradiction in this document.**
+> `uninstall.php` consults no option at all: it drops every table unconditionally, and no
+> such setting exists. A site owner who removes the plugin to try something else loses
+> every registration, attendee and answer with no warning and no way to have asked
+> otherwise. Found by an audit of the plan against the code in stage 7. Owned by **C10.11**
+> — the setting, the guard, and the tables stages 8 and 9 add to that list.
 
 The default is off because deleting an attendee list is not recoverable, and a plugin
 that does it silently on an accidental delete has done something unforgivable.

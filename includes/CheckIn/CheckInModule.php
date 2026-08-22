@@ -101,6 +101,71 @@ final class CheckInModule implements Module {
 	public function register() {
 		add_action( 'qevm_attendees_deleted', array( __CLASS__, 'forget_attendees' ), 10, 1 );
 
+		/*
+		 * The QR goes on the confirmation from here, not from the module that
+		 * sends it. Registration writes the message and knows nothing about
+		 * codes at a door; this listens for the message going out and staples
+		 * the tickets to it. Switch check-in off and confirmations simply stop
+		 * carrying them — no setting, no branch in somebody else's code.
+		 */
+		add_filter( 'qevm_email_attachments', array( __CLASS__, 'attach_tickets' ), 10, 2 );
+	}
+
+	/**
+	 * Put a QR code for each ticket on a confirmation.
+	 *
+	 * Answers `qevm_email_attachments`. One file per person, named by the
+	 * ticket code, because a booking for three is three people arriving
+	 * separately and holding up three different phones.
+	 *
+	 * SVG rather than PNG: a QR code is a grid of squares, an SVG of it is
+	 * under a kilobyte and scales to whatever the screen or the printer is,
+	 * and rendering a PNG would mean depending on GD or Imagick being present
+	 * on the host — which is exactly the kind of assumption that fails on
+	 * somebody else's server rather than on ours.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $files Files attached so far.
+	 * @param mixed $row   Queue row.
+	 * @return array<int, array<string, string>>
+	 */
+	public static function attach_tickets( $files, $row ) {
+		$files = is_array( $files ) ? $files : array();
+		$row   = is_array( $row ) ? $row : array();
+
+		/*
+		 * Only the messages that mean somebody has a place. A waitlist notice
+		 * carries no ticket because there is nothing to admit yet, and the
+		 * organiser's notification is not somebody's ticket at all.
+		 */
+		$wants = array( 'attendee_confirmation', 'waitlist_promotion' );
+
+		if ( ! in_array( (string) ( $row['template'] ?? '' ), $wants, true ) ) {
+			return $files;
+		}
+
+		$meta = json_decode( (string) ( $row['meta'] ?? '' ), true );
+
+		if ( ! is_array( $meta ) || empty( $meta['registration_id'] ) ) {
+			return $files;
+		}
+
+		foreach ( \QuickEventsManager\Registration\AttendeeRepository::for_registration( (int) $meta['registration_id'] ) as $attendee ) {
+			$svg = Qr::svg( $attendee->ticket_code() );
+
+			if ( '' === $svg ) {
+				continue;
+			}
+
+			$files[] = array(
+				'name'    => sanitize_file_name( $attendee->ticket_code() . '.svg' ),
+				'content' => $svg,
+				'type'    => 'image/svg+xml',
+			);
+		}
+
+		return $files;
 	}
 
 	/**

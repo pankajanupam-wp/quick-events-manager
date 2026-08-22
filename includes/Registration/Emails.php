@@ -107,7 +107,7 @@ final class Emails {
 			$event
 		);
 
-		self::dispatch( $email, $event, 'waitlist_promotion' );
+		self::dispatch( $email, $event, 'waitlist_promotion', $registration );
 	}
 
 	/**
@@ -198,7 +198,7 @@ final class Emails {
 		 * calendar entry for a seat it did not have. The test that says so is
 		 * the reason it did not ship.
 		 */
-		self::dispatch( $email, $event, $waitlisted ? 'attendee_waitlisted' : 'attendee_confirmation' );
+		self::dispatch( $email, $event, $waitlisted ? 'attendee_waitlisted' : 'attendee_confirmation', $registration );
 	}
 
 	/**
@@ -280,14 +280,15 @@ final class Emails {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array<string, mixed> $email    Keys: to, subject, body, headers.
-	 * @param Event|null           $event    Event the message is about, if any.
-	 * @param string               $template Which message this is, so the right
-	 *                                       attachment can be produced at send
-	 *                                       time.
+	 * @param array<string, mixed> $email        Keys: to, subject, body, headers.
+	 * @param Event|null           $event        Event the message is about, if any.
+	 * @param string               $template     Which message this is, so the right
+	 *                                           attachment can be produced at send
+	 *                                           time.
+	 * @param Registration|null    $registration Booking the message is about, if any.
 	 * @return void
 	 */
-	private static function dispatch( array $email, ?Event $event = null, $template = '' ) {
+	private static function dispatch( array $email, ?Event $event = null, $template = '', ?Registration $registration = null ) {
 		if ( empty( $email['to'] ) ) {
 			return;
 		}
@@ -327,6 +328,15 @@ final class Emails {
 				'headers'      => isset( $email['headers'] ) ? (array) $email['headers'] : array(),
 				'context_type' => null !== $event ? 'event' : '',
 				'context_id'   => null !== $event ? $event->id() : 0,
+
+				/*
+				 * Which booking, when there is one. The context pair says which
+				 * event and is what a withdrawal searches on; this is detail for
+				 * whoever is listening when the message is finally sent. Nothing
+				 * here knows what will use it — the check-in module attaches
+				 * that booking's tickets, and registration is not told.
+				 */
+				'meta'         => null !== $registration ? array( 'registration_id' => $registration->id() ) : array(),
 			)
 		);
 
