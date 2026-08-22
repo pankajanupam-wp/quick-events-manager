@@ -290,6 +290,64 @@ final class RegistrationService {
 	}
 
 	/**
+	 * The ticket types an event offers, or none.
+	 *
+	 * The single place this module asks. Nothing here names a class from the
+	 * ticketing module: with that module off the filter is unhooked, the answer
+	 * is an empty list, and every question about types answers itself.
+	 *
+	 * @since 26.0
+	 *
+	 * The return is typed `mixed[]` rather than `object[]` on purpose. Whatever
+	 * a filter hands back is whatever a filter hands back — declaring the type
+	 * this module hopes for would let static analysis call the checks below
+	 * redundant and invite somebody to delete them, at which point one badly
+	 * behaved plugin turns a booking into a fatal error.
+	 *
+	 * @param int  $event_id      Event id.
+	 * @param bool $sellable_only Leave out types the organiser has withdrawn.
+	 * @return array<int, mixed>
+	 */
+	private static function ticket_types_for( $event_id, $sellable_only = false ) {
+		$types = apply_filters( 'qevm_event_ticket_types', array(), (int) $event_id );
+		$types = is_array( $types ) ? $types : array();
+
+		if ( ! $sellable_only ) {
+			return $types;
+		}
+
+		return array_values(
+			array_filter(
+				$types,
+				static fn( $type ) => is_object( $type ) && method_exists( $type, 'is_sellable' ) && $type->is_sellable()
+			)
+		);
+	}
+
+	/**
+	 * One of an event's ticket types, by id.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id       Event id.
+	 * @param int $ticket_type_id Type id.
+	 * @return mixed The type, or null.
+	 */
+	private static function ticket_type( $event_id, $ticket_type_id ) {
+		if ( $ticket_type_id <= 0 ) {
+			return null;
+		}
+
+		foreach ( self::ticket_types_for( $event_id ) as $type ) {
+			if ( is_object( $type ) && method_exists( $type, 'id' ) && $type->id() === $ticket_type_id ) {
+				return $type;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Which kind of place this booking is for.
 	 *
 	 * Null when the event offers no types, which is every event until somebody
@@ -298,11 +356,16 @@ final class RegistrationService {
 	 * several: the choice is real, and guessing it on somebody's behalf is how a
 	 * concession ticket becomes a full-price one.
 	 *
-	 * Asked of the ticket types table rather than of the ticketing module.
-	 * Registration and ticketing are both modules, and ADR-0009 is that modules
-	 * depend on the domain, not on each other — so the question is "does this
-	 * event have types", which the table answers whether or not the module is
-	 * switched on today.
+	 * A type outside its sale window is refused here rather than filtered out of
+	 * the list above, because the two failures need different words. The form
+	 * shows what is on sale; this is the check that a submission arriving a
+	 * minute after the window shut does not slip through.
+	 *
+	 * Asked through `qevm_event_ticket_types`, which the ticketing module answers
+	 * only while it is switched on. Reading its table directly was the earlier
+	 * shape and it meant an organiser who tried ticket types and switched them
+	 * off was left with a form still demanding a choice and an editor with no
+	 * box to remove them in.
 	 *
 	 * @since 26.0
 	 *
@@ -311,7 +374,7 @@ final class RegistrationService {
 	 * @return \QuickEventsManager\Tickets\TicketType|null|\WP_Error
 	 */
 	private static function resolve_ticket_type( Event $event, array $input ) {
-		$offered = \QuickEventsManager\Tickets\TicketTypeRepository::for_event( $event->id(), true );
+		$offered = self::ticket_types_for( $event->id(), true );
 
 		if ( array() === $offered ) {
 			return null;
@@ -331,9 +394,40 @@ final class RegistrationService {
 		}
 
 		foreach ( $offered as $type ) {
-			if ( $type->id() === $chosen ) {
-				return $type;
+			if ( $type->id() !== $chosen ) {
+				continue;
 			}
+
+			/*
+			 * On offer, but not yet or not any more. Said separately from "not
+			 * available", because somebody who chose a type a minute before its
+			 * window closed deserves to be told which of those happened — and
+			 * the two need different things from them: come back later, or pick
+			 * something else.
+			 */
+			if ( $type->opens_after() ) {
+				return new \WP_Error(
+					'qevm_ticket_type_not_yet',
+					__( 'That kind of place is not on sale yet.', 'quick-events-manager' ),
+					array(
+						'status' => 409,
+						'field'  => 'ticket_type_id',
+					)
+				);
+			}
+
+			if ( $type->closed_by() ) {
+				return new \WP_Error(
+					'qevm_ticket_type_closed',
+					__( 'That kind of place is no longer on sale.', 'quick-events-manager' ),
+					array(
+						'status' => 409,
+						'field'  => 'ticket_type_id',
+					)
+				);
+			}
+
+			return $type;
 		}
 
 		/*
@@ -538,9 +632,7 @@ final class RegistrationService {
 	 */
 	public static function places_remaining( Event $event, $occurrence_id = 0, $ticket_type_id = 0 ) {
 		$capacity = (int) $event->meta( Meta::CAPACITY, 0 );
-		$ticket   = $ticket_type_id > 0
-			? \QuickEventsManager\Tickets\TicketTypeRepository::find( (int) $ticket_type_id )
-			: null;
+		$ticket   = self::ticket_type( $event->id(), (int) $ticket_type_id );
 
 		$remaining = null;
 

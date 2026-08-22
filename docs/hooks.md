@@ -217,6 +217,33 @@ add_filter( 'qevm_calendar_default_view', function () {
 | --- | --- | --- |
 | `$view` | `string` | `grid` or `list` |
 
+## Tickets
+
+### `qevm_event_ticket_types` (filter)
+
+The ticket types an event offers. The ticketing module answers it while it is switched on, and nothing answers it when it is off — which is how every other part of the plugin knows whether an event has kinds of place at all.
+
+```php
+add_filter(
+	'qevm_event_ticket_types',
+	function ( $types, $event_id ) {
+		// Add your own, or reorder what is there.
+		return $types;
+	},
+	10,
+	2
+);
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$types` | `array` | Types supplied so far; empty by default |
+| `$event_id` | `int` | The event being asked about |
+
+Every type is returned, in display order, including withdrawn ones — a caller that wants only what is on sale asks the types themselves, because "withdrawn" and "outside its sale window" are different facts that need different words in front of somebody.
+
+**This exists so that registration does not read the ticketing module's table.** Modules depend on the domain and not on each other ([ADR-0009](adr/0009-module-architecture.md)); the earlier shape had the registration code querying that table directly, which also meant switching ticketing off left the public form demanding a choice it no longer offered any way to make.
+
 ## Registration questions
 
 ### `qevm_registration_fields` (filter)

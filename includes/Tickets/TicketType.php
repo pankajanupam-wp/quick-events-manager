@@ -207,9 +207,6 @@ final class TicketType {
 	/**
 	 * When the sale opens, or '' for straight away.
 	 *
-	 * Stored now and read in C7.4. The column costs nothing today and saves
-	 * altering a table that by then holds a row for every type ever sold.
-	 *
 	 * @since 26.0
 	 */
 	public function sale_starts_utc(): string {
@@ -227,6 +224,52 @@ final class TicketType {
 		$value = $this->get( 'sale_ends_utc', '' );
 
 		return is_string( $value ) ? $value : '';
+	}
+
+	/**
+	 * Whether this type's sale has not started yet.
+	 *
+	 * There is deliberately no `is_on_sale()` beside this and `closed_by()`. It
+	 * was written, and sabotaging it to return true broke nothing — because
+	 * every caller needs to know *which* of the two is false. The form says
+	 * "on sale from Monday" for one and drops the type entirely for the other;
+	 * the service returns a different error for each, because "not yet" and "no
+	 * longer" need different things from the person reading them. A combined
+	 * answer would have to be taken apart again at every call site.
+	 *
+	 * **An early bird is not a separate kind of thing.** It is a type whose
+	 * window closes early and whose price is lower, which is why neither the
+	 * schema nor the code has the words in it anywhere.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $now_utc Comparison point, `Y-m-d H:i:s` UTC. Defaults to now.
+	 */
+	public function opens_after( string $now_utc = '' ): bool {
+		$starts = $this->sale_starts_utc();
+
+		if ( '' === $starts ) {
+			return false;
+		}
+
+		return ( '' === $now_utc ? gmdate( 'Y-m-d H:i:s' ) : $now_utc ) < $starts;
+	}
+
+	/**
+	 * Whether this type's sale has finished.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $now_utc Comparison point, `Y-m-d H:i:s` UTC. Defaults to now.
+	 */
+	public function closed_by( string $now_utc = '' ): bool {
+		$ends = $this->sale_ends_utc();
+
+		if ( '' === $ends ) {
+			return false;
+		}
+
+		return ( '' === $now_utc ? gmdate( 'Y-m-d H:i:s' ) : $now_utc ) > $ends;
 	}
 
 	/**

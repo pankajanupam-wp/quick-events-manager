@@ -1223,8 +1223,10 @@ to move per-type first.
 | --- | --- | :-: | --- |
 | **C7.1** | `qevm_ticket_types` table + repository + admin UI | L | **Done.** Free types are `price_minor = 0` — same entity, no separate path. Ticketing is a module; the schema is the one docs/database.md already specified |
 | **C7.2** | Per-type capacity, preserving insert-then-rank | L | **Done.** Two limits, both ranked the same way; the eight-process race runs per type and passes |
-| **C7.3** | Ticket selection on the registration form; attendee gains `ticket_type_id` | L | |
-| **C7.4** | Sale windows + early bird | M | |
+| **C7.3** | Ticket selection on the registration form | M | **Done.** The second half of this row — "attendee gains `ticket_type_id`" — had already landed in C7.2; see below |
+| **C7.4** | Sale windows + early bird | M | **Done.** Early bird is a window and a price, not an entity. Closed a C7.1 gap: the box had no price input |
+| **C7.5** | Show the date and the ticket type on the attendee screen and the CSV | M | **Done.** Taken before C7.4 so it did not contend with a review running over the ticketing files |
+| **C7.6** | Fix the defects a review of stage 7 found | M | **Done.** Six fixed, two recorded and not fixed; see below |
 
 > **C7.1 — ticketing had to be a module, which the definition again did not say.** Same
 > as C6.3: an install that lists a few meetups should not grow a ticketing screen, and the
@@ -1283,9 +1285,156 @@ to move per-type first.
 > without documenting it failed the suite — which is exactly what that test is for, and
 > the reason C7.1's schema divergence was worth going back for.
 
+> **C7.3 — half of this row was already built, and the other half is smaller than L.**
+> "Attendee gains `ticket_type_id`" landed in C7.2, because the ranking needed the type on
+> the *registration* and the attendee rows inherit it from the same call. What was left is
+> the form, which is an M. The row is corrected rather than left reading as though a
+> chunk's worth of work happened here.
+>
+> **How many places are left is shown only when the event has one date.** A type's
+> remaining places depend on which date is being booked, and on a series no date has been
+> chosen when the form is built — "four left" beside a type on a twelve-week course would
+> be true of at most one week and wrong about eleven. The booking is still ranked per date
+> and per type; this is only about what can honestly be printed before the choice is made.
+>
+> **No prices on the form, deliberately.** Formatting money has one home and it is C9.2's
+> `Money` value object. A raw integer of minor units in a template is a visible bug, and
+> half a formatter here would be the second home. **C9.2 must add prices to this picker** —
+> noted there as well as here, because a dependency recorded in only one direction is one
+> nobody reads.
+>
+> **Two gaps this chunk found in the plan itself.**
+>
+> The first is C7.5 above: **an organiser cannot see which date or which kind of place a
+> booking is for.** Both dimensions now exist in the data and neither appears on the
+> attendee screen or in the CSV, so a list of sixty people across twelve weeks and three
+> ticket types reads as sixty undifferentiated rows. C6.6 introduced the first dimension
+> and C7.2 the second; neither chunk owned the screen, and no chunk in stages 6 to 10 does
+> either. It is a real omission rather than a deferral, and it is now a chunk.
+>
+> The second is smaller and is left as a note rather than a chunk: `min_per_order` and
+> `max_per_order` exist on the ticket types table, as docs/database.md specified, and
+> **nothing in stages 7 to 10 uses them.** They belong to order building in stage 9. If
+> C9.1 does not pick them up, they should be dropped rather than left as columns that look
+> like a feature.
+
+> **C7.5 — both columns appear only when the event has something to put in them.** A
+> "Date" column on an event with one date is the same value repeated, and this screen is
+> read at a glance by somebody standing at a door. A booking that predates the choice
+> reads as "Any date" or "Standard" rather than blank, because blank means "nobody chose"
+> and that is a different fact. A type deleted outright reads as "Removed"; an *archived*
+> one still names itself, since somebody holds a ticket of it.
+>
+> **A sabotage passed and the test was wrong, not the code.** Excluding archived types
+> from the lookup left the check green, because the type was called "Guest" and this
+> screen's add-attendee form labels extra places "Guest" — the assertion was matching the
+> furniture. Renamed to something no interface would say, plus an assertion that no ticket
+> reads as "Removed", and the same sabotage now fails.
+
+> **C7.4 — "early bird" is not in the schema or the code anywhere, and that is the
+> chunk.** It is a ticket type whose window closes early and whose price is lower. Adding
+> an entity for it would have meant two ways to express one thing and a second set of
+> rules about which wins.
+>
+> **The two failures are told apart everywhere.** "Not on sale yet" and "no longer on
+> sale" get different error codes from the service and different treatment on the form —
+> an upcoming type stays, unselectable, saying when it opens, because "early bird from
+> Monday" is the reason somebody comes back; a closed one is dropped, because there is
+> nothing useful left to say about it.
+>
+> **A window's end includes the minute typed.** The input has minute granularity, so the
+> seconds are ours: an end takes `:59` and a start `:00`. "On sale until 23:59" is on sale
+> for the whole of 23:59, not until it begins — the same call the Repeats box makes about
+> a rule's last date. The first version stored `23:59:00` and a test caught the missing
+> minute.
+>
+> **A gap in C7.1 closed here: the box had no price input.** The column existed, the value
+> object read it, and no interface could write it — found by the audit described below.
+> Prices are typed in whole units and stored in minor ones, rounded rather than truncated,
+> because `(int) ( 12.10 * 100 )` is 1209 and a penny per ticket is how money quietly goes
+> wrong.
+>
+> **Two sabotages passed, and both were about the test rather than the code.** The price
+> check used `12.10`, which is the one value in the range that cannot tell truncation from
+> rounding — both give 1210. It now uses `19.99`, which truncates to 1998. And sabotaging
+> `is_on_sale()` broke nothing at all, because **nothing called it**: every caller needs to
+> know which half of the window failed. The method is gone and the reasoning is in the
+> docblock where the next person will look for it.
+
+> **C7.6 — a review of the stage found eight defects, and six of them were real enough to
+> fix.** Every one was reproduced by a test written against the code as it stood and
+> watched to fail first. That order matters more than usual here: these came from a review
+> rather than from building the feature, and a test written after the fix only proves the
+> fix is still there.
+>
+> | Defect | What it did |
+> | --- | --- |
+> | Waitlist starvation | A seat freed on the *event's* capacity was offered only to people holding the same ticket type, so it stayed empty with a queue for it |
+> | Module gate missing | Switching ticketing off left the public form demanding a choice and removed the only screen for withdrawing the types |
+> | Manual booking impossible | Adding a ticket type made the organiser's own "Add an attendee" form refuse every submission, naming a field that was not on the screen |
+> | Uncapped types | Each printed the room's remaining count as its own, so two types read as twice the places |
+> | No dates left | An event whose every date was called off was treated as a single-date event and measured a term's bookings against one week's capacity |
+> | Array input | A hand-made request could create a ticket type called "Array" |
+>
+> **The module gate and the ADR-0009 coupling were the same bug.** C7.2 had registration
+> reading the ticket types table directly, which is both a module depending on another
+> module and the reason switching ticketing off changed nothing. Both are fixed by one
+> filter: `qevm_event_ticket_types`, which the ticketing module answers only while it is
+> on. Nothing outside `includes/Tickets/` names a class from it any more. This is the same
+> shape as `qevm_occurrence_is_protected` from stage 6, and it should have been the shape
+> from the start.
+>
+> **The promotion rule needed stating properly.** The event's capacity is shared and
+> ordered — strict FIFO, no stepping over, because somebody who asked for three places
+> must not watch every later single booking go in ahead of them. A ticket type's capacity
+> is a *private* queue: a full one is skipped rather than allowed to block the people
+> behind it, who are waiting for something else entirely.
+>
+> **Two findings recorded and deliberately not fixed.**
+>
+> The first is a concurrency subtlety: a booking inserts as `pending`, which counts as
+> occupying, and only then learns whether its ticket type has room. For the moment between
+> those, a row that is about to be waitlisted is counted against the *event's* limit by a
+> concurrent booking, which can waitlist somebody a seat was free for. It errs towards
+> under-filling rather than overselling, and closing it means either a transaction — which
+> the whole insert-then-rank design exists to avoid — or a second pass. **Left as is, with
+> a note**, because the next promotion pass fills the seat and the alternative risks the
+> guarantee that eight parallel processes cannot oversell.
+>
+> The second is `KEY occ_status (occurrence_id, status)` on the ticket types table, which
+> serves no query today: every read filters on `event_id`. It is kept because
+> docs/database.md specifies it and `occurrence_id` is the column a per-date ticket type
+> will use — but it is worth revisiting in stage 10's performance pass rather than
+> pretending it earns its place now.
+
 **Gate:** two ticket types with separate capacities sell out independently · the
 8-parallel-process test passes **per type** · archiving a type does not break existing
 registrations.
+
+**Gate run: passed.** Eight checks against a real WordPress and a real MySQL, plus the
+eight-process race:
+
+| | |
+| --- | --- |
+| Two types, separate capacities | member 2 of 2 then waitlisted, guest 1 of 1 then waitlisted — independently |
+| Each type counts only its own places | member 2, guest 1 |
+| Eight processes, one place of one type | 1 confirmed, 7 waitlisted, in a room with ten seats free |
+| Archiving a type in use | delete refused, status archived, booking intact, its 2 places still counted |
+| Tickets already sold | still name the withdrawn type |
+| A withdrawn type | 1 on sale of 2 in the editor; refused for new bookings, its neighbour still books |
+| A full room | stops a type that has 50 places left |
+| Ticketing switched off | nothing demands a type |
+
+> **The gate was sabotaged in two directions before it was believed.** Removing the ticket
+> type's limit turned "confirmed, confirmed, waitlisted, confirmed, waitlisted" into five
+> confirmations and failed two criteria. Deleting a type in use rather than archiving it
+> failed three, including "the tickets already sold still name their type", which came back
+> naming `""` — the blank an attendee list would have shown for somebody holding a ticket.
+>
+> The race is the one criterion the gate does not run itself: it is
+> `CapacityRaceTest::test_eight_simultaneous_bookings_of_one_ticket_type_oversell_nothing`,
+> eight real processes booking one place of a ticket type inside a room with ten seats
+> free, so the only thing that can stop the eighth is the type's own capacity.
 
 ---
 
@@ -1295,12 +1444,118 @@ registrations.
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C8.1** | `qevm_checkins` table + `CheckInService`, unique-key concurrency | M | Duplicate insert means "already checked in", not an error |
-| **C8.2** | QR generation, no dependency | M | Encodes `ticket_code` |
-| **C8.3** | QR in confirmation emails | S | |
+| **C8.1** | `qevm_checkins` table + `CheckInService`, unique-key concurrency | M | **Done.** Duplicate insert means "already checked in", not an error. Check-in is a module; a date-less booking now has a defined date; and dbDelta was caught reporting an index it had not added |
+| **C8.2** | QR generation, no dependency | M | **Done.** Version 1, level M, alphanumeric only — exactly what a ticket code is, and it refuses anything else. Verified module-for-module against a reference implementation |
+| **C8.3** | QR in confirmation emails | M | **Done, and it was not an S.** The queue could not say which booking a message was for; see below |
 | **C8.4** | Check-in screen — mobile, connectivity-tolerant, accessible | XL | Used one-handed in a doorway. Split if it grows |
-| **C8.5** | Named roles: Event Manager, Event Organizer, Event Staff | S | Capabilities already exist; this is the wiring |
+| **C8.5** | Named roles: Event Manager, Event Organizer, Event Staff | M | **Resized from S.** The capabilities exist; nothing else does — there is no `add_role()` anywhere, uninstall strips caps from a hardcoded two-role list, and Features, Settings and Email templates all gate on `manage_options`, so an Event Manager could reach none of them |
 | **C8.6** | Check-in REST endpoint + attendance report | M | |
+
+> **C8.3 — the queue knew which event a message was about and not which booking.** A
+> confirmation carries `context_type = 'event'` and the event's id, which is what a
+> withdrawal searches on. An attachment filter running at send time therefore had an event
+> and an email address, and on a series one address can hold several bookings — so "attach
+> this booking's tickets" had nothing to attach them from. The queue gains a `meta` column
+> for exactly this: detail a listener needs when the message goes out and nothing needs to
+> search by. That is a schema change and a version bump, which is why the row is now an M
+> rather than an S.
+>
+> **The QR is attached by the check-in module, not by the module that sends the email.**
+> Registration writes the message and knows nothing about codes at a door; check-in listens
+> for the message going out and staples the tickets to it. Switch check-in off and
+> confirmations simply stop carrying them — no setting, no branch in somebody else's code.
+> The plan's own audit flagged this boundary as undecided before the chunk started.
+>
+> **One file per person, not per booking.** A booking for three is three people arriving
+> separately and holding up three different phones. SVG rather than PNG, because rendering
+> a PNG means depending on GD or Imagick being present — an assumption that fails on
+> somebody else's server rather than on ours.
+>
+> A waiting-list notice carries no ticket, because there is nothing to admit yet; the
+> organiser's copy carries none because it is not anybody's ticket. Sabotaging the template
+> filter and the booking id each fail exactly one test.
+
+> **C8.2 — the encoder does one shape of input and refuses the rest.** A general QR
+> encoder is four modes and forty versions and thousands of lines. A ticket code is
+> `QEVT-` and twelve uppercase hex characters: seventeen characters that sit inside
+> **alphanumeric mode** exactly and inside **version 1** with three characters to spare at
+> error correction level M. So that is what this encodes, and anything else — lowercase, a
+> longer string, an accent — is refused rather than guessed at. A QR code that does not
+> scan is worth less than none, because the person holding the phone believes it.
+>
+> **"It looks right" proves nothing here**, which makes this the one piece of the plugin
+> where a test has to compare against something outside it. A symbol with one wrong module
+> still looks like a QR code and still fails at the door. Every matrix is compared, module
+> for module, against one produced by an established implementation — used once as a
+> reference, never shipped, with the vectors committed as a fixture.
+>
+> **The reference disagreed on one of five codes, and it was right and so was I.** Given a
+> code ending in twelve digits it splits the string into an alphanumeric segment and a
+> denser numeric one — a different, equally valid symbol. Comparing against its optimised
+> form would have failed one code in five while saying nothing about correctness, so the
+> vectors pin it to a single alphanumeric segment and the two answer the same question. The
+> plugin could adopt the same optimisation; it would save nothing, because version 1 already
+> has room.
+>
+> Sabotages: fixing the mask to zero, flipping one bit of error correction, and using
+> AES's primitive polynomial instead of QR's each break three or four of the five vectors.
+> The fixture has its own guard — a file of empty strings would let every comparison pass
+> against an encoder that returned nothing.
+
+> **C8.1 — three things decided that the definition left open.**
+>
+> **Check-in is a module**, for the third time in three stages. The predicted omission,
+> written down before the chunk started and confirmed by building it.
+>
+> **A booking with no date checks into the event's next one.** Every booking on a
+> single-date event carries `occurrence_id = 0`, because attaching it to a row identified
+> by its start time would orphan it the moment the organiser rescheduled. The door
+> resolves it instead, so a check-in row always names a real occurrence and a door report
+> is one indexed lookup rather than a special case for events that never repeat.
+>
+> **Deleting a booking takes its check-ins with it, through an action rather than a
+> reach.** The registration module owns attendee rows and cannot see this table; it now
+> announces `qevm_attendees_deleted` and this module listens. Same direction as
+> `qevm_occurrence_is_protected` and `qevm_event_ticket_types`.
+>
+> **The behavioural test passed with the unique key dropped, and that was not its fault.**
+> It asks what the door was told, and the door is told the right thing either way. A second
+> test asks the other question — what happens without the key — and it took four attempts
+> to write, each failure teaching something:
+>
+> - **DDL commits the transaction the suite relies on.** Anything an earlier test had
+>   pending becomes permanent at that moment and turns up in every later count. The test
+>   runs first in its class for that reason, which is how the recurrence schema test
+>   handles the same problem.
+> - **`Installer::upgrade_schema()` could not restore the index**, because the registry
+>   read its enabled modules when the plugin booted — before the test switched check-in on
+>   — so it skipped the very module whose table needed fixing. The module's own
+>   `activate()` is what to call.
+> - **dbDelta reported "Added index" while the index was still missing.** It compares the
+>   schema it is given against the table and reports what it *decided* to do; the `ALTER`
+>   underneath had failed, because the table still held the duplicate rows the test had
+>   just created. A unique index cannot be added to data that violates it, and nothing in
+>   the return value says so.
+>
+> That last one is worth more than the test. **Any site whose data violates a unique index
+> will have that index silently skipped on upgrade, with dbDelta reporting success** — and
+> the plugin's whole schema-upgrade path is dbDelta. Stage 10's hardening should verify
+> indexes exist after an upgrade rather than trusting the report. Recorded as **C10.12**.
+
+> **Check-in is a module, and no row above says so.** Same omission as C6.3 and C7.1, both
+> corrected after the fact: `Installer::upgrade_schema()` only creates tables for enabled
+> modules, and every screen and hook lives behind `Module::register()`. Without a
+> `CheckInModule` in the registry the table has nothing to create it and the door screen
+> appears on installs that list meetups. C8.1 owns creating it.
+>
+> **The axe-core criterion has no harness.** The Playwright suite scans front-end URLs and
+> has no authentication, so scanning any wp-admin screen is new work — the login state,
+> not the assertion. C8.4 owns it, and it is the reason that chunk is XL.
+>
+> **A booking with no date needs an answer before check-in exists.** `occurrence_id` is 0
+> on every booking made on a single-date event, and the check-in table is keyed on
+> `(attendee_id, occurrence_id)` with a per-occurrence door report. Which date such a
+> booking checks into is undefined today. C8.1 decides it.
 
 **Gate:** two devices check in 200 attendees concurrently with nobody marked twice ·
 the Event Staff role can check people in and cannot edit any post · a reversal is
@@ -1317,12 +1572,33 @@ Stripe + WooCommerce. Not Razorpay, not PayPal.
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
 | **C9.1** | `qevm_orders`, `qevm_order_items`, `qevm_transactions` + repositories | L | [ADR-0006](adr/0006-money-and-immutability.md) |
-| **C9.2** | `Money` value object — integer minor units, one formatting boundary | M | A raw `49950` in a template is a visible bug |
+| **C9.2** | `Money` value object — integer minor units, one formatting boundary | M | A raw `49950` in a template is a visible bug. **Must also add prices to the ticket picker built in C7.3**, which shows names and availability only because formatting money has no home until this lands |
 | **C9.3** | `Gateway` interface + order lifecycle + **seat holds with expiry cron** | L | Without holds, an abandoned checkout permanently eats a seat |
 | **C9.4** | Stripe — PaymentIntent, return flow | XL | Split if it grows |
 | **C9.5** | Stripe webhooks — signature verification + **idempotency** | L | Gateways deliver twice by design |
 | **C9.6** | Refunds, full and partial, releasing capacity and promoting the waitlist | L | |
 | **C9.7** | WooCommerce bridge — ticket type → product; mutually exclusive with the built-in gateway | XL | Inherits a decade of hardening |
+
+> **Commerce is a module too, and C9.7 needs something the registry cannot do.**
+> "Mutually exclusive with the built-in gateway" has no mechanism: `Registry::enable()`
+> appends an id to an option and knows nothing about conflicts, and the Features screen
+> groups purely by level. Mutual exclusion is registry and Features-screen work that no
+> row owns. C9.7 owns it, and it is part of why that chunk is XL.
+>
+> **No chunk creates a site currency, and `qevm_orders.currency` has no default.** Ticket
+> types store `''` meaning "the site's own", and there is no such setting. C9.2 owns it:
+> the `Money` object needs a currency to format in, so the setting and the formatter are
+> one piece of work.
+>
+> **C9.1 owns the decision about `min_per_order` and `max_per_order`.** They exist on the
+> ticket types table because docs/database.md specified them, and nothing reads them. If
+> order building does not pick them up, C9.1 drops them rather than leaving columns that
+> look like a feature.
+>
+> **Two things here are smaller than they look.** `pending` already counts as occupying a
+> place, so C9.3's seat hold is a timestamp and a sweep rather than a new capacity
+> concept; and `Waitlist::promote_for_event()` already takes an occurrence and a ticket
+> type, so C9.6's "promote the waitlist after a refund" is a call rather than a mechanism.
 
 **Gate:** an abandoned checkout releases its seat · the same webhook delivered twice
 creates one registration · a full refund frees capacity and promotes the waitlist, a
@@ -1366,11 +1642,11 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | 4 · Calendar | 4 | **C4.1–C4.4 ✓** — stage complete. The gate scanned an empty calendar first time round and proved nothing; re-run against one with events in it |
 | 5 · Communication | 4 | **C5.1–C5.4 ✓** — stage complete. Gate passed: 500 recipients queued in 0.21s, 497 sent, 3 failed and named. C5.1 shipped without a schema bump, which C5.4 found on a real site |
 | 6 · Recurring events | 10 | **C6.1–C6.7 ✓** — stage complete. C6.4 split in three and C6.5 in two; C6.6 and C6.7 were added by findings. Gate passed 10 of 10, after two of its own checks turned out to prove nothing |
-| 7 · Ticketing | 4 | not started |
-| 8 · Event operations | 6 | not started |
+| 7 · Ticketing | 6 | **C7.1–C7.6 ✓** — stage complete, gate passed 8 of 8 plus the eight-process race. C7.5 and C7.6 were added by findings; a review of the stage found eight defects and six were real |
+| 8 · Event operations | 6 | **C8.1 ✓ · C8.2 ✓ · C8.3 ✓** |
 | 9 · Commerce | 7 | not started |
-| 10 · Release readiness | 10 | not started |
-| | **78** | |
+| 10 · Release readiness | 12 | not started |
+| | **82** | |
 
 ---
 

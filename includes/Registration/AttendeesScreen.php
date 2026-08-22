@@ -405,13 +405,29 @@ final class AttendeesScreen {
 				array_map( static fn ( $registration ) => $registration->id(), $registrations )
 			);
 
-		$columns = array() === $fields ? 8 : 9;
+		/*
+		 * Both of these are shown only when the event actually has them. A
+		 * "Date" column on an event with one date is the same value repeated,
+		 * and a "Ticket" column on an event offering one kind of place is the
+		 * same again — this screen is read at a glance by somebody standing at
+		 * a door, and every column that says nothing costs the ones that do.
+		 */
+		$dates   = self::dates_for( $event_id );
+		$tickets = self::tickets_for( $event_id );
+
+		$columns = 8 + ( array() === $fields ? 0 : 1 ) + ( array() === $dates ? 0 : 1 ) + ( array() === $tickets ? 0 : 1 );
 		?>
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Name', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Email', 'quick-events-manager' ); ?></th>
+					<?php if ( array() !== $dates ) : ?>
+						<th scope="col"><?php esc_html_e( 'Date', 'quick-events-manager' ); ?></th>
+					<?php endif; ?>
+					<?php if ( array() !== $tickets ) : ?>
+						<th scope="col"><?php esc_html_e( 'Ticket', 'quick-events-manager' ); ?></th>
+					<?php endif; ?>
 					<th scope="col"><?php esc_html_e( 'Phone', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Places', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Reference', 'quick-events-manager' ); ?></th>
@@ -431,6 +447,12 @@ final class AttendeesScreen {
 					<tr>
 						<td><strong><?php echo esc_html( $registration->booker_name() ); ?></strong></td>
 						<td><a href="mailto:<?php echo esc_attr( $registration->booker_email() ); ?>"><?php echo esc_html( $registration->booker_email() ); ?></a></td>
+						<?php if ( array() !== $dates ) : ?>
+							<td><?php echo esc_html( self::date_label( $registration, $dates ) ); ?></td>
+						<?php endif; ?>
+						<?php if ( array() !== $tickets ) : ?>
+							<td><?php echo esc_html( self::ticket_label( $registration, $tickets ) ); ?></td>
+						<?php endif; ?>
 						<td><?php echo esc_html( $registration->booker_phone() ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( $registration->quantity() ) ); ?></td>
 						<td><code><?php echo esc_html( $registration->code() ); ?></code></td>
@@ -501,6 +523,117 @@ final class AttendeesScreen {
 			</tbody>
 		</table>
 		<?php
+	}
+
+	/**
+	 * The event's dates, keyed by id, or none when it has only one.
+	 *
+	 * Loaded once for the page rather than per row: twenty-five bookings would
+	 * otherwise ask the same question twenty-five times.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, \QuickEventsManager\Events\Occurrence>
+	 */
+	private static function dates_for( $event_id ) {
+		$occurrences = \QuickEventsManager\Events\OccurrenceRepository::for_event( (int) $event_id );
+
+		if ( count( $occurrences ) <= 1 ) {
+			return array();
+		}
+
+		$map = array();
+
+		foreach ( $occurrences as $occurrence ) {
+			$map[ $occurrence->id() ] = $occurrence;
+		}
+
+		return $map;
+	}
+
+	/**
+	 * The ticket types an event offers, including withdrawn ones.
+	 *
+	 * Through `qevm_event_ticket_types`: with ticketing switched off there are
+	 * no types, and this module never names a class from that one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, object>
+	 */
+	private static function event_ticket_types( $event_id ) {
+		$types = apply_filters( 'qevm_event_ticket_types', array(), (int) $event_id );
+
+		return is_array( $types ) ? $types : array();
+	}
+
+	/**
+	 * The event's ticket types, keyed by id, or none when it offers no choice.
+	 *
+	 * Archived types are included, and that is the point: somebody holds a
+	 * ticket of one, and a list that cannot name it has lost the fact rather
+	 * than tidied it away.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, string>
+	 */
+	private static function tickets_for( $event_id ) {
+		$map = array();
+
+		foreach ( self::event_ticket_types( (int) $event_id ) as $type ) {
+			$map[ $type->id() ] = $type->name();
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Which date a booking is for.
+	 *
+	 * A booking made before the event had several dates carries none, and says
+	 * so plainly rather than being shown against a date nobody chose.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Registration                                      $registration The booking.
+	 * @param array<int, \QuickEventsManager\Events\Occurrence> $dates        The event's dates.
+	 * @return string
+	 */
+	private static function date_label( Registration $registration, array $dates ) {
+		$id = $registration->occurrence_id();
+
+		if ( 0 === $id || ! isset( $dates[ $id ] ) ) {
+			return __( 'Any date', 'quick-events-manager' );
+		}
+
+		return $dates[ $id ]->format_start();
+	}
+
+	/**
+	 * Which kind of place a booking is for.
+	 *
+	 * A type that has been deleted outright is named as removed rather than
+	 * left blank. Blank reads as "nobody chose", which is a different fact and
+	 * the one thing this column exists to distinguish.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Registration       $registration The booking.
+	 * @param array<int, string> $tickets      The event's ticket types.
+	 * @return string
+	 */
+	private static function ticket_label( Registration $registration, array $tickets ) {
+		$id = $registration->ticket_type_id();
+
+		if ( 0 === $id ) {
+			return __( 'Standard', 'quick-events-manager' );
+		}
+
+		return isset( $tickets[ $id ] ) ? $tickets[ $id ] : __( 'Removed', 'quick-events-manager' );
 	}
 
 	/**
@@ -637,6 +770,59 @@ final class AttendeesScreen {
 						</th>
 						<td><input type="tel" id="qevm-add-phone" name="phone" class="regular-text" /></td>
 					</tr>
+					<?php
+					/*
+					 * The same two questions the public form asks, for the same
+					 * reason: the service refuses a booking that does not answer
+					 * them, and an organiser taking a booking by phone was left
+					 * with an error naming a field that was not on the screen.
+					 */
+					$qevm_dates   = self::dates_for( $event->id() );
+					$qevm_tickets = self::event_ticket_types( $event->id() );
+					?>
+
+					<?php if ( array() !== $qevm_dates ) : ?>
+						<tr>
+							<th scope="row">
+								<label for="qevm-add-date"><?php esc_html_e( 'Date', 'quick-events-manager' ); ?></label>
+							</th>
+							<td>
+								<select id="qevm-add-date" name="occurrence_id" required>
+									<option value=""><?php esc_html_e( 'Choose a date', 'quick-events-manager' ); ?></option>
+									<?php foreach ( $qevm_dates as $qevm_date ) : ?>
+										<option value="<?php echo esc_attr( (string) $qevm_date->id() ); ?>">
+											<?php echo esc_html( $qevm_date->format_start() ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description">
+									<?php esc_html_e( 'A date that has already happened is allowed here — the sign-up sheet usually arrives afterwards.', 'quick-events-manager' ); ?>
+								</p>
+							</td>
+						</tr>
+					<?php endif; ?>
+
+					<?php if ( array() !== $qevm_tickets ) : ?>
+						<tr>
+							<th scope="row">
+								<label for="qevm-add-ticket"><?php esc_html_e( 'Ticket', 'quick-events-manager' ); ?></label>
+							</th>
+							<td>
+								<select id="qevm-add-ticket" name="qevm_ticket_type_id" required>
+									<option value=""><?php esc_html_e( 'Choose a kind of place', 'quick-events-manager' ); ?></option>
+									<?php foreach ( $qevm_tickets as $qevm_ticket ) : ?>
+										<?php if ( ! $qevm_ticket->is_sellable() ) : ?>
+											<?php continue; ?>
+										<?php endif; ?>
+										<option value="<?php echo esc_attr( (string) $qevm_ticket->id() ); ?>">
+											<?php echo esc_html( $qevm_ticket->name() ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
+					<?php endif; ?>
+
 					<tr>
 						<th scope="row">
 							<label for="qevm-add-quantity"><?php esc_html_e( 'Places', 'quick-events-manager' ); ?></label>
@@ -687,10 +873,18 @@ final class AttendeesScreen {
 		$notify   = ! empty( $_POST['notify'] );
 
 		$input = array(
-			'name'     => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
-			'email'    => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
-			'phone'    => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '',
-			'quantity' => isset( $_POST['quantity'] ) ? absint( wp_unslash( $_POST['quantity'] ) ) : 1,
+			'name'           => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
+			'email'          => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
+			'phone'          => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '',
+			'quantity'       => isset( $_POST['quantity'] ) ? absint( wp_unslash( $_POST['quantity'] ) ) : 1,
+
+			/*
+			 * Carried through from the two selects above. Without them the
+			 * service refuses every booking on an event that has dates or
+			 * ticket types, naming a field the organiser was never shown.
+			 */
+			'occurrence_id'  => isset( $_POST['occurrence_id'] ) ? absint( wp_unslash( $_POST['occurrence_id'] ) ) : 0,
+			'ticket_type_id' => isset( $_POST['qevm_ticket_type_id'] ) ? absint( wp_unslash( $_POST['qevm_ticket_type_id'] ) ) : 0,
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 

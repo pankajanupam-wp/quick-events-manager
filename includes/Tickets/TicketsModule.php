@@ -96,9 +96,43 @@ final class TicketsModule implements Module {
 	 * @return void
 	 */
 	public function register() {
+		/*
+		 * The one way anything else learns that an event has ticket types.
+		 *
+		 * Registration asks; this answers, and only while the module is on.
+		 * Reading the table directly from the registration code was the earlier
+		 * shape and it was wrong twice over: modules must depend on the domain
+		 * rather than on each other (ADR-0009), and with ticketing switched off
+		 * the public form went on demanding a choice it no longer offered a way
+		 * to make. With nothing hooked here, nothing answers and there are no
+		 * types — which is the same thing an install that never enabled this has
+		 * always meant.
+		 */
+		add_filter( 'qevm_event_ticket_types', array( __CLASS__, 'supply_types' ), 10, 2 );
+
 		if ( is_admin() ) {
 			( new TicketTypesBox() )->register();
 		}
+	}
+
+	/**
+	 * The ticket types an event offers.
+	 *
+	 * Answers `qevm_event_ticket_types`. Every type, in display order,
+	 * including archived ones — a caller that wants only what is on sale asks
+	 * the types themselves, because "withdrawn" and "outside its window" are
+	 * different questions with different answers for the person reading them.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $types    Types supplied so far.
+	 * @param mixed $event_id Event id.
+	 * @return array<int, TicketType>
+	 */
+	public static function supply_types( $types, $event_id ) {
+		unset( $types );
+
+		return TicketTypeRepository::for_event( (int) $event_id );
 	}
 
 	/**

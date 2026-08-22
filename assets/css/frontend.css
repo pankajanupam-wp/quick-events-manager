@@ -197,6 +197,39 @@
 	color: #b32d2e;
 }
 
+/* Choosing a kind of place
+   ------------------------------------------------------------------------ */
+
+.qevm-ticket-choice {
+	border: 0;
+	margin: 0 0 1rem;
+	padding: 0;
+}
+
+.qevm-ticket-choice legend {
+	font-weight: 600;
+	padding: 0 0 0.35rem;
+}
+
+.qevm-ticket-option {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	margin: 0 0 0.5rem;
+}
+
+.qevm-ticket-option label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+
+.qevm-ticket-option__description,
+.qevm-ticket-option__state {
+	font-size: 0.875rem;
+	color: var( --qevm-muted );
+}
+
 /*
  * A field-level error, sitting under its input and pointed at by
  * aria-describedby. Colour is not the only signal — the text says what is

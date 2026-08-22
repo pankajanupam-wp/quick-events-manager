@@ -161,6 +161,20 @@ A date with bookings on it is marked **Booked**, so you can see what a change wo
 
 **None of these buttons emails anybody.** Moving a date that two hundred people have booked is exactly when they need telling — and exactly why it should not happen because you corrected a typo. Use **Email everybody** on the attendee screen when you are ready to tell them.
 
+## Offering more than one kind of place
+
+Switch **Ticket types** on under **Events → Features**, and the event editor grows a **Ticket types** box.
+
+Leave it empty and everybody books the same kind of place. Add types — Member and Guest, Full and Concession — and the registration form asks which one. Each type can have **its own number of places**, and a booking has to fit both that and the event's capacity: twelve seats with four kept for members means the fifth member joins the waiting list while the room is half empty, and the thirteenth person waits whatever kind of place they asked for.
+
+The waiting list works the same way. A member who cancels frees a member place, and it goes to the next member waiting — not to somebody waiting for a guest ticket.
+
+Leaving **Places** empty means as many as the event allows.
+
+Clearing a type's name removes it. If somebody already holds a ticket of that type it is **archived** instead: it stops being offered, and every booking that named it still says so on your attendee list and in your export.
+
+Prices are recorded but not yet shown on the form — that arrives with payments.
+
 ## Copying an event
 
 A monthly meetup is the same event with a different date. On **Events**, hover a row and choose **Duplicate**.

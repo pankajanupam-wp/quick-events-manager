@@ -138,6 +138,14 @@ final class Exporter {
 
 		$fields = self::exported_fields( $event_id, $include_sensitive );
 
+		/*
+		 * The date and the ticket type are columns only when the event has
+		 * them, matching the attendee screen. A column of one repeated value is
+		 * noise in a spreadsheet as much as on a screen.
+		 */
+		$dates   = self::dates_for( $event_id );
+		$tickets = self::tickets_for( $event_id );
+
 		$headers = array(
 			__( 'Name', 'quick-events-manager' ),
 			__( 'Email', 'quick-events-manager' ),
@@ -147,6 +155,14 @@ final class Exporter {
 			__( 'Status', 'quick-events-manager' ),
 			__( 'Registered (UTC)', 'quick-events-manager' ),
 		);
+
+		if ( array() !== $dates ) {
+			$headers[] = __( 'Date', 'quick-events-manager' );
+		}
+
+		if ( array() !== $tickets ) {
+			$headers[] = __( 'Ticket', 'quick-events-manager' );
+		}
 
 		foreach ( $fields as $field ) {
 			$headers[] = self::defuse( $field->label() );
@@ -187,6 +203,22 @@ final class Exporter {
 					$registration->created_at(),
 				);
 
+				if ( array() !== $dates ) {
+					$booked = $registration->occurrence_id();
+
+					$line[] = isset( $dates[ $booked ] )
+						? $dates[ $booked ]->start_local()
+						: __( 'Any date', 'quick-events-manager' );
+				}
+
+				if ( array() !== $tickets ) {
+					$kind = $registration->ticket_type_id();
+
+					$line[] = 0 === $kind
+						? __( 'Standard', 'quick-events-manager' )
+						: self::defuse( isset( $tickets[ $kind ] ) ? $tickets[ $kind ] : __( 'Removed', 'quick-events-manager' ) );
+				}
+
 				$given = isset( $answers[ $registration->id() ] ) ? $answers[ $registration->id() ] : array();
 
 				foreach ( $fields as $field ) {
@@ -200,6 +232,65 @@ final class Exporter {
 
 			++$page;
 		} while ( $fetched === $page_size );
+	}
+
+	/**
+	 * The event's dates, keyed by id, or none when it has only one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, \QuickEventsManager\Events\Occurrence>
+	 */
+	private static function dates_for( $event_id ) {
+		$occurrences = \QuickEventsManager\Events\OccurrenceRepository::for_event( (int) $event_id );
+
+		if ( count( $occurrences ) <= 1 ) {
+			return array();
+		}
+
+		$map = array();
+
+		foreach ( $occurrences as $occurrence ) {
+			$map[ $occurrence->id() ] = $occurrence;
+		}
+
+		return $map;
+	}
+
+	/**
+	 * The ticket types an event offers, including withdrawn ones.
+	 *
+	 * Through `qevm_event_ticket_types`: with ticketing switched off there are
+	 * no types, and this module never names a class from that one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, object>
+	 */
+	private static function event_ticket_types( $event_id ) {
+		$types = apply_filters( 'qevm_event_ticket_types', array(), (int) $event_id );
+
+		return is_array( $types ) ? $types : array();
+	}
+
+	/**
+	 * The event's ticket types, keyed by id, or none when it offers no choice.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, string>
+	 */
+	private static function tickets_for( $event_id ) {
+		$map = array();
+
+		foreach ( self::event_ticket_types( (int) $event_id ) as $type ) {
+			$map[ $type->id() ] = $type->name();
+		}
+
+		return $map;
 	}
 
 	/**

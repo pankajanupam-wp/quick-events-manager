@@ -96,7 +96,10 @@ final class TicketTypesBox {
 					<tr>
 						<th scope="col"><?php esc_html_e( 'Name', 'quick-events-manager' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Description', 'quick-events-manager' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Price', 'quick-events-manager' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Places', 'quick-events-manager' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'On sale from', 'quick-events-manager' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Until', 'quick-events-manager' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'On sale', 'quick-events-manager' ); ?></th>
 					</tr>
 				</thead>
@@ -116,6 +119,93 @@ final class TicketTypesBox {
 			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * A price typed in whole units, as minor units.
+	 *
+	 * Rounded rather than truncated, and rounded once. `12.10` arrives as a
+	 * float that is not exactly 12.10, and `(int) ( 12.10 * 100 )` is 1209 on
+	 * every machine this will ever run on — a penny lost per ticket, which is
+	 * the classic way money goes wrong in software that never tested it.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $typed What the organiser entered.
+	 * @return int
+	 */
+	private static function price_to_minor( $typed ) {
+		$typed = trim( str_replace( ',', '', $typed ) );
+
+		if ( '' === $typed || ! is_numeric( $typed ) ) {
+			return 0;
+		}
+
+		return max( 0, (int) round( ( (float) $typed ) * 100 ) );
+	}
+
+	/**
+	 * A submitted local datetime as stored UTC, or ''.
+	 *
+	 * Read in the event's own timezone, because that is the clock the organiser
+	 * is looking at. "On sale until Friday midnight" means Friday midnight
+	 * where the event is, not wherever the server happens to be.
+	 *
+	 * @since 26.0
+	 *
+	 * The input has minute granularity, so the seconds are ours to choose. An
+	 * end takes `:59` and a start takes `:00`, which means the minute somebody
+	 * typed is included at both ends — "on sale until 23:59" is on sale for the
+	 * whole of 23:59, not until it begins. The Repeats box makes the same call
+	 * about a repeat rule's last date.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int    $post_id   Event id.
+	 * @param string $typed     Submitted `Y-m-d\TH:i` value.
+	 * @param bool   $inclusive Whether this is the end of a window.
+	 * @return string
+	 */
+	private static function window_to_utc( $post_id, $typed, $inclusive = false ) {
+		$typed = trim( str_replace( 'T', ' ', $typed ) );
+
+		if ( '' === $typed ) {
+			return '';
+		}
+
+		if ( 16 === strlen( $typed ) ) {
+			$typed .= $inclusive ? ':59' : ':00';
+		}
+
+		$event = new \QuickEventsManager\Events\Event( (int) $post_id );
+
+		return \QuickEventsManager\Events\Meta::to_utc( $typed, $event->timezone() );
+	}
+
+	/**
+	 * A stored UTC window edge as the local value the input wants.
+	 *
+	 * @since 26.0
+	 *
+	 * @param TicketType|null $type   The type, or null for a blank row.
+	 * @param string          $column Which edge.
+	 * @return string
+	 */
+	private static function window_for_input( $type, $column ) {
+		if ( ! $type instanceof TicketType ) {
+			return '';
+		}
+
+		$stored = 'sale_starts_utc' === $column ? $type->sale_starts_utc() : $type->sale_ends_utc();
+
+		if ( '' === $stored ) {
+			return '';
+		}
+
+		$event = new \QuickEventsManager\Events\Event( $type->event_id() );
+		$local = \QuickEventsManager\Events\Meta::to_local( $stored, $event->timezone() );
+
+		return '' !== $local ? str_replace( ' ', 'T', substr( $local, 0, 16 ) ) : '';
 	}
 
 	/**
@@ -151,12 +241,44 @@ final class TicketTypesBox {
 					value="<?php echo esc_attr( null !== $type ? $type->description() : '' ); ?>" />
 			</td>
 			<td>
+				<label class="screen-reader-text" for="qevm-ticket-price-<?php echo esc_attr( (string) $index ); ?>">
+					<?php esc_html_e( 'Price', 'quick-events-manager' ); ?>
+				</label>
+				<?php
+				/*
+				 * Typed in whole units and stored in minor ones. Nobody enters a
+				 * price in pence, and nobody should have to know that is how it
+				 * is kept — the conversion belongs at this boundary, which is
+				 * the only place a human number meets a stored one.
+				 */
+				?>
+				<input type="number" min="0" step="0.01" id="qevm-ticket-price-<?php echo esc_attr( (string) $index ); ?>"
+					name="<?php echo esc_attr( $field ); ?>[price]"
+					value="<?php echo esc_attr( null !== $type && $type->price_minor() > 0 ? number_format( $type->price_minor() / 100, 2, '.', '' ) : '' ); ?>" />
+			</td>
+			<td>
 				<label class="screen-reader-text" for="qevm-ticket-capacity-<?php echo esc_attr( (string) $index ); ?>">
 					<?php esc_html_e( 'Places of this type', 'quick-events-manager' ); ?>
 				</label>
 				<input type="number" min="0" step="1" id="qevm-ticket-capacity-<?php echo esc_attr( (string) $index ); ?>"
 					name="<?php echo esc_attr( $field ); ?>[capacity]"
 					value="<?php echo esc_attr( null !== $type && $type->capacity() > 0 ? (string) $type->capacity() : '' ); ?>" />
+			</td>
+			<td>
+				<label class="screen-reader-text" for="qevm-ticket-opens-<?php echo esc_attr( (string) $index ); ?>">
+					<?php esc_html_e( 'On sale from', 'quick-events-manager' ); ?>
+				</label>
+				<input type="datetime-local" id="qevm-ticket-opens-<?php echo esc_attr( (string) $index ); ?>"
+					name="<?php echo esc_attr( $field ); ?>[sale_starts]"
+					value="<?php echo esc_attr( self::window_for_input( $type, 'sale_starts_utc' ) ); ?>" />
+			</td>
+			<td>
+				<label class="screen-reader-text" for="qevm-ticket-closes-<?php echo esc_attr( (string) $index ); ?>">
+					<?php esc_html_e( 'On sale until', 'quick-events-manager' ); ?>
+				</label>
+				<input type="datetime-local" id="qevm-ticket-closes-<?php echo esc_attr( (string) $index ); ?>"
+					name="<?php echo esc_attr( $field ); ?>[sale_ends]"
+					value="<?php echo esc_attr( self::window_for_input( $type, 'sale_ends_utc' ) ); ?>" />
 			</td>
 			<td>
 				<label>
@@ -211,6 +333,15 @@ final class TicketTypesBox {
 				continue;
 			}
 
+			/*
+			 * map_deep() walks nested arrays, so a hand-made request can still
+			 * put an array where a value belongs. Casting one to string yields
+			 * the literal "Array" and a warning — a ticket type called Array,
+			 * created by somebody posting to their own event editor. Anything
+			 * that is not a scalar is not an answer to the question asked.
+			 */
+			$row = array_filter( $row, 'is_scalar' );
+
 			$id   = isset( $row['id'] ) ? absint( $row['id'] ) : 0;
 			$name = isset( $row['name'] ) ? trim( (string) $row['name'] ) : '';
 
@@ -244,11 +375,14 @@ final class TicketTypesBox {
 			}
 
 			$values = array(
-				'name'        => $name,
-				'description' => isset( $row['description'] ) ? (string) $row['description'] : '',
-				'capacity'    => isset( $row['capacity'] ) ? absint( $row['capacity'] ) : 0,
-				'sort_order'  => $position,
-				'status'      => empty( $row['active'] )
+				'name'            => $name,
+				'description'     => isset( $row['description'] ) ? (string) $row['description'] : '',
+				'price_minor'     => self::price_to_minor( isset( $row['price'] ) ? (string) $row['price'] : '' ),
+				'capacity'        => isset( $row['capacity'] ) ? absint( $row['capacity'] ) : 0,
+				'sale_starts_utc' => self::window_to_utc( $post_id, isset( $row['sale_starts'] ) ? (string) $row['sale_starts'] : '' ),
+				'sale_ends_utc'   => self::window_to_utc( $post_id, isset( $row['sale_ends'] ) ? (string) $row['sale_ends'] : '', true ),
+				'sort_order'      => $position,
+				'status'          => empty( $row['active'] )
 					? TicketTypeStatus::Archived->value
 					: TicketTypeStatus::Active->value,
 			);

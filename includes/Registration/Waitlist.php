@@ -135,17 +135,15 @@ final class Waitlist {
 		}
 
 		$capacity = (int) $event->meta( \QuickEventsManager\Events\Meta::CAPACITY, 0 );
-		$ticket   = $ticket_type_id > 0
-			? \QuickEventsManager\Tickets\TicketTypeRepository::find( (int) $ticket_type_id )
-			: null;
 
 		/*
 		 * A place freed on a capped ticket type is worth filling even on an
 		 * event with no overall capacity — "twenty members, anybody else
-		 * welcome" is a real thing to want. So the early return below asks
-		 * whether *either* limit exists, not just the event's.
+		 * welcome" is a real thing to want — so the early return below asks
+		 * whether *either* limit exists.
 		 */
-		$ticket_capacity = null !== $ticket ? $ticket->capacity() : 0;
+		$freed           = self::ticket_type( (int) $event_id, (int) $ticket_type_id );
+		$ticket_capacity = null !== $freed ? $freed->capacity() : 0;
 
 		/*
 		 * An uncapped event has no waiting list to work through: nothing is
@@ -158,7 +156,7 @@ final class Waitlist {
 			return array();
 		}
 
-		$candidates = self::candidates( $event_id, (int) $occurrence_id, (int) $ticket_type_id );
+		$candidates = self::candidates( $event_id, (int) $occurrence_id );
 
 		if ( empty( $candidates ) ) {
 			return array();
@@ -177,24 +175,37 @@ final class Waitlist {
 				 * Re-read on every iteration rather than decrementing a local
 				 * count. The authority on how many places are taken is the
 				 * table, and a promotion is a write to it.
-				 *
-				 * The tighter of the two limits wins: a booking that fits the
-				 * ticket type but not the room is not one that can be promoted.
 				 */
 				$free = $capacity > 0
 					? $capacity - Repository::count_taken( $event_id, (int) $occurrence_id )
 					: PHP_INT_MAX;
 
-				if ( $ticket_capacity > 0 ) {
-					$free = min(
-						$free,
-						$ticket_capacity - Repository::count_taken( $event_id, (int) $occurrence_id, (int) $ticket_type_id )
-					);
+				if ( $free <= 0 || $candidate->quantity() > $free ) {
+					/*
+					 * The room is full. Strict FIFO: the queue stops here, it
+					 * does not step over — somebody who asked for three places
+					 * must not watch every later single booking go in ahead of
+					 * them.
+					 */
+					break;
 				}
 
-				if ( $free <= 0 || $candidate->quantity() > $free ) {
-					// Strict FIFO: the queue stops here, it does not step over.
-					break;
+				/*
+				 * The candidate's own ticket type is a second, private queue,
+				 * and a full one is not a reason to hold up a different queue.
+				 * Stopping here would mean a member queue with no member places
+				 * left blocking every guest behind it from a seat the room
+				 * genuinely has — which is how a freed place stays empty with
+				 * people waiting for it.
+				 */
+				$kind = self::ticket_type( (int) $event_id, $candidate->ticket_type_id() );
+
+				if ( null !== $kind && $kind->capacity() > 0 ) {
+					$of_this_kind = $kind->capacity() - Repository::count_taken( $event_id, (int) $occurrence_id, $candidate->ticket_type_id() );
+
+					if ( $of_this_kind <= 0 || $candidate->quantity() > $of_this_kind ) {
+						continue;
+					}
 				}
 
 				if ( ! Repository::update_status( $candidate->id(), RegistrationStatus::Confirmed ) ) {
@@ -230,9 +241,43 @@ final class Waitlist {
 	}
 
 	/**
+	 * One of an event's ticket types, by id, or null.
+	 *
+	 * Through `qevm_event_ticket_types`, so a site with ticketing switched off
+	 * has no types and this module never names a class from that one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id       Event id.
+	 * @param int $ticket_type_id Type id.
+	 * @return object|null
+	 */
+	private static function ticket_type( $event_id, $ticket_type_id ) {
+		if ( $ticket_type_id <= 0 ) {
+			return null;
+		}
+
+		$types = apply_filters( 'qevm_event_ticket_types', array(), $event_id );
+
+		foreach ( is_array( $types ) ? $types : array() as $type ) {
+			if ( is_object( $type ) && method_exists( $type, 'id' ) && $type->id() === $ticket_type_id ) {
+				return $type;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * The waiting list for an event, oldest first.
 	 *
 	 * @since 26.0
+	 *
+	 * Everybody waiting for the date, whatever ticket they hold. Narrowing this
+	 * to one type is what made a freed seat unreachable to the person waiting
+	 * for it: the event's capacity is shared, so a place it frees belongs to
+	 * whoever is next in line, not to whoever happens to hold the same ticket
+	 * as the person who cancelled.
 	 *
 	 * @param int $event_id       Event id.
 	 * @param int $occurrence_id  Only those waiting for this date, or 0 for all.

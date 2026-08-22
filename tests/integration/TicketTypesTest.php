@@ -50,6 +50,14 @@ final class TicketTypesTest extends TestCase {
 			$this->restore_schema();
 		}
 
+		/*
+		 * Modules hook themselves up when the plugin boots, which happened
+		 * before this option was written. Registering here is what a real
+		 * request does on its next load — without it the site has the table and
+		 * nothing answering for it.
+		 */
+		( new TicketsModule() )->register();
+
 		wp_set_current_user( $this->an_administrator() );
 	}
 

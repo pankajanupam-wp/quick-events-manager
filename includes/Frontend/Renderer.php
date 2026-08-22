@@ -188,6 +188,7 @@ final class Renderer {
 			array(
 				'event'        => $event,
 				'dates'        => $dates,
+				'ticket_types' => self::bookable_ticket_types( $event ),
 
 				/*
 				 * On a series these two are questions about a date, and no date
@@ -248,6 +249,126 @@ final class Renderer {
 		}
 
 		return $dates;
+	}
+
+	/**
+	 * The kinds of place somebody may choose between, or none.
+	 *
+	 * Empty when the event offers no types, which is every event until somebody
+	 * switches ticketing on and makes one — and the signal the form uses to
+	 * leave the question out rather than asking it with one answer.
+	 *
+	 * **How many are left is only shown when the event has a single date.** A
+	 * type's remaining places depend on which date is being booked, and on a
+	 * series no date has been chosen at the moment this list is built. "Four
+	 * left" beside a type on a twelve-week course would be true of at most one
+	 * week and wrong about the other eleven, so it is not said at all. The
+	 * booking itself is still ranked per date and per type; this is about what
+	 * can honestly be printed before the choice is made.
+	 *
+	 * Prices are absent for a different reason: formatting money has one home,
+	 * and it is the `Money` value object in stage 9. A raw integer of minor
+	 * units in a template is a visible bug, and half a formatter here would be
+	 * the second home.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event $event The event.
+	 * @return array<int, array{id: int, name: string, description: string, remaining: int|null, full: bool, opens: string}>
+	 */
+	private static function bookable_ticket_types( Event $event ) {
+		$types = self::ticket_types_for( $event->id() );
+
+		/*
+		 * Asked of the occurrence table, not of `$dates`. An empty `$dates` is
+		 * two different facts — the event has one date, or every date it has is
+		 * finished or called off — and treating the second as the first made a
+		 * twelve-week series print one week's worth of availability measured
+		 * against the whole term.
+		 */
+		$single = OccurrenceRepository::count_for_event( $event->id() ) <= 1;
+		$offer  = array();
+
+		foreach ( $types as $type ) {
+			/*
+			 * A type whose window has closed is gone from the form entirely: it
+			 * is not on offer and there is nothing useful to say about it. One
+			 * whose window has not opened stays, unselectable, saying when it
+			 * does — because "early bird from Monday" is the reason somebody
+			 * comes back, and a page that simply omits it looks like a page
+			 * that forgot.
+			 */
+			if ( $type->closed_by() ) {
+				continue;
+			}
+
+			$opens = $type->opens_after();
+
+			/*
+			 * Only a type with a limit of its own says how many are left. An
+			 * uncapped type shares the room's number, and printing that beside
+			 * each of two types reads as twice the places — the count above the
+			 * form already says what the room has.
+			 */
+			$countable = $single && ! $opens && $type->capacity() > 0;
+
+			$offer[] = array(
+				'id'          => $type->id(),
+				'name'        => $type->name(),
+				'description' => $type->description(),
+				'remaining'   => $countable ? RegistrationService::places_remaining( $event, 0, $type->id() ) : null,
+				'full'        => $countable && RegistrationService::is_full( $event, 0, $type->id() ),
+				'opens'       => $opens ? self::local_moment( $event, $type->sale_starts_utc() ) : '',
+			);
+		}
+
+		return $offer;
+	}
+
+	/**
+	 * A stored UTC moment, in the event's own timezone, for reading.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Event  $event The event.
+	 * @param string $utc   Stored `Y-m-d H:i:s` UTC.
+	 * @return string
+	 */
+	private static function local_moment( Event $event, $utc ) {
+		if ( '' === $utc ) {
+			return '';
+		}
+
+		$local = Meta::to_local( $utc, $event->timezone() );
+		$time  = '' !== $local ? strtotime( $local . ' UTC' ) : false;
+
+		if ( false === $time ) {
+			return '';
+		}
+
+		return (string) date_i18n( (string) get_option( 'date_format' ) . ' ' . (string) get_option( 'time_format' ), $time, true );
+	}
+
+	/**
+	 * The ticket types an event offers, on sale or not yet.
+	 *
+	 * Through `qevm_event_ticket_types`, so switching ticketing off stops the
+	 * form asking a question the site can no longer answer.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $event_id Event id.
+	 * @return array<int, object>
+	 */
+	private static function ticket_types_for( $event_id ) {
+		$types = apply_filters( 'qevm_event_ticket_types', array(), (int) $event_id );
+
+		return array_values(
+			array_filter(
+				is_array( $types ) ? $types : array(),
+				static fn( $type ) => is_object( $type ) && method_exists( $type, 'is_sellable' ) && $type->is_sellable()
+			)
+		);
 	}
 
 	/**

@@ -8,6 +8,7 @@
  *
  * @var \QuickEventsManager\Events\Event $event Event being registered for.
  * @var array<int, array{id: int, label: string, full: bool}> $dates Dates to choose between, or empty when there is only one.
+ * @var array<int, array{id: int, name: string, description: string, remaining: int|null, full: bool, opens: string}> $ticket_types Kinds of place to choose between, or empty when the event offers one.
  * @var bool              $is_full      Whether every place is taken.
  * @var int|null          $remaining    Places left, or null when uncapped.
  * @var array|null        $result       Outcome of the previous submission.
@@ -171,6 +172,74 @@ defined( 'ABSPATH' ) || exit;
 					<span class="qevm-field__error" id="qevm-date-error"><?php echo esc_html( $qevm_error ); ?></span>
 				<?php endif; ?>
 			</p>
+		<?php endif; ?>
+
+		<?php if ( array() !== $ticket_types ) : ?>
+			<?php $qevm_error = FormHandler::error( $result, 'ticket_type_id' ); ?>
+			<fieldset class="qevm-field qevm-ticket-choice"
+				<?php
+				if ( '' !== $qevm_error ) {
+					echo 'aria-invalid="true" aria-describedby="qevm-ticket-error"';
+				}
+				?>
+				>
+				<legend><?php esc_html_e( 'Which kind of place', 'quick-events-manager' ); ?> <span class="qevm-required" aria-hidden="true">*</span></legend>
+
+				<?php foreach ( $ticket_types as $qevm_index => $qevm_ticket ) : ?>
+					<?php $qevm_id = 'qevm-ticket-' . (int) $qevm_ticket['id']; ?>
+					<p class="qevm-ticket-option<?php echo '' !== $qevm_ticket['opens'] ? ' qevm-ticket-option--waiting' : ''; ?>">
+						<input type="radio" id="<?php echo esc_attr( $qevm_id ); ?>" name="qevm_ticket_type_id" required
+							value="<?php echo esc_attr( (string) $qevm_ticket['id'] ); ?>"
+							<?php disabled( '' !== $qevm_ticket['opens'] ); ?>
+							<?php checked( (string) $qevm_ticket['id'], (string) FormHandler::value( $result, 'ticket_type_id' ) ); ?> />
+						<label for="<?php echo esc_attr( $qevm_id ); ?>">
+							<span class="qevm-ticket-option__name"><?php echo esc_html( $qevm_ticket['name'] ); ?></span>
+
+							<?php if ( '' !== $qevm_ticket['description'] ) : ?>
+								<span class="qevm-ticket-option__description"><?php echo esc_html( $qevm_ticket['description'] ); ?></span>
+							<?php endif; ?>
+
+							<?php
+							/*
+							 * Said only when it can be said truthfully. On an
+							 * event with several dates, how many places are left
+							 * of a kind depends on which date — and no date has
+							 * been chosen yet, so nothing is claimed.
+							 */
+							?>
+							<?php if ( '' !== $qevm_ticket['opens'] ) : ?>
+								<span class="qevm-ticket-option__state">
+									<?php
+									printf(
+										/* translators: %s: Date and time the sale opens. */
+										esc_html__( 'On sale from %s', 'quick-events-manager' ),
+										esc_html( $qevm_ticket['opens'] )
+									);
+									?>
+								</span>
+							<?php elseif ( $qevm_ticket['full'] ) : ?>
+								<span class="qevm-ticket-option__state">
+									<?php esc_html_e( 'Full — join the waiting list', 'quick-events-manager' ); ?>
+								</span>
+							<?php elseif ( null !== $qevm_ticket['remaining'] ) : ?>
+								<span class="qevm-ticket-option__state">
+									<?php
+									printf(
+										/* translators: %s: Number of places left. */
+										esc_html( _n( '%s place left', '%s places left', (int) $qevm_ticket['remaining'], 'quick-events-manager' ) ),
+										esc_html( number_format_i18n( (int) $qevm_ticket['remaining'] ) )
+									);
+									?>
+								</span>
+							<?php endif; ?>
+						</label>
+					</p>
+				<?php endforeach; ?>
+
+				<?php if ( '' !== $qevm_error ) : ?>
+					<span class="qevm-field__error" id="qevm-ticket-error"><?php echo esc_html( $qevm_error ); ?></span>
+				<?php endif; ?>
+			</fieldset>
 		<?php endif; ?>
 
 		<p class="qevm-field">

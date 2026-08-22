@@ -419,8 +419,14 @@ paid are the same entity, which is what stops free events needing a separate cod
 `status = 'archived'`. Historical orders keep their own snapshot regardless (below),
 but the reference stays resolvable.
 
-> **As built in C7.1.** The table is exactly as described above, including the four
-> columns nothing reads yet — `occurrence_id`, `currency`, `min_per_order` and
+> **As built in C7.1**, with one deliberate departure: `price_minor` is `unsigned`. A
+> negative price is not a discount, it is a mistake, and a discount is a different feature
+> with its own record. The note here previously claimed the table was "exactly as
+> described", which was wrong in the one column stage 9 copies into its snapshots — found
+> by an audit, not by a test, because nothing compares this document to that table the way
+> `MigrationTest` compares it to `registrations`.
+>
+> Everything else is as described above, including the four columns nothing reads yet — `occurrence_id`, `currency`, `min_per_order` and
 > `max_per_order`. Writing the schema this document already specified, rather than the
 > narrower one the chunk needed, costs nothing now and avoids altering a table that will
 > hold a row for every ticket ever sold.
@@ -592,7 +598,7 @@ plugin runs; anything not on this list does not get an index.
 | Q14 | Is this person already checked in? | `checkins` | `UNIQUE attendee_occurrence` |
 | Q15 | Door report for an occurrence | `checkins` | `occurrence_time (occurrence_id, checked_in_at)` |
 | Q16 | Ticket types on sale for an occurrence | `ticket_types` | `occ_status (occurrence_id, status)` |
-| Q17 | Places taken per ticket type | `attendees` | `ticket_type (ticket_type_id)` |
+| Q17 | Places taken per ticket type | `registrations` | `ticket_status (ticket_type_id, status)` |
 | Q18 | Expired seat holds, for the cron sweep | `orders` | `hold_expires (hold_expires_utc)` |
 | Q19 | Has this webhook already been handled? | `transactions` | `UNIQUE gateway_txn` |
 | Q20 | Net position of an order | `transactions` | `order_kind (order_id, kind)` |
