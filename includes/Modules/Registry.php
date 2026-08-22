@@ -48,6 +48,7 @@ final class Registry {
 			new \QuickEventsManager\Calendar\CalendarModule(),
 			new \QuickEventsManager\Recurrence\RecurrenceModule(),
 			new \QuickEventsManager\Tickets\TicketsModule(),
+			new \QuickEventsManager\CheckIn\CheckInModule(),
 			new \QuickEventsManager\Email\TemplatesModule(),
 		);
 

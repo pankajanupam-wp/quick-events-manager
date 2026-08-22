@@ -428,9 +428,15 @@ final class AttendeeRepository {
 			return 0;
 		}
 
-		self::forget_answers( self::ids_for_registration( $registration_id ) );
+		$ids = self::ids_for_registration( $registration_id );
 
-		return (int) $wpdb->delete( self::table(), array( 'registration_id' => $registration_id ), array( '%d' ) );
+		self::forget_answers( $ids );
+
+		$removed = (int) $wpdb->delete( self::table(), array( 'registration_id' => $registration_id ), array( '%d' ) );
+
+		self::announce_deletion( $ids );
+
+		return $removed;
 	}
 
 	/**
@@ -506,7 +512,9 @@ final class AttendeeRepository {
 			)
 		);
 
-		self::forget_answers( array_map( 'intval', (array) $ids ) );
+		$ids = array_map( 'intval', (array) $ids );
+
+		self::forget_answers( $ids );
 
 		$removed = $wpdb->query(
 			$wpdb->prepare(
@@ -516,6 +524,8 @@ final class AttendeeRepository {
 				$event_id
 			)
 		);
+
+		self::announce_deletion( $ids );
 
 		return (int) $removed;
 	}
@@ -551,6 +561,40 @@ final class AttendeeRepository {
 
 		// Ten collisions against a 32^8 space means something is very wrong.
 		return 'QEVT-' . strtoupper( substr( md5( uniqid( '', true ) ), 0, 12 ) );
+	}
+
+	/**
+	 * Say which attendees have gone.
+	 *
+	 * Anything holding rows keyed on an attendee — check-ins today, whatever
+	 * stage 9 adds tomorrow — cleans up when it hears this. This module cannot
+	 * reach those tables and should not know they exist: modules depend on the
+	 * domain, not on each other, so the one that owns the rows says what
+	 * happened and the ones that care listen.
+	 *
+	 * Fired after the delete rather than before, so a listener that reads the
+	 * table finds what is actually there.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int[] $ids Attendee ids that were removed.
+	 * @return void
+	 */
+	private static function announce_deletion( array $ids ) {
+		$ids = array_values( array_filter( array_map( 'intval', $ids ), static fn( int $id ): bool => $id > 0 ) );
+
+		if ( array() === $ids ) {
+			return;
+		}
+
+		/**
+		 * Fires after attendee rows have been deleted.
+		 *
+		 * @since 26.0
+		 *
+		 * @param int[] $ids The attendees that were removed.
+		 */
+		do_action( 'qevm_attendees_deleted', $ids );
 	}
 
 	/**

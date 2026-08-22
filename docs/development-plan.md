@@ -1616,11 +1616,13 @@ no card data touches the plugin.
 | **C10.1** | Full accessibility audit across every screen; `docs/accessibility.md` with honest known limitations | L | |
 | **C10.2** | Performance benchmark at 10,000 events and 10,000 registrations; publish the numbers | M | |
 | **C10.3** | Security pass over **everything**, not just the last thing built | L | Checklist in [engineering-standards.md §7](engineering-standards.md#7-security-rules) |
-| **C10.4** | `npm run build` wired; all blocks verified in the editor; front end loads zero block JS | M | Has never been run |
+| **C10.4** | All blocks verified in the editor | S | **Resized from M.** "Has never been run" was wrong: CI runs `npm run build` on every push and on deploy, and every block registers a PHP `render_callback`, so "zero block JS on the front end" is structurally true already. What is left is opening each block in the editor |
 | **C10.5** | Multisite activation and uninstall tested | M | Currently untested |
 | **C10.6** | i18n sweep; `.pot` regenerated; RTL verified | M | |
 | **C10.7** | `readme.txt` rewritten for the finished plugin; screenshots in `.wordpress-org/` | M | |
-| **C10.8** | Delete an event's bookings when the event is deleted | S | Found by the Stage 6 gate. `deleted_post` removes the occurrence rows and leaves registrations and attendees behind, holding names and addresses nothing can reach |
+| **C10.8** | Delete an event's bookings when the event is deleted | S | Found by the Stage 6 gate. `deleted_post` removes the occurrence rows and leaves registrations and attendees behind, holding names and addresses nothing can reach. The cascade already exists in `Repository::delete_for_event()`; only the hook is missing |
+| **C10.12** | Verify indexes actually exist after an upgrade, rather than trusting dbDelta | S | **Found in C8.1.** dbDelta reports "Added index" from its own comparison; the `ALTER` beneath it fails silently when existing data violates the constraint |
+| **C10.11** | The "Delete all data on uninstall" opt-in, and every table on the drop list | M | **Found by the stage 7 audit.** docs/database.md promises removal happens *only if* the owner ticked a setting. There is no such setting and `uninstall.php` drops unconditionally — removing the plugin destroys every registration with no warning. Stages 8 and 9 add four more tables to that list |
 | **C10.9** | `SVN_USERNAME` / `SVN_PASSWORD` verified on the repo | S | Their absence already failed a release on a sibling plugin |
 | **C10.10** | Final review; tag `26.0` | S | Tag must equal `Stable tag` exactly, no `v` prefix |
 
