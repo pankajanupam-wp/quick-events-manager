@@ -72,7 +72,7 @@ final class TicketTypesTest extends TestCase {
 		$table   = TicketTypeRepository::table();
 		$columns = $wpdb->get_col( "DESCRIBE {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reading our own schema.
 
-		foreach ( array( 'id', 'event_id', 'occurrence_id', 'name', 'description', 'price_minor', 'currency', 'capacity', 'min_per_order', 'max_per_order', 'sale_starts_utc', 'sale_ends_utc', 'sort_order', 'status', 'created_at', 'updated_at' ) as $column ) {
+		foreach ( array( 'id', 'event_id', 'occurrence_id', 'name', 'description', 'price_minor', 'currency', 'capacity', 'sale_starts_utc', 'sale_ends_utc', 'sort_order', 'status', 'created_at', 'updated_at' ) as $column ) {
 			$this->assertContains( $column, $columns, $column . ' is missing' );
 		}
 	}

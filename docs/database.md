@@ -406,8 +406,6 @@ CREATE TABLE {prefix}qevm_ticket_types (
     price_minor      bigint(20)   NOT NULL DEFAULT 0,
     currency         char(3)      NOT NULL DEFAULT '',
     capacity         int(10) unsigned NOT NULL DEFAULT 0,
-    min_per_order    smallint(5) unsigned NOT NULL DEFAULT 1,
-    max_per_order    smallint(5) unsigned NOT NULL DEFAULT 0,
     sale_starts_utc  datetime     DEFAULT NULL,
     sale_ends_utc    datetime     DEFAULT NULL,
     sort_order       smallint(5) unsigned NOT NULL DEFAULT 0,
@@ -435,8 +433,17 @@ but the reference stays resolvable.
 > by an audit, not by a test, because nothing compares this document to that table the way
 > `MigrationTest` compares it to `registrations`.
 >
-> Everything else is as described above, including the four columns nothing reads yet — `occurrence_id`, `currency`, `min_per_order` and
-> `max_per_order`. Writing the schema this document already specified, rather than the
+> **`min_per_order` and `max_per_order` were dropped in C9.1**, which is the chunk the
+> development plan gave that decision to. Nothing ever read them: no interface set them,
+> no booking checked them, and a column that looks like a feature and is not one is worse
+> than an absent one. A per-order minimum and maximum is a real thing to want, and it
+> comes back as one piece of work — a field on the ticket types box, a check on the
+> booking form, a check in the order builder — rather than as two columns waiting to be
+> noticed. dbDelta never drops anything, so the removal is an explicit
+> `Installer::drop_retired_columns()` rather than an absence from the `CREATE TABLE`.
+>
+> Everything else is as described above, including the two columns nothing reads yet —
+> `occurrence_id` and `currency`. Writing the schema this document already specified, rather than the
 > narrower one the chunk needed, costs nothing now and avoids altering a table that will
 > hold a row for every ticket ever sold.
 >
@@ -529,8 +536,8 @@ CREATE TABLE {prefix}qevm_transactions (
     amount_minor     bigint(20)   NOT NULL,
     currency         char(3)      NOT NULL,
     gateway          varchar(40)  NOT NULL,
-    gateway_txn_id   varchar(190) NOT NULL DEFAULT '',
-    idempotency_key  varchar(190) NOT NULL DEFAULT '',
+    gateway_txn_id   varchar(190) DEFAULT NULL,
+    idempotency_key  varchar(190) DEFAULT NULL,
     reason           varchar(190) NOT NULL DEFAULT '',
     error_code       varchar(64)  NOT NULL DEFAULT '',
     created_at       datetime     NOT NULL,
@@ -547,6 +554,22 @@ CREATE TABLE {prefix}qevm_transactions (
 `amount_minor` is **signed** — charges positive, refunds negative — so an order's net
 position is one `SUM`. One ledger rather than separate payment and refund tables
 means reconciliation cannot disagree with itself.
+
+> **Built in C9.1, with one correction to the above.** Those two columns were specified
+> `NOT NULL DEFAULT ''`, which cannot work underneath a unique key. MySQL treats `''` as
+> a value like any other, so the *second* row without a gateway id yet — the second
+> checkout the site ever had — is rejected as a duplicate. That failure is worse than a
+> crash, because a duplicate-key error is exactly what a webhook handler is told to read
+> as "already processed": a brand-new payment would have looked like a replay of an old
+> one. Multiple `NULL`s are permitted in a unique index, so "not known yet" is `NULL` and
+> a real id still cannot appear twice. Verified against MySQL directly before the table
+> was written, and locked down by
+> `tests/integration/CommerceTablesTest.php::test_two_charges_can_be_pending_at_once`.
+>
+> `qevm_orders.currency` is `NOT NULL DEFAULT ''` rather than having no default, because
+> a site currency does not exist until C9.2 and a column with no default makes every
+> insert before then a failure. `qevm_order_items` also gains `KEY ticket_type_id`, which
+> `sold_for_ticket_type()` uses — added because a query needed it, not in case one might.
 
 **`UNIQUE KEY gateway_txn` is the webhook-replay defence.** Payment gateways deliver
 the same event more than once by design; a naive handler creates two registrations
@@ -714,12 +737,16 @@ destroy data.
 | **Module switched off** | Nothing is removed. The table stays. Switching it back on finds the data intact. |
 | **Uninstall** | Removes plugin data **only if** the site owner ticked *Delete all data on uninstall*. Default is off. |
 
-> **Not true today, and it is the most serious contradiction in this document.**
-> `uninstall.php` consults no option at all: it drops every table unconditionally, and no
-> such setting exists. A site owner who removes the plugin to try something else loses
-> every registration, attendee and answer with no warning and no way to have asked
-> otherwise. Found by an audit of the plan against the code in stage 7. Owned by **C10.11**
-> — the setting, the guard, and the tables stages 8 and 9 add to that list.
+> **True as of C10.11**, and it was not before. `uninstall.php` used to consult no option
+> at all: it dropped every table unconditionally, and no such setting existed. A site owner
+> who removed the plugin to try something else lost every registration, attendee and answer
+> with no warning and no way to have asked otherwise. Found by an audit of the plan against
+> the code in stage 7, and resolved in favour of this promise rather than the code, because
+> that is the half that cannot be undone if it is the wrong choice.
+>
+> The setting is **Events → Settings → Privacy → When the plugin is deleted**, it is off,
+> and `tests/integration/UninstallTest.php` holds both halves: nothing goes with it off,
+> everything goes with it on.
 
 The default is off because deleting an attendee list is not recoverable, and a plugin
 that does it silently on an accidental delete has done something unforgivable.

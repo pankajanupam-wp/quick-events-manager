@@ -11,6 +11,8 @@ import { PanelBody, TextControl } from '@wordpress/components';
 import ServerSideRender from '@wordpress/server-side-render';
 import { __ } from '@wordpress/i18n';
 
+import Empty from '../shared/empty';
+
 import metadata from './block.json';
 
 registerBlockType( metadata.name, {
@@ -32,7 +34,13 @@ registerBlockType( metadata.name, {
 				</InspectorControls>
 
 				<div { ...useBlockProps() }>
-					<ServerSideRender block={ metadata.name } attributes={ attributes } />
+					<ServerSideRender
+						block={ metadata.name }
+						attributes={ attributes }
+						EmptyResponsePlaceholder={ () => (
+							<Empty label={ __( 'Event Registration', 'quick-events-manager' ) } />
+						) }
+					/>
 				</div>
 			</>
 		);

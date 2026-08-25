@@ -8,6 +8,7 @@
 namespace QuickEventsManager\Frontend;
 
 use QuickEventsManager\Admin\Settings;
+use QuickEventsManager\Commerce\Money;
 use QuickEventsManager\Events\Event;
 use QuickEventsManager\Events\Meta;
 use QuickEventsManager\Events\OccurrenceRepository;
@@ -105,6 +106,20 @@ final class Renderer {
 		$event = new Event( (int) $atts['id'] > 0 ? (int) $atts['id'] : get_the_ID() );
 
 		if ( ! $event->is_valid() ) {
+			return '';
+		}
+
+		/*
+		 * Nothing worth a box. An event with no date, no location and no
+		 * joining link has nothing to put in a details list, and rendering the
+		 * empty shell puts an invisible element on the page — on the front end
+		 * it is clutter, and in the block editor it is a block with no height
+		 * that cannot be clicked or selected.
+		 *
+		 * Found in C10.4 by inserting the block into a new event, which is
+		 * exactly the state where an event has none of the three.
+		 */
+		if ( '' === $event->start_utc() && ! $event->has_location_details() && ! $event->is_online() ) {
 			return '';
 		}
 
@@ -312,10 +327,21 @@ final class Renderer {
 			 */
 			$countable = $single && ! $opens && $type->capacity() > 0;
 
+			/*
+			 * The price as a person reads it, decided here rather than in the
+			 * template, because money becomes words in exactly one place. A
+			 * free type says "Free" rather than "£0.00": zero is a price and
+			 * "free" is what it means.
+			 */
+			$price = Money::from_minor( $type->price_minor() );
+
 			$offer[] = array(
 				'id'          => $type->id(),
 				'name'        => $type->name(),
 				'description' => $type->description(),
+				'price'       => $price->is_zero()
+					? __( 'Free', 'quick-events-manager' )
+					: $price->format(),
 				'remaining'   => $countable ? RegistrationService::places_remaining( $event, 0, $type->id() ) : null,
 				'full'        => $countable && RegistrationService::is_full( $event, 0, $type->id() ),
 				'opens'       => $opens ? self::local_moment( $event, $type->sale_starts_utc() ) : '',

@@ -106,7 +106,9 @@ final class FormHandler {
 		$this->redirect(
 			$event_id,
 			RegistrationStatus::Waitlisted === $result->status() ? 'waitlisted' : 'success',
-			''
+			'',
+			'',
+			$result->id()
 		);
 	}
 
@@ -195,14 +197,30 @@ final class FormHandler {
 	 * @param string $status   One of success, waitlisted, error.
 	 * @param string $message  Message to display.
 	 * @param string $token    Stash token for a failed submission, if there is one.
+	 * @param int    $registration_id The booking that was made, or 0.
 	 * @return void
 	 */
-	private function redirect( $event_id, $status, $message, $token = '' ) {
+	private function redirect( $event_id, $status, $message, $token = '', $registration_id = 0 ) {
 		$url = $event_id > 0 ? get_permalink( $event_id ) : home_url( '/' );
 
 		if ( ! $url ) {
 			$url = home_url( '/' );
 		}
+
+		/**
+		 * Filter where somebody goes after booking.
+		 *
+		 * The event page, unless something has a reason to send them somewhere
+		 * else first — a booking that has to be paid for goes to the checkout.
+		 * This module does not know what a checkout is, which is why this is a
+		 * filter rather than a branch.
+		 *
+		 * @since 26.0
+		 *
+		 * @param string $url             Where they were going.
+		 * @param int    $registration_id The booking, or 0 when there is not one.
+		 */
+		$url = (string) apply_filters( 'qevm_booking_destination', $url, (int) $registration_id );
 
 		$args = array( self::RESULT_ARG => $status );
 

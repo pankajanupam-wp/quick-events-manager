@@ -48,6 +48,13 @@ abstract class TestCase extends PHPUnitTestCase {
 	private $hooks_before = null;
 
 	/**
+	 * The enabled modules as this test found them.
+	 *
+	 * @var mixed
+	 */
+	private $modules_before = array();
+
+	/**
 	 * Open a transaction and start from a known state.
 	 *
 	 * @return void
@@ -66,6 +73,16 @@ abstract class TestCase extends PHPUnitTestCase {
 		 */
 		$wpdb->query( 'SET autocommit = 0' );
 		$wpdb->query( 'START TRANSACTION' );
+
+		/*
+		 * Which modules were on before this test touched anything. A test that
+		 * creates a table commits the transaction along with it, so switching a
+		 * module on can outlive the rollback that is supposed to undo it — and
+		 * then decides what the *next* phpunit process boots with. That is not
+		 * hypothetical: it is why three email tests failed for a session with
+		 * nothing wrong with the code.
+		 */
+		$this->modules_before = get_option( QEVM_OPTION_MODULES, array() );
 
 		$this->enable_registration();
 		$this->empty_plugin_tables();
@@ -89,6 +106,15 @@ abstract class TestCase extends PHPUnitTestCase {
 		 * for the next test to read.
 		 */
 		wp_cache_flush();
+
+		/*
+		 * After the rollback and the flush, because both of those are what
+		 * would otherwise have restored it. Written only when it actually
+		 * differs, so the ordinary test pays nothing for this.
+		 */
+		if ( get_option( QEVM_OPTION_MODULES, array() ) !== $this->modules_before ) {
+			update_option( QEVM_OPTION_MODULES, $this->modules_before );
+		}
 
 		$this->restore_hooks();
 
@@ -141,11 +167,33 @@ abstract class TestCase extends PHPUnitTestCase {
 	 * @return void
 	 */
 	protected function enable_registration() {
-		update_option( QEVM_OPTION_MODULES, array( RegistrationModule::ID ) );
+		$this->switch_module_on( RegistrationModule::ID );
 
 		if ( ! Repository::table_exists() || ! AttendeeRepository::table_exists() ) {
 			( new RegistrationModule() )->activate();
 		}
+	}
+
+	/**
+	 * Add one module to whatever is already on.
+	 *
+	 * Adding rather than assigning. This used to write the whole option, so a
+	 * test that wanted two modules got whichever it asked for last — and the
+	 * value it left behind outlived the transaction, quietly deciding what the
+	 * *next* run booted with.
+	 *
+	 * @param string $id Module id.
+	 * @return void
+	 */
+	protected function switch_module_on( $id ) {
+		$enabled = get_option( QEVM_OPTION_MODULES, array() );
+		$enabled = is_array( $enabled ) ? $enabled : array();
+
+		if ( ! in_array( $id, $enabled, true ) ) {
+			$enabled[] = $id;
+		}
+
+		update_option( QEVM_OPTION_MODULES, array_values( $enabled ) );
 	}
 
 	/**
@@ -259,6 +307,7 @@ abstract class TestCase extends PHPUnitTestCase {
 			array(
 				'title'        => 'Integration event',
 				'status'       => 'publish',
+				'author'       => 0,
 				'capacity'     => 0,
 				'starts_in'    => WEEK_IN_SECONDS,
 				'duration'     => HOUR_IN_SECONDS,
@@ -291,6 +340,7 @@ abstract class TestCase extends PHPUnitTestCase {
 				'post_type'   => QEVM_POST_TYPE,
 				'post_title'  => (string) $args['title'],
 				'post_status' => (string) $args['status'],
+				'post_author' => (int) $args['author'],
 				'meta_input'  => $meta,
 			)
 		);

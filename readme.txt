@@ -8,7 +8,7 @@ Stable tag: 26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Create events, publish them, and take free registrations. Start simple and switch on more features only when you need them.
+Events that behave like events. Start with a date and a page; switch on registration, a calendar, tickets, payments or a door as you need them.
 
 == Description ==
 
@@ -40,19 +40,36 @@ When you want more, you switch it on yourself under **Events > Features**. Anyth
 = Switch on registration =
 
 * A sign-up form that works with or without JavaScript
-* A capacity, with an automatic waiting list once it is reached
+* A capacity, with an automatic waiting list once it is reached — strictly in the order people joined
 * A closing date for registrations
-* Confirmation emails to attendees and notifications to you
-* An attendee list with search and status filtering
-* CSV export
+* Confirmation emails carrying a calendar file, and notifications to you
+* Editable email wording, and one message to everybody registered for an event
+* An attendee list with search and status filtering, and CSV export
+* A cancellation link, so "I can't come after all" takes one click
+* Automatic deletion of old registrations, if you want it
+
+= And, when you need them =
+
+Each of these is off until you switch it on under **Events > Features**.
+
+* **A calendar** — a month grid or a list, on any page
+* **Your own questions** on the registration form, with the answers in the export
+* **Reusable venues and organisers**, promoted from the addresses you have already typed
+* **Repeating events** — daily, weekly, monthly or yearly, with per-date bookings. Move one date, call one off, or split a series from a date onwards
+* **Ticket types** — Member and Guest, Full and Concession — each with its own capacity, price and sale window
+* **Paid tickets through Stripe**, with seats held for twenty minutes while somebody pays, and full or partial refunds
+* **Selling through WooCommerce** instead, if you already run a shop
+* **Check-in** — a QR code on every confirmation and a door screen built for one hand and a phone with two bars of signal. It works with JavaScript switched off
+* **Three roles** — Event Manager, Event Organizer and Event Staff. Hand a volunteer a phone for the evening and they can admit people and change nothing else
 
 = Blocks and shortcodes =
 
-Three blocks — Event List, Event Details and Event Registration — plus the matching shortcodes:
+Four blocks — Event List, Event Details, Event Registration and Event Calendar — plus the matching shortcodes:
 
 `[qevm_event_list limit="10" show="upcoming"]`
 `[qevm_event_details id="123"]`
 `[qevm_event_registration id="123"]`
+`[qevm_event_calendar]`
 
 The blocks render on the server, so your visitors download no extra JavaScript.
 
@@ -68,7 +85,22 @@ When somebody registers for an event, the plugin stores the name, email address,
 
 Registering asks people to agree to that, in wording you control, and records which wording they agreed to and the moment they did. Nothing else about the agreement is kept.
 
-It does not store IP addresses. It sends nothing to any external service — no tracking, no analytics, no calls home. Registrations are covered by WordPress's own privacy tools, so an export or erasure request includes them automatically.
+Deleting the plugin does **not** delete your events and attendees unless you ask it to. There is a setting for that under Events → Settings, and it is off: removing a plugin to try something else should not destroy a guest list.
+
+It does not store IP addresses. There is no tracking, no analytics and no calls home, ever. Registrations are covered by WordPress's own privacy tools, so an export or erasure request includes them automatically.
+
+= External services =
+
+Out of the box the plugin contacts nothing at all. One optional feature changes that, and only after you have set it up:
+
+**Stripe** — used only if you switch on **Paid tickets** and enter your own Stripe keys. Two things happen then, and only on a payment screen:
+
+* The site asks Stripe (api.stripe.com) to create a payment for the amount, the currency, the order reference and the buyer's email address, so that Stripe can send its own receipt.
+* The payment screen loads Stripe's script (js.stripe.com), which draws the card form. Stripe requires the script to be loaded from them, and it is what makes bank authentication work.
+
+Card details are entered on Stripe's side and never reach this site. Nothing is sent to Stripe for a free event, on any other page, or before you have entered keys.
+
+Stripe's terms are at https://stripe.com/legal and their privacy policy at https://stripe.com/privacy.
 
 == Installation ==
 
@@ -107,7 +139,9 @@ Yes, and this is worth checking in anything you use. Each event stores the time 
 
 = Can I take payments? =
 
-Yes. Payments sit behind a gateway interface, so no part of the event or registration system is tied to one provider. Nothing in this plugin ever handles card details — every gateway takes that off your site.
+Yes, through Stripe. Payments sit behind a gateway interface, so no part of the event or registration system is tied to one provider and another can be added without touching the rest. Nothing in this plugin ever handles card details — the card is entered on the gateway's side.
+
+An unpaid checkout holds its seats for twenty minutes and then gives them back, so an event is never sold out by people who closed the tab.
 
 Like everything past the basics, it is off until you switch it on.
 
@@ -131,8 +165,9 @@ On GitHub: https://github.com/pankajanupam-wp/quick-events-manager/issues
 
 1. The event editor, with date, time and timezone.
 2. Events > Features, where you switch capability on a level at a time.
-3. An event page with details and a registration form.
+3. An event page, with the details, an add-to-calendar button and the registration form.
 4. The attendee list, with search, filtering and CSV export.
+5. The check-in door: one row per person, one big button, and a code you can type when the camera will not start.
 
 == Changelog ==
 

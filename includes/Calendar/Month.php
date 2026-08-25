@@ -304,10 +304,31 @@ final class Month {
 
 		$this->days = array();
 
+		$events = array();
+
 		foreach ( OccurrenceRepository::for_local_range( $first, $last ) as $occurrence ) {
+			$events[] = $occurrence->event_id();
+
 			foreach ( self::dates_covered( $occurrence, $first, $last ) as $date ) {
 				$this->days[ $date ][] = $occurrence;
 			}
+		}
+
+		/*
+		 * Every event in the month, fetched together.
+		 *
+		 * The grid builds an `Event` for each occupied day, which reads a post
+		 * and its meta. One at a time that is two queries per event, and a busy
+		 * month is two hundred events: the performance benchmark measured 471
+		 * queries and 70ms for a single month view, which is the classic N+1 and
+		 * invisible on the ten-event site anybody develops against.
+		 *
+		 * Priming here rather than in the template because the template is
+		 * overridable — a theme that copies it must not have to know this, and a
+		 * theme that has already copied the old one gets the fix anyway.
+		 */
+		if ( array() !== $events ) {
+			_prime_post_caches( array_values( array_unique( $events ) ), false, true );
 		}
 
 		return $this->days;

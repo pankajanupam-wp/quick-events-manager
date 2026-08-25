@@ -8,7 +8,7 @@
  *
  * @var \QuickEventsManager\Events\Event $event Event being registered for.
  * @var array<int, array{id: int, label: string, full: bool}> $dates Dates to choose between, or empty when there is only one.
- * @var array<int, array{id: int, name: string, description: string, remaining: int|null, full: bool, opens: string}> $ticket_types Kinds of place to choose between, or empty when the event offers one.
+ * @var array<int, array{id: int, name: string, description: string, price: string, remaining: int|null, full: bool, opens: string}> $ticket_types Kinds of place to choose between, or empty when the event offers one.
  * @var bool              $is_full      Whether every place is taken.
  * @var int|null          $remaining    Places left, or null when uncapped.
  * @var array|null        $result       Outcome of the previous submission.
@@ -194,6 +194,10 @@ defined( 'ABSPATH' ) || exit;
 							<?php checked( (string) $qevm_ticket['id'], (string) FormHandler::value( $result, 'ticket_type_id' ) ); ?> />
 						<label for="<?php echo esc_attr( $qevm_id ); ?>">
 							<span class="qevm-ticket-option__name"><?php echo esc_html( $qevm_ticket['name'] ); ?></span>
+
+							<?php if ( isset( $qevm_ticket['price'] ) && '' !== $qevm_ticket['price'] ) : ?>
+								<span class="qevm-ticket-option__price"><?php echo esc_html( $qevm_ticket['price'] ); ?></span>
+							<?php endif; ?>
 
 							<?php if ( '' !== $qevm_ticket['description'] ) : ?>
 								<span class="qevm-ticket-option__description"><?php echo esc_html( $qevm_ticket['description'] ); ?></span>

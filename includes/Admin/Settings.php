@@ -104,7 +104,8 @@ final class Settings {
 			__( 'Events per page', 'quick-events-manager' ),
 			array( $this, 'render_archive_per_page' ),
 			self::SLUG,
-			'qevm_display'
+			'qevm_display',
+			array( 'label_for' => 'qevm-archive-per-page' )
 		);
 
 		add_settings_section(
@@ -121,8 +122,43 @@ final class Settings {
 			__( 'Send notifications to', 'quick-events-manager' ),
 			array( $this, 'render_notification_email' ),
 			self::SLUG,
-			'qevm_notifications'
+			'qevm_notifications',
+			array( 'label_for' => 'qevm-notification-email' )
 		);
+
+		/*
+		 * What the site charges in is only a question if it charges. The
+		 * currency belongs to the site rather than to an event: an event priced
+		 * in one currency and another in a second is not a thing anybody wants,
+		 * and a gateway account has one currency anyway.
+		 */
+		if ( \QuickEventsManager\Plugin::instance()->registry()->is_enabled( \QuickEventsManager\Commerce\CommerceModule::ID ) ) {
+			add_settings_section(
+				'qevm_money',
+				__( 'Money', 'quick-events-manager' ),
+				static function () {
+					echo '<p>' . esc_html__( 'What prices on this site are in.', 'quick-events-manager' ) . '</p>';
+				},
+				self::SLUG
+			);
+
+			add_settings_field(
+				'currency',
+				__( 'Currency', 'quick-events-manager' ),
+				array( $this, 'render_currency' ),
+				self::SLUG,
+				'qevm_money',
+				array( 'label_for' => 'qevm-currency' )
+			);
+
+			add_settings_field(
+				'stripe_keys',
+				__( 'Stripe keys', 'quick-events-manager' ),
+				array( $this, 'render_stripe_keys' ),
+				self::SLUG,
+				'qevm_money'
+			);
+		}
 
 		/*
 		 * Consent is only a question if the site takes registrations at all. A
@@ -148,7 +184,8 @@ final class Settings {
 			__( 'Consent wording', 'quick-events-manager' ),
 			array( $this, 'render_consent_text' ),
 			self::SLUG,
-			'qevm_privacy'
+			'qevm_privacy',
+			array( 'label_for' => 'qevm-consent-text' )
 		);
 
 		add_settings_field(
@@ -156,7 +193,17 @@ final class Settings {
 			__( 'Delete registrations after', 'quick-events-manager' ),
 			array( $this, 'render_retention_days' ),
 			self::SLUG,
-			'qevm_privacy'
+			'qevm_privacy',
+			array( 'label_for' => 'qevm-retention-days' )
+		);
+
+		add_settings_field(
+			'delete_on_uninstall',
+			__( 'When the plugin is deleted', 'quick-events-manager' ),
+			array( $this, 'render_delete_on_uninstall' ),
+			self::SLUG,
+			'qevm_privacy',
+			array( 'label_for' => 'qevm-delete-on-uninstall' )
 		);
 	}
 
@@ -169,10 +216,19 @@ final class Settings {
 	 */
 	public static function defaults() {
 		return array(
-			'auto_details'       => true,
-			'archive_per_page'   => 10,
-			'notification_email' => '',
-			'consent_text'       => __( 'I agree to my details being stored so the organiser can contact me about this event.', 'quick-events-manager' ),
+			'auto_details'        => true,
+			'currency'            => \QuickEventsManager\Commerce\Currency::FALLBACK,
+
+			/*
+			 * Off, and it has to be off. Deleting an attendee list is not
+			 * recoverable, and a plugin that does it on an accidental delete —
+			 * or while somebody is trying another plugin for an afternoon — has
+			 * done something unforgivable.
+			 */
+			'delete_on_uninstall' => false,
+			'archive_per_page'    => 10,
+			'notification_email'  => '',
+			'consent_text'        => __( 'I agree to my details being stored so the organiser can contact me about this event.', 'quick-events-manager' ),
 
 			/*
 			 * Zero, meaning keep forever, and it has to stay zero. A plugin
@@ -180,7 +236,7 @@ final class Settings {
 			 * retention feature appeared would be the worst thing this codebase
 			 * could do to somebody.
 			 */
-			'retention_days'     => 0,
+			'retention_days'      => 0,
 		);
 	}
 
@@ -243,13 +299,72 @@ final class Settings {
 		$per_page = isset( $input['archive_per_page'] ) ? absint( $input['archive_per_page'] ) : $defaults['archive_per_page'];
 		$per_page = max( 1, min( 100, $per_page ) );
 
+		/*
+		 * The keys are not part of this option and never get written into it:
+		 * they go to their own, unautoloaded, through the class that owns them.
+		 * They arrive on this form because that is where somebody expects to
+		 * type them, not because they belong in this array.
+		 */
+		if ( isset( $input['stripe'] ) && is_array( $input['stripe'] ) ) {
+			\QuickEventsManager\Commerce\Stripe\Keys::save( $input['stripe'] );
+		}
+
 		return array(
-			'auto_details'       => ! empty( $input['auto_details'] ),
-			'archive_per_page'   => $per_page,
-			'notification_email' => is_email( $email ) ? $email : '',
-			'consent_text'       => $this->sanitize_consent_text( $input ),
-			'retention_days'     => $this->sanitize_retention_days( $input ),
+			'auto_details'        => ! empty( $input['auto_details'] ),
+			'currency'            => $this->sanitize_currency( $input ),
+			'delete_on_uninstall' => $this->sanitize_delete_on_uninstall( $input ),
+			'archive_per_page'    => $per_page,
+			'notification_email'  => is_email( $email ) ? $email : '',
+			'consent_text'        => $this->sanitize_consent_text( $input ),
+			'retention_days'      => $this->sanitize_retention_days( $input ),
 		);
+	}
+
+	/**
+	 * Sanitise the delete-everything switch.
+	 *
+	 * Absent means unchanged rather than off, for the same reason the retention
+	 * period and the consent wording work that way: this field renders only
+	 * when registration is on, and a save from a site with it off must not
+	 * silently change what happens to that site's data.
+	 *
+	 * A checkbox that is present and unticked is a deliberate "no", and is
+	 * honoured — that is what the hidden companion field below is for.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $input Submitted values.
+	 * @return bool
+	 */
+	private function sanitize_delete_on_uninstall( array $input ) {
+		if ( ! isset( $input['delete_on_uninstall_present'] ) ) {
+			return (bool) self::get( 'delete_on_uninstall', false );
+		}
+
+		return ! empty( $input['delete_on_uninstall'] );
+	}
+
+	/**
+	 * Sanitise the currency.
+	 *
+	 * Absent means unchanged, for the same reason the consent wording and the
+	 * retention period do: this field only renders while paid tickets are on,
+	 * and a save from a site that has them off must not quietly reset what its
+	 * historic orders were priced in.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed> $input Submitted values.
+	 * @return string
+	 */
+	private function sanitize_currency( array $input ) {
+		if ( ! isset( $input['currency'] ) ) {
+			return (string) self::get( 'currency', \QuickEventsManager\Commerce\Currency::FALLBACK );
+		}
+
+		$code = strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $input['currency'] ) );
+
+		return 3 === strlen( $code ) ? $code : \QuickEventsManager\Commerce\Currency::FALLBACK;
 	}
 
 	/**
@@ -329,10 +444,141 @@ final class Settings {
 	 */
 	public function render_archive_per_page() {
 		?>
-		<input type="number" min="1" max="100" class="small-text"
+		<input type="number" min="1" max="100" class="small-text" id="qevm-archive-per-page"
 			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[archive_per_page]"
 			value="<?php echo esc_attr( (string) self::get( 'archive_per_page' ) ); ?>" />
 		<?php
+	}
+
+	/**
+	 * Render the delete-everything switch.
+	 *
+	 * Worded as what will happen rather than as a feature name, and the warning
+	 * is beside the control rather than in a tooltip: this is the one setting on
+	 * the screen that can destroy something nobody can get back.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function render_delete_on_uninstall() {
+		?>
+		<input type="hidden" name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[delete_on_uninstall_present]" value="1" />
+
+		<label for="qevm-delete-on-uninstall">
+			<input type="checkbox" id="qevm-delete-on-uninstall"
+				name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[delete_on_uninstall]" value="1"
+				<?php checked( (bool) self::get( 'delete_on_uninstall', false ) ); ?> />
+			<?php esc_html_e( 'Delete all events, attendees and settings when this plugin is deleted', 'quick-events-manager' ); ?>
+		</label>
+
+		<p class="description">
+			<?php esc_html_e( 'Off by default. With this off, deleting the plugin leaves your data in the database, so reinstalling picks up where you left off. With it on, everything goes and cannot be recovered.', 'quick-events-manager' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the currency chooser.
+	 *
+	 * A dropdown rather than a text field: a typo in an ISO code is a rejected
+	 * charge at the gateway, discovered by a customer.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function render_currency() {
+		$current = (string) self::get( 'currency', \QuickEventsManager\Commerce\Currency::FALLBACK );
+		?>
+		<select id="qevm-currency" name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[currency]">
+			<?php foreach ( \QuickEventsManager\Commerce\Currency::choices() as $code => $label ) : ?>
+				<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $current, $code ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<p class="description">
+			<?php esc_html_e( 'Prices already recorded keep the currency they were taken in.', 'quick-events-manager' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the Stripe key fields.
+	 *
+	 * The stored keys are never printed back into the form. A secret key in a
+	 * `value` attribute is a secret key in the page source, in the browser's
+	 * autofill store and in every screenshot anybody takes of this screen. Each
+	 * field says how the stored key ends, and leaving it empty keeps what is
+	 * there.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public function render_stripe_keys() {
+		$fields = array(
+			'publishable' => array(
+				'label' => __( 'Publishable key', 'quick-events-manager' ),
+				'value' => \QuickEventsManager\Commerce\Stripe\Keys::publishable(),
+				'hint'  => __( 'Starts pk_test_ or pk_live_. Safe to appear in a page.', 'quick-events-manager' ),
+			),
+			'secret'      => array(
+				'label' => __( 'Secret key', 'quick-events-manager' ),
+				'value' => \QuickEventsManager\Commerce\Stripe\Keys::secret(),
+				'hint'  => __( 'Starts sk_test_ or sk_live_. Never share it.', 'quick-events-manager' ),
+			),
+			'webhook'     => array(
+				'label' => __( 'Webhook signing secret', 'quick-events-manager' ),
+				'value' => \QuickEventsManager\Commerce\Stripe\Keys::webhook_secret(),
+				'hint'  => __( 'Starts whsec_. Stripe shows it when you add the endpoint.', 'quick-events-manager' ),
+			),
+		);
+
+		foreach ( $fields as $name => $field ) {
+			$stored = \QuickEventsManager\Commerce\Stripe\Keys::mask( $field['value'] );
+			?>
+			<p>
+				<label for="<?php echo esc_attr( 'qevm-stripe-' . $name ); ?>">
+					<?php echo esc_html( $field['label'] ); ?>
+				</label><br />
+				<input type="password" class="regular-text" autocomplete="off"
+					id="<?php echo esc_attr( 'qevm-stripe-' . $name ); ?>"
+					name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[stripe][<?php echo esc_attr( $name ); ?>]"
+					value=""
+					placeholder="<?php echo '' !== $stored ? esc_attr( $stored ) : ''; ?>" />
+				<span class="description">
+					<?php echo esc_html( $field['hint'] ); ?>
+					<?php if ( '' !== $stored ) : ?>
+						<?php esc_html_e( 'Saved. Leave empty to keep it.', 'quick-events-manager' ); ?>
+					<?php endif; ?>
+				</span>
+			</p>
+			<?php
+		}
+
+		?>
+		<p class="description">
+			<?php esc_html_e( 'Add this address as a webhook endpoint in your Stripe dashboard, for the payment_intent events:', 'quick-events-manager' ); ?><br />
+			<code><?php echo esc_html( \QuickEventsManager\Commerce\Stripe\Webhook::url() ); ?></code>
+		</p>
+		<?php
+
+		if ( \QuickEventsManager\Commerce\Stripe\Keys::are_complete() && ! \QuickEventsManager\Commerce\Stripe\Keys::are_consistent() ) {
+			?>
+			<p class="notice notice-error" style="padding: 0.5rem;">
+				<?php esc_html_e( 'One of these keys is a test key and the other is a live one. Card payments are switched off until they match.', 'quick-events-manager' ); ?>
+			</p>
+			<?php
+		} elseif ( \QuickEventsManager\Commerce\Stripe\Keys::are_complete() && \QuickEventsManager\Commerce\Stripe\Keys::are_test() ) {
+			?>
+			<p class="description">
+				<strong><?php esc_html_e( 'Test mode.', 'quick-events-manager' ); ?></strong>
+				<?php esc_html_e( 'No real money will move while these are test keys.', 'quick-events-manager' ); ?>
+			</p>
+			<?php
+		}
 	}
 
 	/**
@@ -344,7 +590,7 @@ final class Settings {
 	 */
 	public function render_notification_email() {
 		?>
-		<input type="email" class="regular-text"
+		<input type="email" class="regular-text" id="qevm-notification-email"
 			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[notification_email]"
 			value="<?php echo esc_attr( (string) self::get( 'notification_email' ) ); ?>"
 			placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>" />
@@ -394,7 +640,7 @@ final class Settings {
 	public function render_consent_text() {
 		$version = Consent::version();
 		?>
-		<textarea class="large-text" rows="3"
+		<textarea class="large-text" rows="3" id="qevm-consent-text"
 			name="<?php echo esc_attr( QEVM_OPTION_SETTINGS ); ?>[consent_text]"
 		><?php echo esc_textarea( (string) self::get( 'consent_text', '' ) ); ?></textarea>
 		<p class="description">

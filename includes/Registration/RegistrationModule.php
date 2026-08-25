@@ -11,6 +11,7 @@ use QuickEventsManager\Install\Installer;
 use QuickEventsManager\Modules\Module;
 
 use QuickEventsManager\Domain\ModuleLevel;
+use QuickEventsManager\Domain\RegistrationStatus;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -101,6 +102,34 @@ final class RegistrationModule implements Module {
 		add_filter( 'cron_schedules', array( \QuickEventsManager\Email\Worker::class, 'add_interval' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- Five minutes, for a queue that must not leave a confirmation sitting for an hour.
 
 		/*
+		 * Money, from the other side. Something is taking payment for a booking:
+		 * these say which booking an order is for, and act on what happened to
+		 * it. Nothing here names a class from the commerce module and nothing
+		 * here knows what a gateway is — the hooks carry ids, and with paid
+		 * tickets switched off nobody ever fires them.
+		 */
+		add_action( 'qevm_order_opened', array( __CLASS__, 'remember_order' ), 10, 2 );
+		add_filter( 'qevm_order_booking', array( __CLASS__, 'booking_for_order' ), 10, 2 );
+		add_filter( 'qevm_booking_order', array( __CLASS__, 'order_for_booking' ), 10, 2 );
+		add_action( 'qevm_booking_awaiting_payment', array( __CLASS__, 'hold_until_paid' ), 10, 1 );
+
+		/*
+		 * A deleted event takes its bookings with it. Without this, deleting an
+		 * event permanently leaves every name, email address and phone number
+		 * on it sitting in a table nothing points at any more — invisible to
+		 * every screen, invisible to the privacy exporter, and still personal
+		 * data. Found by the stage 6 gate and fixed in C10.8.
+		 *
+		 * Here rather than beside the occurrence cleanup, because bookings
+		 * belong to this module: with registration switched off nothing listens,
+		 * which is correct — there are no bookings to remove.
+		 */
+		add_action( 'deleted_post', array( __CLASS__, 'forget_event_bookings' ), 10, 2 );
+		add_action( 'qevm_booking_paid_for', array( __CLASS__, 'confirm_paid_booking' ), 10, 1 );
+		add_action( 'qevm_booking_payment_abandoned', array( __CLASS__, 'release_unpaid_booking' ), 10, 1 );
+		add_action( 'qevm_booking_refunded', array( __CLASS__, 'release_refunded_booking' ), 10, 1 );
+
+		/*
 		 * A date somebody has booked onto is never deleted by a rule change. The
 		 * occurrence table asks; this answers, because the domain must not reach
 		 * into a module that may not be loaded — with registration off there are
@@ -116,12 +145,207 @@ final class RegistrationModule implements Module {
 		 */
 		add_action( 'qevm_series_split', array( __CLASS__, 'follow_series_split' ), 10, 3 );
 
+		/*
+		 * The door asks who is expected; this answers. Check-in owns the
+		 * arrival record and this module owns the people, and neither reaches
+		 * into the other's tables — with registration off there is nobody
+		 * expected anywhere, which is the truth rather than an empty screen.
+		 */
+		add_filter( 'qevm_expected_attendees', array( __CLASS__, 'supply_expected' ), 10, 4 );
+
 		if ( is_admin() ) {
 			( new AttendeesScreen() )->register();
 			( new \QuickEventsManager\Email\BroadcastForm() )->register();
 			( new Exporter() )->register();
 			( new EventMetaBox() )->register();
 		}
+	}
+
+	/**
+	 * Remove the bookings for an event that has been deleted.
+	 *
+	 * Deletion only — trashing an event does not fire this, and must not: a
+	 * trashed event can be restored, and restoring one whose attendees were
+	 * thrown away is worse than not restoring it at all.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $post_id The deleted post.
+	 * @param mixed $post    The post, when WordPress passed it.
+	 * @return void
+	 */
+	public static function forget_event_bookings( $post_id, $post = null ) {
+		if ( $post instanceof \WP_Post && QEVM_POST_TYPE !== $post->post_type ) {
+			return;
+		}
+
+		Repository::delete_for_event( (int) $post_id );
+	}
+
+	/**
+	 * Record which order is paying for a booking.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $order_id        The order.
+	 * @param int $registration_id The booking.
+	 * @return void
+	 */
+	public static function remember_order( $order_id, $registration_id ) {
+		$registration_id = (int) $registration_id;
+
+		if ( $registration_id <= 0 ) {
+			return;
+		}
+
+		Repository::set_order( $registration_id, (int) $order_id );
+	}
+
+	/**
+	 * Which booking an order is paying for.
+	 *
+	 * Answers `qevm_order_booking`. The commerce module asks rather than
+	 * reading this table, so that with registration switched off the question
+	 * simply has no answer instead of a fatal error.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $registration_id Answer so far.
+	 * @param mixed $order_id        The order.
+	 * @return int
+	 */
+	public static function booking_for_order( $registration_id, $order_id ) {
+		$found = Repository::find_by_order( (int) $order_id );
+
+		return null !== $found ? $found->id() : (int) $registration_id;
+	}
+
+	/**
+	 * Somebody has to pay before this place is really theirs.
+	 *
+	 * The booking stays in the room — pending occupies a place exactly as
+	 * confirmed does, which is what stops the seat being sold twice while the
+	 * card is being typed — and stops being confirmed, which is what lets it be
+	 * let go if nobody pays. Leaving it confirmed was the first version, and it
+	 * meant an abandoned checkout could never release its seat: the handlers
+	 * that free one only act on a pending booking.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $registration_id The booking.
+	 * @return void
+	 */
+	public static function hold_until_paid( $registration_id ) {
+		$registration = Repository::find( (int) $registration_id );
+
+		if ( null === $registration || RegistrationStatus::Confirmed !== $registration->status() ) {
+			return;
+		}
+
+		Repository::update_status( $registration->id(), RegistrationStatus::Pending );
+	}
+
+	/**
+	 * Which order is paying for a booking.
+	 *
+	 * Answers `qevm_booking_order`, the other direction from
+	 * `qevm_order_booking`.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $order_id        Answer so far.
+	 * @param mixed $registration_id The booking.
+	 * @return int
+	 */
+	public static function order_for_booking( $order_id, $registration_id ) {
+		$registration = Repository::find( (int) $registration_id );
+
+		return null !== $registration ? (int) $registration->get( 'order_id', 0 ) : (int) $order_id;
+	}
+
+	/**
+	 * Somebody paid: confirm their place.
+	 *
+	 * Only a booking that is still pending, and only up to the place it
+	 * actually holds — a payment does not overrule capacity. Somebody who paid
+	 * for a seat that filled while they were at the bank is a refund, not a
+	 * second person in the same chair, and the ranking that decided they were
+	 * on the waiting list is not re-run by an unrelated event.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $registration_id The booking.
+	 * @return void
+	 */
+	public static function confirm_paid_booking( $registration_id ) {
+		$registration = Repository::find( (int) $registration_id );
+
+		if ( null === $registration || RegistrationStatus::Pending !== $registration->status() ) {
+			return;
+		}
+
+		Repository::update_status( $registration->id(), RegistrationStatus::Confirmed );
+
+		$event = new \QuickEventsManager\Events\Event( $registration->event_id() );
+
+		/**
+		 * Fires when a booking has been paid for and confirmed.
+		 *
+		 * The confirmation and the organiser's notification are held back
+		 * while a booking is waiting to be paid for — telling somebody their
+		 * place is confirmed before the money arrives is a promise this plugin
+		 * cannot keep — so this is where those messages go out instead.
+		 *
+		 * @since 26.0
+		 *
+		 * @param Registration $registration The booking, now confirmed.
+		 * @param \QuickEventsManager\Events\Event $event The event.
+		 */
+		do_action( 'qevm_registration_paid', Repository::find( $registration->id() ), $event );
+	}
+
+	/**
+	 * The money went back: let the place go.
+	 *
+	 * Only a booking that had a place to begin with. A refund on something
+	 * already cancelled changes nothing here, and running the cancellation
+	 * again would move the waiting list twice for one freed seat.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $registration_id The booking.
+	 * @return void
+	 */
+	public static function release_refunded_booking( $registration_id ) {
+		$registration = Repository::find( (int) $registration_id );
+
+		if ( null === $registration || ! $registration->status()->occupies_place() ) {
+			return;
+		}
+
+		Repository::update_status( $registration->id(), RegistrationStatus::Cancelled );
+	}
+
+	/**
+	 * Nobody paid: let the place go.
+	 *
+	 * Cancelling is what frees the seat, and freeing a seat is what moves the
+	 * waiting list — through the machinery a cancellation already goes through,
+	 * rather than a second path that would have to be kept in step with it.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $registration_id The booking.
+	 * @return void
+	 */
+	public static function release_unpaid_booking( $registration_id ) {
+		$registration = Repository::find( (int) $registration_id );
+
+		if ( null === $registration || RegistrationStatus::Pending !== $registration->status() ) {
+			return;
+		}
+
+		Repository::update_status( $registration->id(), RegistrationStatus::Cancelled );
 	}
 
 	/**
@@ -186,6 +410,29 @@ final class RegistrationModule implements Module {
 		}
 
 		Repository::repoint_to_event( $moved, (int) $event_id );
+	}
+
+	/**
+	 * Everybody with a place at one date.
+	 *
+	 * Answers `qevm_expected_attendees`.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $attendees     Supplied so far.
+	 * @param mixed $event_id      Event id.
+	 * @param mixed $occurrence_id Date being run, or 0.
+	 * @param mixed $search        Match a name, an email or a ticket code.
+	 * @return array<int, Attendee>
+	 */
+	public static function supply_expected( $attendees, $event_id, $occurrence_id, $search ) {
+		unset( $attendees );
+
+		return AttendeeRepository::expected_for_occurrence(
+			(int) $event_id,
+			(int) $occurrence_id,
+			is_string( $search ) ? $search : ''
+		);
 	}
 
 	/**

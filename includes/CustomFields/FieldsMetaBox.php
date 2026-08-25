@@ -139,7 +139,18 @@ final class FieldsMetaBox {
 				<label for="<?php echo esc_attr( $id ); ?>_type"><?php esc_html_e( 'Answer', 'quick-events-manager' ); ?></label>
 				<select id="<?php echo esc_attr( $id ); ?>_type" name="<?php echo esc_attr( $name ); ?>[type]">
 					<?php foreach ( FieldType::cases() as $case ) : ?>
-						<option value="<?php echo esc_attr( $case->value ); ?>" <?php selected( $type, $case ); ?>>
+						<?php
+						/*
+						 * The two stored values, not the two enum instances.
+						 * `selected()` casts both sides to string, and a PHP
+						 * enum cannot be cast — so this fatally errored on
+						 * every event editor screen, before the block editor
+						 * had a chance to boot. The page still returned 200
+						 * with an empty editor and nothing in the console,
+						 * which is why it survived to stage 10.
+						 */
+						?>
+						<option value="<?php echo esc_attr( $case->value ); ?>" <?php selected( $type->value, $case->value ); ?>>
 							<?php echo esc_html( $case->label() ); ?>
 						</option>
 					<?php endforeach; ?>

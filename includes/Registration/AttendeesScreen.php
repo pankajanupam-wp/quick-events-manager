@@ -106,6 +106,12 @@ final class AttendeesScreen {
 		$paged    = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
+		/*
+		 * Holding the capability says somebody manages guest lists. It does not
+		 * say whose — see Access.
+		 */
+		Access::require_manage( $event_id );
+
 		echo '<div class="wrap qevm-attendees">';
 		echo '<h1>' . esc_html__( 'Attendees', 'quick-events-manager' ) . '</h1>';
 
@@ -245,9 +251,21 @@ final class AttendeesScreen {
 		echo '<p>' . esc_html__( 'Choose an event to see who has registered.', 'quick-events-manager' ) . '</p>';
 		echo '<form method="get"><input type="hidden" name="post_type" value="' . esc_attr( QEVM_POST_TYPE ) . '" />';
 		echo '<input type="hidden" name="page" value="' . esc_attr( self::SLUG ) . '" />';
-		echo '<select name="event_id">';
 
-		foreach ( $events as $event_post ) {
+		/*
+		 * A label, even though the sentence above says what the control is for.
+		 * A screen reader reaching this by tabbing lands on the control without
+		 * the paragraph, and "combo box" on its own is not an instruction. The
+		 * label is visually hidden because the sentence is already there for
+		 * everybody else.
+		 */
+		echo '<label class="screen-reader-text" for="qevm-event-picker">'
+			. esc_html__( 'Choose an event', 'quick-events-manager' )
+			. '</label>';
+
+		echo '<select name="event_id" id="qevm-event-picker">';
+
+		foreach ( Access::only_theirs( $events ) as $event_post ) {
 			$event = new Event( $event_post );
 
 			printf(
@@ -415,9 +433,34 @@ final class AttendeesScreen {
 		$dates   = self::dates_for( $event_id );
 		$tickets = self::tickets_for( $event_id );
 
-		$columns = 8 + ( array() === $fields ? 0 : 1 ) + ( array() === $dates ? 0 : 1 ) + ( array() === $tickets ? 0 : 1 );
+		/**
+		 * Filter the extra columns on the attendee screen.
+		 *
+		 * Keyed by an id this screen passes back when it asks for each cell.
+		 * How another module adds what it knows about a booking — what was paid
+		 * for it, say — without this screen having to know that module exists.
+		 *
+		 * @since 26.0
+		 *
+		 * @param array<string, string> $extra    Column id => heading.
+		 * @param int                   $event_id The event being shown.
+		 */
+		$extra = (array) apply_filters( 'qevm_attendee_columns', array(), (int) $event_id );
+
+		$columns = 8 + count( $extra ) + ( array() === $fields ? 0 : 1 ) + ( array() === $dates ? 0 : 1 ) + ( array() === $tickets ? 0 : 1 );
 		?>
-		<table class="wp-list-table widefat fixed striped">
+		<?php
+		/*
+		 * Not `fixed`. WordPress's fixed layout divides the width equally
+		 * between columns, which is fine for the four or five a core list
+		 * table has and not for the ten this one can reach once dates, tickets
+		 * and answers are all in play: the cells become too narrow for their
+		 * own buttons, and "Update" and "Resend" end up drawn on top of each
+		 * other. Found by taking the listing screenshots in C10.7, which is
+		 * the first time anybody looked at this screen full of columns.
+		 */
+		?>
+		<table class="wp-list-table widefat striped qevm-attendees-table">
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Name', 'quick-events-manager' ); ?></th>
@@ -434,6 +477,9 @@ final class AttendeesScreen {
 					<th scope="col"><?php esc_html_e( 'Registered', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Status', 'quick-events-manager' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Confirmation', 'quick-events-manager' ); ?></th>
+					<?php foreach ( $extra as $qevm_heading ) : ?>
+						<th scope="col"><?php echo esc_html( $qevm_heading ); ?></th>
+					<?php endforeach; ?>
 					<?php if ( array() !== $fields ) : ?>
 						<th scope="col"><?php esc_html_e( 'Answers', 'quick-events-manager' ); ?></th>
 					<?php endif; ?>
@@ -508,6 +554,27 @@ final class AttendeesScreen {
 								</button>
 							</form>
 						</td>
+						<?php foreach ( array_keys( $extra ) as $qevm_column ) : ?>
+							<td>
+								<?php
+								/**
+								 * Filter one cell of an extra attendee column.
+								 *
+								 * Whatever answers is printed as it stands, so
+								 * it is the answering module's job to escape
+								 * it — this screen cannot escape markup it was
+								 * handed without destroying it.
+								 *
+								 * @since 26.0
+								 *
+								 * @param string       $cell         Markup so far.
+								 * @param string       $column       Column id.
+								 * @param Registration $registration The booking.
+								 */
+								echo wp_kses_post( apply_filters( 'qevm_attendee_column', '', $qevm_column, $registration ) );
+								?>
+							</td>
+						<?php endforeach; ?>
 						<?php if ( array() !== $fields ) : ?>
 							<td>
 								<?php
@@ -870,7 +937,9 @@ final class AttendeesScreen {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- check_admin_referer() above.
 		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
-		$notify   = ! empty( $_POST['notify'] );
+
+		Access::require_manage( $event_id );
+		$notify = ! empty( $_POST['notify'] );
 
 		$input = array(
 			'name'           => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
@@ -938,6 +1007,8 @@ final class AttendeesScreen {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- check_admin_referer() above.
 		$id       = isset( $_POST['registration_id'] ) ? absint( wp_unslash( $_POST['registration_id'] ) ) : 0;
 		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
+
+		Access::require_manage( $event_id );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		$registration = Repository::find( $id );
@@ -1050,7 +1121,9 @@ final class AttendeesScreen {
 
 		$id       = isset( $_POST['registration_id'] ) ? absint( wp_unslash( $_POST['registration_id'] ) ) : 0;
 		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
-		$status   = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
+
+		Access::require_manage( $event_id );
+		$status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
 
 		$new_status = RegistrationStatus::coerce( $status );
 

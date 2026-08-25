@@ -164,9 +164,47 @@ final class Plugin {
 	 *
 	 * @since 26.0
 	 *
+	 * @param bool $network_wide Whether this is a network-wide activation.
 	 * @return void
 	 */
-	public static function activate() {
+	public static function activate( $network_wide = false ) {
+		/*
+		 * A network activation is one hook call for the whole network, and
+		 * everything this sets up is per site: the tables carry the site's own
+		 * prefix, the roles live in the site's own options table, and the
+		 * rewrite rules are the site's own. Activating across a network without
+		 * this loop left every site but the first with no roles and no tables —
+		 * an installation where registration simply does not work, and nothing
+		 * says why. Found by C10.5, which is the chunk that exists to find it.
+		 */
+		if ( $network_wide && is_multisite() ) {
+			foreach ( get_sites(
+				array(
+					'fields' => 'ids',
+					'number' => 0,
+				)
+			) as $site_id ) {
+				switch_to_blog( (int) $site_id );
+
+				self::activate_site();
+
+				restore_current_blog();
+			}
+
+			return;
+		}
+
+		self::activate_site();
+	}
+
+	/**
+	 * Set up one site.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	private static function activate_site() {
 		Installer::install();
 		Runner::run();
 
@@ -179,6 +217,36 @@ final class Plugin {
 		Events\PostType::register_taxonomies();
 
 		flush_rewrite_rules();
+	}
+
+	/**
+	 * Set up a site that is created while the plugin is network active.
+	 *
+	 * Without this, a site added to the network tomorrow gets the code and none
+	 * of the setup — the same broken half-installation as the loop above fixes,
+	 * arriving later and even less visibly.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $site The new site.
+	 * @return void
+	 */
+	public static function activate_new_site( $site ) {
+		if ( ! is_multisite() || ! is_plugin_active_for_network( plugin_basename( QEVM_FILE ) ) ) {
+			return;
+		}
+
+		$site_id = is_object( $site ) && isset( $site->blog_id ) ? (int) $site->blog_id : (int) $site;
+
+		if ( $site_id <= 0 ) {
+			return;
+		}
+
+		switch_to_blog( $site_id );
+
+		self::activate_site();
+
+		restore_current_blog();
 	}
 
 	/**

@@ -172,6 +172,42 @@ Fires after one queued message has been handed to `wp_mail()`, whether or not it
 | `$went` | `bool` | Whether `wp_mail()` accepted it |
 | `$recipient` | `string` | Address it was for |
 
+### `qevm_email_attachments` (filter)
+
+Files to send with one queued message. Attachments are produced **at send time** from the row, not stored on it, so a message that waits in the queue cannot put a stale time in somebody's diary.
+
+Each file is an array with `name`, `content` and `type`. Content is a string — nothing is read from disk, so nothing depends on a writable temp directory.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$files` | `array` | Files so far |
+| `$row` | `array` | The queue row: `template`, `event_id`, `meta` (JSON, carries `registration_id`) |
+
+```php
+// A joining-instructions PDF on every confirmation.
+add_filter( 'qevm_email_attachments', function ( $files, $row ) {
+	if ( 'attendee_confirmation' !== $row['template'] ) {
+		return $files;
+	}
+
+	$files[] = array(
+		'name'    => 'joining-instructions.pdf',
+		'content' => my_instructions_pdf( (int) $row['event_id'] ),
+		'type'    => 'application/pdf',
+	);
+
+	return $files;
+}, 10, 2 );
+```
+
+This is how the check-in module puts a QR code on a confirmation without the registration module knowing that check-in exists. Switch that module off and confirmations simply stop carrying them.
+
+### `qevm_email_placeholders` (filter)
+
+The placeholders offered to somebody writing a template, as `name => what it means`. Add one here **and** add its value on the message filter (`qevm_attendee_email` and friends, under `$email['values']`), or the editor will list a placeholder that substitutes to nothing.
+
+The check-in module uses it to offer `{ticket_codes}`.
+
 ### `qevm_broadcast_queued` (action)
 
 Fires after a message to an event's attendees has been put on the queue, from the **Email everybody** box at the bottom of the attendee screen.
@@ -306,6 +342,154 @@ Fires after an event's registrations have been deleted by the sweep. This is the
 | --- | --- | --- |
 | `$event_id` | `int` | Event id |
 | `$removed` | `int` | Registrations deleted |
+
+## Orders and payment
+
+The commerce module never reaches into the registration module, and the registration module knows nothing about money. Everything between them travels through these, carrying ids rather than objects — so with either module switched off, the questions simply have no answers.
+
+### `qevm_payment_gateways` (filter)
+
+The gateways this site can take money through, keyed by id. Each must implement `QuickEventsManager\Commerce\Gateway`; anything else is dropped rather than trusted.
+
+```php
+add_filter( 'qevm_payment_gateways', function ( $gateways ) {
+	$gateways['my_bank'] = new My_Bank_Gateway();
+
+	return $gateways;
+} );
+```
+
+A gateway that is registered but not configured is not offered — `is_configured()` is asked first, so half-entered keys never reach a customer.
+
+### `qevm_hold_minutes` (filter)
+
+How long an unpaid checkout holds its seats. Twenty minutes by default: long enough to find a card and get through a bank's verification screen, short enough that an event is not sold out by people who closed the tab.
+
+### `qevm_order_opened` (action)
+
+An order has been opened for a booking.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$order_id` | `int` | The new order |
+| `$registration_id` | `int` | The booking it pays for |
+
+### `qevm_order_booking` (filter)
+
+Which booking an order is paying for. Answered by the registration module.
+
+### `qevm_booking_paid_for` (action)
+
+The money arrived. Fired once — a gateway that says "paid" twice changes nothing the second time, which is what stops a duplicate webhook sending two confirmations.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registration_id` | `int` | The booking |
+| `$order_id` | `int` | The order that paid for it |
+
+### `qevm_booking_payment_abandoned` (action)
+
+No payment is coming: the hold ran out, or the gateway said the order is finished. The booking is cancelled, which frees the place and lets the waiting list move. A declined card is **not** this — that is a failed transaction on an order somebody is still trying to pay.
+
+### `qevm_booking_awaiting_payment` (action)
+
+A booking needs paying for before it counts. The registration module listens and holds the booking at `pending`: it keeps its place in the room, and it is not confirmed until the money arrives.
+
+### `qevm_booking_awaits_payment` (filter)
+
+Whether a booking is still waiting to be paid for. The registration module asks this before sending a confirmation — telling somebody their place is confirmed before the money arrives is a promise the plugin cannot keep. With paid tickets off, nobody answers and every booking is settled at once.
+
+### `qevm_booking_order` (filter)
+
+Which order is paying for a booking. The other direction from `qevm_order_booking`.
+
+### `qevm_booking_destination` (filter)
+
+Where somebody goes after booking. The event page, unless something sends them somewhere else first — a booking that has to be paid for goes to the checkout.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$url` | `string` | Where they were going |
+| `$registration_id` | `int` | The booking, or `0` |
+
+### `qevm_registration_paid` (action)
+
+A booking has been paid for and confirmed. Carries the `Registration` and the `Event`. This is where the confirmation and the organiser's notification go out for a paid booking, since both were held back while it was waiting.
+
+### `qevm_booking_refunded` (action)
+
+An order has been refunded **in full**. The booking is cancelled, which frees the place and moves the waiting list on. A partial refund does not fire this: somebody who got part of their money back is still coming.
+
+### `qevm_attendee_columns` / `qevm_attendee_column` (filters)
+
+Extra columns on the attendee screen. The first offers `id => heading`; the second is asked for each cell, with the column id and the `Registration`. Whatever the second returns is printed through `wp_kses_post()`, so the answering module escapes its own values.
+
+This is how the payment column gets onto a screen that knows nothing about money.
+
+### `qevm_holds_released` (action)
+
+Fires after a sweep has let go of some seats, with how many.
+
+### `qevm_ticket_type_saved` (action)
+
+A ticket type has been written, with its id and its event's id. What a shopfront listens for: the WooCommerce bridge keeps a product in step through this, so the ticket type stays the one editable copy of a price.
+
+## Money
+
+### `qevm_money_format` (filter)
+
+One formatted amount, on its way to being printed. Where a site fixes a symbol, a position or a separator the plugin does not get right for it, without every template having to know.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$formatted` | `string` | What will be printed, e.g. `£499.50` |
+| `$minor` | `int` | Minor units — pence, cents, paise |
+| `$currency` | `string` | ISO-4217 code |
+
+```php
+// A space between the symbol and the number.
+add_filter( 'qevm_money_format', function ( $formatted, $minor, $currency ) {
+	return 'CHF' === $currency ? str_replace( 'CHF', 'CHF ', $formatted ) : $formatted;
+}, 10, 3 );
+```
+
+### `qevm_currencies` (filter)
+
+The currencies the plugin knows how to print, as `CODE => array( 'symbol', 'decimals', 'before' )`. Adding one is how a site charges in something unlisted without editing the plugin.
+
+`decimals` is not decoration: it is how many minor units make one unit of the currency. The yen has none, the dinar has three, and getting it wrong makes every price on the site wrong by a factor of a hundred.
+
+```php
+add_filter( 'qevm_currencies', function ( $currencies ) {
+	$currencies['ISK'] = array( 'symbol' => 'kr', 'decimals' => 0, 'before' => false );
+
+	return $currencies;
+} );
+```
+
+## Check-in
+
+### `qevm_expected_attendees` (filter)
+
+Who is expected at a door, and the only way the check-in module asks. It names no class from the registration module and reads no table of its own: with registration off, nothing answers and the answer is nobody.
+
+The list is **who is actually coming** — a cancelled booking is not expected, and somebody still on the waiting list has no place yet. Both are left out.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$attendees` | `array` | Attendees so far — start with `array()` |
+| `$event_id` | `int` | Event |
+| `$occurrence_id` | `int` | Which date, or `0` for a single-date event |
+| `$search` | `string` | What was typed into the search box, or `''` |
+
+```php
+// Keep a VIP list at the top of the door screen.
+add_filter( 'qevm_expected_attendees', function ( $attendees ) {
+	usort( $attendees, fn( $a, $b ) => my_priority( $b ) <=> my_priority( $a ) );
+
+	return $attendees;
+}, 20 );
+```
 
 ## Front end
 

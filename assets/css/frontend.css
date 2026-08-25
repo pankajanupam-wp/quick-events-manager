@@ -224,6 +224,15 @@
 	gap: 0.1rem;
 }
 
+/*
+ * The price sits with the name rather than under the description, because it is
+ * half of what the choice is between: "Member" and "Guest" are not a decision
+ * until they carry numbers.
+ */
+.qevm-ticket-option__price {
+	font-weight: 600;
+}
+
 .qevm-ticket-option__description,
 .qevm-ticket-option__state {
 	font-size: 0.875rem;

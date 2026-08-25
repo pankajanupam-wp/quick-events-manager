@@ -1447,9 +1447,12 @@ eight-process race:
 | **C8.1** | `qevm_checkins` table + `CheckInService`, unique-key concurrency | M | **Done.** Duplicate insert means "already checked in", not an error. Check-in is a module; a date-less booking now has a defined date; and dbDelta was caught reporting an index it had not added |
 | **C8.2** | QR generation, no dependency | M | **Done.** Version 1, level M, alphanumeric only — exactly what a ticket code is, and it refuses anything else. Verified module-for-module against a reference implementation |
 | **C8.3** | QR in confirmation emails | M | **Done, and it was not an S.** The queue could not say which booking a message was for; see below |
-| **C8.4** | Check-in screen — mobile, connectivity-tolerant, accessible | XL | Used one-handed in a doorway. Split if it grows |
+| **C8.4** | Check-in screen — mobile, connectivity-tolerant, accessible | XL | **Split into three, as the definition allowed for.** See the rows below |
+| **C8.4a** | The door screen: who is expected, who is in, admit and undo | L | **Done.** Works with no JavaScript at all; that is the mechanism, not the fallback |
+| **C8.4b** | Scanning with the camera, over the top of the same screen | M | **Done.** A code can be typed in as well, which is what the camera falls back to and also what a cracked phone screen needs |
+| **C8.4c** | An authenticated axe harness, and the audit of this screen | M | **Done.** Playwright logs in through `wp-login.php`; the door screen is clean, and the harness is reusable for every later admin screen |
 | **C8.5** | Named roles: Event Manager, Event Organizer, Event Staff | M | **Resized from S.** The capabilities exist; nothing else does — there is no `add_role()` anywhere, uninstall strips caps from a hardcoded two-role list, and Features, Settings and Email templates all gate on `manage_options`, so an Event Manager could reach none of them |
-| **C8.6** | Check-in REST endpoint + attendance report | M | |
+| **C8.6** | Check-in REST endpoint + attendance report | M | **Done.** A second scan is a 200 saying `already`, not an error — a door is not a place to explain HTTP status codes |
 
 > **C8.3 — the queue knew which event a message was about and not which booking.** A
 > confirmation carries `context_type = 'event'` and the event's id, which is what a
@@ -1542,6 +1545,34 @@ eight-process race:
 > the plugin's whole schema-upgrade path is dbDelta. Stage 10's hardening should verify
 > indexes exist after an upgrade rather than trusting the report. Recorded as **C10.12**.
 
+> **C8.4 split into three, and the definition said to.** A door screen, a camera scanner
+> and an authenticated accessibility harness are three different problems: one is a list
+> with buttons, one is a browser capability that half of browsers lack, and one is test
+> infrastructure that does not exist. Built as one XL chunk none of them gets reviewed on
+> its own.
+>
+> **C8.4a — no JavaScript at all, and that is the mechanism rather than the fallback.**
+> Every action is a form post that reloads the page: slower, and completely reliable in a
+> church hall with two bars of signal. Scanning is added on top in C8.4b.
+>
+> Everything else follows from one hand, one thumb and a queue. One column of large rows,
+> because a six-column table is unusable on a phone held at chest height. One primary
+> action a row, and it is a button because it changes something. The count at the top, in
+> words, because "12 of 40 in" is the question the organiser is asked every few minutes.
+> The date defaults to the next one rather than being asked for — somebody opening this at
+> ten to seven is running tonight's door.
+>
+> **The list is who is actually coming**: a cancelled booking is not expected, and somebody
+> on the waiting list has no place yet. Both are excluded, and the door asks the
+> registration module for the list rather than reading its table — the same direction as
+> every other cross-module question in this codebase.
+>
+> **A fixture caught the waiting list working.** The first version of "the list is who is
+> actually coming" cancelled a confirmed booking while somebody waited — which promoted the
+> waiting person, correctly, and left the test asserting that a *confirmed* attendee should
+> be missing from the door. The fixture now cancels a booking that was already waiting, and
+> says in an assertion that nobody was promoted, so it cannot drift back.
+
 > **Check-in is a module, and no row above says so.** Same omission as C6.3 and C7.1, both
 > corrected after the fact: `Installer::upgrade_schema()` only creates tables for enabled
 > modules, and every screen and hook lives behind `Module::register()`. Without a
@@ -1557,9 +1588,71 @@ eight-process race:
 > `(attendee_id, occurrence_id)` with a per-occurrence door report. Which date such a
 > booking checks into is undefined today. C8.1 decides it.
 
+> **C8.4b — the camera is the convenience and typing is the mechanism.** A scanner is a
+> browser capability that a fair number of phones in a church hall will not give you:
+> an older Android, a locked-down work phone, a site not on HTTPS. So the code entry
+> field is not a fallback bolted on afterwards — it is the path the camera feeds, and
+> the camera writes into it. That also makes the whole screen testable without a camera.
+>
+> **C8.5 — an organiser runs their own door.** Three roles: Event Manager (everything
+> including settings), Event Organizer (their own events and their own attendees), Event
+> Staff (a door, and nothing else — cannot edit a single post). Adding the roles is
+> idempotent and does **not** reset a site's customisation of them, because a plugin that
+> silently undoes an administrator's capability edits on every update is worse than one
+> that never had roles. A test asserting the organiser *cannot* check in was the test
+> being wrong, not the code: `management_capabilities()` grants it deliberately.
+>
+> **C8.6 — the endpoint answers the door, not a developer.** `POST /qevm/v1/checkins`
+> and `GET /qevm/v1/events/{id}/attendance`, both behind `manage_qevm_checkins`. Scanning
+> the same ticket twice returns 200 with `already`, because the person on the door needs
+> to know whether to let somebody in, and "409 Conflict" is not that answer.
+>
+> **The one step nobody had tested was the one in the middle.** The gate proved the
+> encoder draws a real symbol and the door admits a code typed into it. Nothing proved the
+> code ever reached the person holding the ticket — and the email tests could not have
+> caught it, because `enable_registration()` *assigned* the module option instead of
+> adding to it, so every email test ran with check-in switched off. The helper now adds,
+> and `tests/integration/TicketAttachmentTest.php` books three places and asserts three
+> SVGs, each named by the code inside it. Sabotaged both ways: ticketing only the first
+> attendee, and ticketing a waiting-list notice.
+>
+> **Writing the guide found the hole the tests could not.** Describing the typed-code
+> fallback meant saying where somebody reads the code — and there was nowhere. The QR
+> encodes the *ticket* code, the door accepts only ticket codes, and the confirmation
+> printed only the *booking reference*, which is a different code for a different thing.
+> So the path C8.4b calls the mechanism rather than the fallback could not be walked by
+> anybody whose camera would not start. The codes are now printed in the message, one per
+> person, by the check-in module through `qevm_attendee_email` — the same shape as the
+> attachment, so switching check-in off still says nothing about doors. Templates get
+> `{ticket_codes}`, because a stored template replaces the body outright and appending to
+> it would reach nobody who had written one. The test types what the message says into
+> `admit_by_code()`; the first version of it read back a pattern that stopped at the
+> hyphen, typed half a code, and got exactly the refusal a doorman squinting at a phone
+> would have got.
+>
+> **State that outlives a rollback decides what the next run sees.** Switching a module
+> on inside a test is undone by the transaction — unless that test also creates a table,
+> because DDL commits everything sitting in front of it. So an enabled module could
+> survive into the *next* phpunit process and change what booted. `TestCase` now puts the
+> module option back in `tearDown`, after the rollback and the cache flush, and only when
+> it actually differs.
+>
+> **A test that asserts a count asserts more than it means.** Three email tests asserted
+> "exactly one attachment", which is a claim about every module that will ever attach
+> anything. They now count calendar files by MIME type. The first attempt read `['type']`
+> from PHPMailer's attachment tuple, which is numerically indexed — it counted zero and
+> passed nothing, which is how a narrowing turns into a hole.
+
 **Gate:** two devices check in 200 attendees concurrently with nobody marked twice ·
 the Event Staff role can check people in and cannot edit any post · a reversal is
 recorded, not deleted · axe-core clean on the check-in screen.
+
+**Gate result: 5 of 5.** A reversal is recorded rather than deleted · a reversed person
+is not counted present · Event Staff can check in and can edit nothing · a ticket code
+encodes as a real symbol, 226 dark modules · the attendance report says 1 of 3 present.
+Plus eight concurrent processes against one ticket: one `admitted`, seven `already`, one
+row (`tests/integration/CheckInRaceTest.php`). Sabotaged: `reverse()` made to delete
+instead of mark, which failed the first criterion as it should.
 
 ---
 
@@ -1571,14 +1664,264 @@ Stripe + WooCommerce. Not Razorpay, not PayPal.
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C9.1** | `qevm_orders`, `qevm_order_items`, `qevm_transactions` + repositories | L | [ADR-0006](adr/0006-money-and-immutability.md) |
-| **C9.2** | `Money` value object — integer minor units, one formatting boundary | M | A raw `49950` in a template is a visible bug. **Must also add prices to the ticket picker built in C7.3**, which shows names and availability only because formatting money has no home until this lands |
-| **C9.3** | `Gateway` interface + order lifecycle + **seat holds with expiry cron** | L | Without holds, an abandoned checkout permanently eats a seat |
-| **C9.4** | Stripe — PaymentIntent, return flow | XL | Split if it grows |
-| **C9.5** | Stripe webhooks — signature verification + **idempotency** | L | Gateways deliver twice by design |
-| **C9.6** | Refunds, full and partial, releasing capacity and promoting the waitlist | L | |
-| **C9.7** | WooCommerce bridge — ticket type → product; mutually exclusive with the built-in gateway | XL | Inherits a decade of hardening |
+| **C9.1** | `qevm_orders`, `qevm_order_items`, `qevm_transactions` + repositories | L | **Done.** [ADR-0006](adr/0006-money-and-immutability.md). The specified schema could not have held two pending charges; see below |
+| **C9.2** | `Money` value object — integer minor units, one formatting boundary | M | **Done.** A raw `49950` in a template is a visible bug, and the picker now prints prices. Its own test caught a float creeping back in at the last step |
+| **C9.3** | `Gateway` interface + order lifecycle + **seat holds with expiry cron** | L | **Done.** Without holds, an abandoned checkout permanently eats a seat — and a chased-down sabotage found a second way for that to happen |
+| **C9.4** | Stripe — PaymentIntent, return flow | XL | **Split into two before starting, as the row allowed for.** See the rows below |
+| **C9.4a** | Stripe keys, the API client, and creating a PaymentIntent | L | **Done.** Every request is proved against a faked transport; whether Stripe accepts them is a live check that has not been run |
+| **C9.4b** | The checkout screen and the return flow | L | **Done.** Building it found that the confirmation email went out before the money did |
+| **C9.5** | Stripe webhooks — signature verification + **idempotency** | L | **Done.** Gateways deliver twice by design, and one of the three defences here is one no test can observe |
+| **C9.6** | Refunds, full and partial, releasing capacity and promoting the waitlist | L | **Done.** A partial refund is not a cancellation, and deciding that from the ledger is what makes five small refunds equal one big one |
+| **C9.7** | WooCommerce bridge — ticket type → product; mutually exclusive with the built-in gateway | XL | **Split in two.** See the rows below |
+| **C9.7a** | Mutually exclusive modules, in the registry and on the Features screen | M | **Done.** The mechanism the plan noted no row owned |
+| **C9.7b** | The WooCommerce bridge itself | L | **Done, against the real WooCommerce.** Installed in the tests environment rather than faked |
 
+> **C9.7a — the conflict is read from both ends, and the first version was not.**
+> `Exclusive` is a second interface rather than a method on `Module`, because almost
+> nothing conflicts with anything and making eight modules declare an empty list to say so
+> is noise to serve one pair. The first implementation returned early when the module
+> being switched on had no opinion — which is the common case: the module already on is
+> usually the one that objects. A test caught it. The Features screen says which feature
+> will be switched off *before* it happens, because finding out by noticing something has
+> gone is how a site owner stops trusting a screen.
+>
+> **C9.7b — tested against the real WooCommerce, not a fake of it.** Woo was installed
+> into the tests environment for this. A fake proves the fake matches what was assumed
+> about the API, and this bridge is made almost entirely of assumptions about somebody
+> else's hooks, product objects and status transitions — the assumptions are the risk, so
+> faking them tests nothing. The tests skip where Woo is absent, so CI stays green without
+> it; running them needs `-d memory_limit=512M`, because WordPress plus Woo plus this
+> suite does not fit in the container's default 128M.
+>
+> **The ticket type stays the one editable copy of a price.** The product is a shopfront:
+> name, price and whether it is on sale all flow one way. Two editable copies is a support
+> conversation waiting to happen, and the one people would edit is not the one capacity is
+> counted against. Products are virtual and sold individually — a ticket has no weight,
+> and Woo would otherwise happily sell three of one seat.
+>
+> **The booking is made when Woo says paid, and not before.** This is the one place the
+> bridge deliberately behaves unlike the built-in checkout: Woo already owns the basket,
+> the session, the abandoned order and the customer who comes back an hour later.
+> Reserving a seat at checkout would mean reimplementing a stock system Woo already has.
+> The trade — no seat held during payment — is stated in the class rather than discovered.
+>
+> **A purchase for a full event joins the waiting list rather than overselling.** Woo does
+> not know the room's capacity, and the booking goes through the ordinary service, so a
+> sold ticket cannot create a seat. The organiser sees it and can refund it, which is the
+> honest outcome and the one Woo makes easy.
+>
+> **One sabotage passed, and the reason is recorded rather than papered over.** Removing
+> the line-meta guard against double booking changed nothing, because the registration
+> service already refuses a second booking for the same address at the same event. The
+> meta is provably load-bearing for something else — without it a refund cannot find the
+> booking to cancel — and that is what its test now says.
+>
+> **A duplicate-key error was printing into every test run**, from the second scan of a
+> ticket at the door. The docblock claimed `$wpdb->insert()` suppresses errors; it does
+> not. An expected duplicate is an answer that method has, not a fault to report, and
+> noise like that is exactly what buries a real failure in CI output.
+>
+> **C9.6 — a partial refund is not a cancellation.** Somebody given £5 back off a £25
+> ticket is still coming, and taking their seat away would be a worse outcome than the
+> overcharge was. Only a refund that returns everything the order was worth releases the
+> place, and whether that has happened is read from the ledger rather than from the size
+> of the refund being made — so five refunds of £5 free the place exactly as one of £25
+> does, which a test pins down.
+>
+> **Refunding more than is left is refused, not clamped.** Somebody typing a bigger number
+> than the order has left has misunderstood something — which order, or what has already
+> gone back — and quietly refunding a different figure than they asked for is how that
+> misunderstanding survives to the next one.
+>
+> **The ledger row is written after the gateway agrees, never before.** A row for money
+> that never moved is worse than no row at all: every report from then on is wrong, and
+> the place would be freed for a refund the customer never received.
+>
+> **The refund lives on the attendee screen, not on a new one.** "Did this person pay, and
+> can I give it back" is asked while looking at the attendee list. A second screen showing
+> the same bookings by their money would be two places to look and two to keep in step.
+> Getting it there needed two extension points on that screen — `qevm_attendee_columns`
+> and `qevm_attendee_column` — because the registration module must not learn what an
+> order is.
+>
+> **C9.5 — the webhook is not polish, it is the only path that survives a closed tab.**
+> Somebody who pays and closes the browser before the redirect completes has paid, and
+> nothing on the site knows: the sweep would release their seat while their money sits at
+> Stripe. That is the case the endpoint exists for, and it is why it shares one code path
+> with the return flow — "is this order paid" should have one answer wherever the question
+> arrives from.
+>
+> **The URL is public, so the signature is the authentication.** Checked before the body
+> is looked at, with the timestamp checked too, because a signature stays valid for ever
+> and a captured delivery would otherwise be replayable next year. A refusal answers 400
+> rather than 5xx: Stripe retries a 5xx for days, and a delivery we cannot authenticate is
+> one we never want again. Anything genuine answers 200 even when it means nothing to us,
+> because teaching Stripe to retry ends with the endpoint disabled and the events we do
+> care about going with it.
+>
+> **One defence here cannot be tested by behaviour.** `hash_equals()` and `===` accept and
+> reject exactly the same strings; they differ only in how long they take to say so, and
+> that timing is enough to recover a secret one byte at a time. Swapping the call passed
+> every behavioural test in the file. There is now a test that reads the source for it,
+> which is a weaker kind of test and is the honest one to have — recorded rather than
+> quietly skipped.
+>
+> **C9.4b — the confirmation was going out before the money.** A paid booking is
+> inserted like any other, so it was `confirmed` the moment it was made, and the
+> confirmation email says "your place is confirmed" — before a card had been anywhere
+> near it. Both messages, the attendee's and the organiser's, are now held while a
+> booking is waiting to be paid for and sent when the payment lands. Registration asks
+> `qevm_booking_awaits_payment` rather than being told what a payment is; with paid
+> tickets off nobody answers and every booking is settled the moment it is made.
+>
+> **And the booking has to be held, not just the order.** The first version opened an
+> order and left the booking `confirmed`, which meant an abandoned checkout could never
+> release its seat — the handlers that free one only act on a pending booking. It is now
+> pending while the card is being typed: still occupying the place, so nobody else can
+> take it, and not yet confirmed, so it can be let go.
+>
+> **The browser is not evidence.** Anybody can type a return URL, so coming back from
+> Stripe proves nothing: the handler reads the PaymentIntent from Stripe's own API and
+> believes that. An intent belonging to a different order settles nothing — and the first
+> version of *that* test asserted nothing at all, because the order it used had no
+> transaction for a foreign intent to be mistaken for. The sabotage that fell back to
+> "the order's own charge, whatever intent you handed me" passed it. Rewritten, it fails.
+>
+> **Somebody on the waiting list is never asked for money.** Charging for a place that may
+> never exist is the worst thing this screen could do.
+>
+> **A site with paid tickets on and no keys entered behaves as it did before.** Every
+> booking is confirmed straight away rather than stranded at pending, waiting for a
+> payment screen that cannot appear.
+>
+> **Not verified: axe on the checkout screen.** It cannot render without keys that work,
+> and this machine has none. The markup is a heading, two paragraphs, Stripe's own iframe
+> and one button with a live region beside it for errors, but that is a description rather
+> than a scan. It goes on the list for the accessibility pass in stage 10.
+>
+> **C9.4a — this is the plugin's first outbound request.** Nothing in it had ever talked
+> to another server, which is worth saying out loud: it is a privacy fact about the
+> plugin, it needs disclosing in the readme, and it is the reason the client is one file
+> with one job. Written against `wp_remote_post()` rather than Stripe's SDK, because
+> vendoring an SDK into a wordpress.org plugin means shipping its dependency tree and its
+> autoloader — and then losing to whichever version another active plugin loaded first.
+>
+> **Every request carries an idempotency key derived from the order.** A request that
+> times out on our side and is retried creates one charge rather than two, because Stripe
+> honours the key for 24 hours. Random keys would have made the retry a second charge, and
+> the sabotage that swapped the derivation for `uniqid()` failed the test as it should.
+>
+> **The attempt is recorded before the customer is sent anywhere.** If the browser closes
+> on the payment screen, the webhook that arrives later needs a row to find; written after
+> the redirect, a paid intent would have had nothing pointing at it.
+>
+> **Test or live is read off the key rather than stored beside it.** A separate mode
+> toggle is a second source of truth, and the one that disagrees quietly is the one that
+> charges real cards from a staging site. A mismatched pair — live secret, test
+> publishable — counts as *not configured*, because it fails at the last step in front of
+> a customer.
+>
+> **The secret is never printed back into the form**, and it does not live in the
+> autoloaded settings option. A key in a `value` attribute is a key in the page source, in
+> the browser's autofill store and in every screenshot of that screen.
+>
+> **What is not proved.** The suite intercepts `pre_http_request`, so it says what is
+> sent and what is done with each kind of answer. It does not say Stripe accepts any of
+> it. That needs a real test key against Stripe's test mode and is a manual step before
+> release, not something this suite can assert — recorded here rather than left implied.
+>
+> **C9.4 split in two before a line was written.** "PaymentIntent, return flow" is two
+> problems that fail differently: one is whether this site can talk to Stripe — keys,
+> transport, an idempotent create — and the other is whether a person can get from a
+> booking to a paid place, which is screens, redirects and coming back. Built as one XL
+> chunk, the second half is where the attention runs out.
+>
+> **C9.3 — a sabotage that passed found a real defect.** Making the sweep pick up paid
+> orders as well as pending ones did not fail anything, because `abandon()` refuses
+> anything that is not pending and the seat survived either way. Chasing *why* it passed
+> was the useful part: a `failed` order kept its hold, and the sweep only looks at pending
+> ones, so a seat belonging to an order the gateway had finished with would have been held
+> until the end of time. The same bug the whole chunk exists to prevent, wearing a
+> different status.
+>
+> **A declined card is not a failed order.** Somebody whose card is refused is still
+> standing there and will try another one; the attempt belongs in the ledger as a failed
+> transaction, which is what a ledger is for, and the booking is untouched. `fail()` is
+> for the gateway saying the order itself is finished, and it now releases the seat at
+> once rather than waiting for a sweep that would never have come.
+>
+> **Commerce tells registration what happened; it does not reach into it.** An order is
+> opened from a described basket rather than from a `Registration` object, and what
+> becomes of the booking travels as `qevm_order_opened`, `qevm_booking_paid_for` and
+> `qevm_booking_payment_abandoned` — ids, not objects. Registration answers
+> `qevm_order_booking` in the other direction. Same discipline as
+> `qevm_expected_attendees`, in the direction that had not needed it before: telling
+> another module that something has happened.
+>
+> **The hold is twenty minutes and it is filterable**, because a conference selling £400
+> tickets and a yoga class selling £8 ones do not want the same number. The sweep runs on
+> the mail queue's five-minute schedule rather than inventing a second interval: a seat
+> coming back five minutes late is invisible, and a per-minute tick on every site to fix
+> that is not free.
+>
+> **Nothing takes money yet.** `Gateways::any_usable()` is false until C9.4 registers one,
+> which is the honest state for a stage whose storage and lifecycle exist and whose
+> gateway does not.
+>
+> **C9.2 — the float got back in at the moment of printing.** Every amount is an
+> integer, every calculation is integer arithmetic, and the formatter still managed to
+> lose precision: `number_format_i18n()` takes a float, so the largest amount a `bigint`
+> can hold came out as `92,233,720,368,547,760.07` instead of `...758.07`. The whole part
+> is now grouped as a string. This is the same failure floats were rejected for in
+> storage, arriving through the back door at the one place that seemed too trivial to
+> think about, and it was found by a test written to be thorough rather than by suspicion.
+>
+> **Two decimal places is a guess, not a fact.** The yen and the won have none — ¥500 is
+> five hundred minor units, not fifty thousand — and the dinar has three. A hardcoded
+> hundred makes a Japanese site's prices a hundredfold wrong, invisibly to anybody testing
+> in dollars. `Currency` holds the exponent, and `intl` is not assumed: it is a common
+> extension, not a universal one, and an unlisted currency prints its ISO code rather than
+> failing.
+>
+> **The site has a currency, and an event does not.** Priced-in-euros-and-also-dollars is
+> not a thing anybody wants, and a gateway account has one currency anyway. The setting
+> only appears while paid tickets are on, so it follows the same "absent means unchanged"
+> rule as the consent wording — a save from a site with the module off must not silently
+> re-price what its historic orders were taken in.
+>
+> **A free ticket says "Free".** Zero is a price, and `£0.00` makes somebody read a number
+> twice to learn that it costs nothing.
+>
+> **C9.1 — the schema as written could not have held two checkouts.** `gateway_txn_id`
+> and `idempotency_key` were specified `NOT NULL DEFAULT ''` underneath unique keys.
+> MySQL treats `''` as a value, so the second row without a gateway id yet is a duplicate
+> — and a duplicate key is precisely the signal a webhook handler is told to read as
+> "already processed". A brand-new payment would have looked like a replay of an old one,
+> which is a class of bug that shows up as missing money rather than as an error. Both
+> columns are now `NULL` when unknown. Proved against MySQL directly before the table was
+> written, and the guard was sabotaged by putting the specified schema back, which failed
+> the test as it should.
+>
+> **The sign is not the caller's business.** `record()` takes an amount and a kind and
+> stores a refund negative, so a caller passing 500 for a refund cannot add money to an
+> order. `refunded_minor` on the header is a copy kept so that a list of two hundred
+> orders is not two hundred `SUM` queries, and exactly one thing writes it — the ledger
+> repository, in the same call that wrote the ledger — so the copy and the truth cannot
+> drift. A test asserts both after every movement.
+>
+> **`min_per_order` and `max_per_order` are gone**, which is the decision this chunk was
+> given. Nothing read them, no interface set them, and dbDelta never drops anything, so
+> the removal is an explicit `Installer::drop_retired_columns()`. They come back as one
+> piece of work — a field, a check on the booking form, a check in the order builder —
+> rather than as two columns waiting to be noticed.
+>
+> **A module in the chunk that creates the tables, not in the chunk that misses it.**
+> C6.3, C7.1 and C8.1 each built a table before the module that owns it existed, and each
+> was corrected afterwards. `CommerceModule` registers no hooks yet: the storage exists
+> and the behaviour does not, and that is the correct state for it. Switching it off
+> deletes nothing, because a site that stops selling tickets still has to answer what it
+> took last year.
+>
 > **Commerce is a module too, and C9.7 needs something the registry cannot do.**
 > "Mutually exclusive with the built-in gateway" has no mechanism: `Registry::enable()`
 > appends an id to an option and knows nothing about conflicts, and the Features screen
@@ -1605,6 +1948,18 @@ creates one registration · a full refund frees capacity and promotes the waitli
 partial refund does not · an event sells and refunds end to end through WooCommerce ·
 no card data touches the plugin.
 
+**Gate result: 5 of 5**, and it lives in the suite as `tests/integration/GateStage9Test.php`
+rather than as a script that was deleted afterwards. The last four gates were scripts, and
+each had to be rewritten mid-run because a criterion turned out to prove nothing; a gate
+that stays in the suite keeps being true and surfaces its own mistakes on the next run.
+
+Sabotaged three ways before it was believed: a sweep that abandons nothing, a partial
+refund that frees the place, and a card field name planted in a source file. Each failed
+the criterion it should. The fifth criterion is read from the source rather than from
+behaviour — the only way to show a thing never happens is to show the code that would do
+it does not exist — and it sweeps every PHP file under `includes/` plus the checkout
+script for `card_number`, `cardNumber`, `cvc`, `cvv` and the expiry fields.
+
 ---
 
 ## Stage 10 — Release readiness
@@ -1613,18 +1968,232 @@ no card data touches the plugin.
 
 | ID | Chunk | Size | Output |
 | --- | --- | :-: | --- |
-| **C10.1** | Full accessibility audit across every screen; `docs/accessibility.md` with honest known limitations | L | |
-| **C10.2** | Performance benchmark at 10,000 events and 10,000 registrations; publish the numbers | M | |
-| **C10.3** | Security pass over **everything**, not just the last thing built | L | Checklist in [engineering-standards.md §7](engineering-standards.md#7-security-rules) |
-| **C10.4** | All blocks verified in the editor | S | **Resized from M.** "Has never been run" was wrong: CI runs `npm run build` on every push and on deploy, and every block registers a PHP `render_callback`, so "zero block JS on the front end" is structurally true already. What is left is opening each block in the editor |
-| **C10.5** | Multisite activation and uninstall tested | M | Currently untested |
-| **C10.6** | i18n sweep; `.pot` regenerated; RTL verified | M | |
-| **C10.7** | `readme.txt` rewritten for the finished plugin; screenshots in `.wordpress-org/` | M | |
+| **C10.1** | Full accessibility audit across every screen; `docs/accessibility.md` with honest known limitations | L | **Done.** Twelve admin scans and thirty public ones; two real critical defects found, both on screens nothing had ever scanned |
+| **C10.2** | Performance benchmark at 10,000 events and 10,000 registrations; publish the numbers | M | **Done.** [docs/performance.md](performance.md). It found a 471-query calendar month |
+| **C10.3** | Security pass over **everything**, not just the last thing built | L | **Done.** Two real findings, both about *which* capability was checked rather than whether one was |
+| **C10.4** | All blocks verified in the editor | S | **Done, and it was not an S.** The editor was fatally broken on every event screen. **Resized from M.** "Has never been run" was wrong: CI runs `npm run build` on every push and on deploy, and every block registers a PHP `render_callback`, so "zero block JS on the front end" is structurally true already. What is left is opening each block in the editor |
+| **C10.5** | Multisite activation and uninstall tested | M | **Done.** Network activation set up only the first site. Uninstall was already correct |
+| **C10.6** | i18n sweep; `.pot` regenerated; RTL verified | M | **Done.** 713 strings in the template, and every string in the block editor had been untranslatable |
+| **C10.7** | `readme.txt` rewritten for the finished plugin; screenshots in `.wordpress-org/` | M | **Done.** Taking the screenshots found two visible defects nothing else had looked at |
 | **C10.8** | Delete an event's bookings when the event is deleted | S | Found by the Stage 6 gate. `deleted_post` removes the occurrence rows and leaves registrations and attendees behind, holding names and addresses nothing can reach. The cascade already exists in `Repository::delete_for_event()`; only the hook is missing |
-| **C10.12** | Verify indexes actually exist after an upgrade, rather than trusting dbDelta | S | **Found in C8.1.** dbDelta reports "Added index" from its own comparison; the `ALTER` beneath it fails silently when existing data violates the constraint |
-| **C10.11** | The "Delete all data on uninstall" opt-in, and every table on the drop list | M | **Found by the stage 7 audit.** docs/database.md promises removal happens *only if* the owner ticked a setting. There is no such setting and `uninstall.php` drops unconditionally — removing the plugin destroys every registration with no warning. Stages 8 and 9 add four more tables to that list |
-| **C10.9** | `SVN_USERNAME` / `SVN_PASSWORD` verified on the repo | S | Their absence already failed a release on a sibling plugin |
+| **C10.12** | Verify indexes actually exist after an upgrade, rather than trusting dbDelta | S | **Done. Found in C8.1.** dbDelta reports "Added index" from its own comparison; the `ALTER` beneath it fails silently when existing data violates the constraint |
+| **C10.11** | The "Delete all data on uninstall" opt-in, and every table on the drop list | M | **Done. Found by the stage 7 audit.** docs/database.md promises removal happens *only if* the owner ticked a setting. There is no such setting and `uninstall.php` drops unconditionally — removing the plugin destroys every registration with no warning. Stages 8 and 9 add four more tables to that list |
+| **C10.9** | `SVN_USERNAME` / `SVN_PASSWORD` verified on the repo | S | **Checked, and it is not ready. `SVN_USERNAME` is missing** — the deploy would fail authentication exactly as a sibling's did |
 | **C10.10** | Final review; tag `26.0` | S | Tag must equal `Stable tag` exactly, no `v` prefix |
+
+> **C10.9 — the repository is one secret short, and that is the whole point of the chunk.**
+> `gh secret list` shows `SVN_PASSWORD` on this repository and **no `SVN_USERNAME`**, while
+> both sibling plugins have the pair. `.github/workflows/deploy.yml` reads both, so pushing
+> the tag today would fail at authentication after the build had passed — which is exactly
+> how a release on `shortcodes-in-sidebar` was lost, and exactly why this is a chunk rather
+> than an assumption.
+>
+> Setting it needs the wordpress.org username, which is not something to guess at:
+>
+> ```sh
+> gh secret set SVN_USERNAME --repo pankajanupam-wp/quick-events-manager --body '<username>'
+> ```
+>
+> The password secret is **not** the wordpress.org account password — since October 2024 it
+> is a separate, revocable SVN password generated under profile → Account & Security. There
+> is no read-only way to test either: wordpress.org allows anonymous reads, so `svn ls`
+> succeeds with a wrong password and only a write proves it.
+>
+> **C10.7 — photographing the plugin found two things reading the code had not.**
+> The first attempt captured what was actually on the dev site: test fixtures called
+> "Calendar fixture: same day again", an admin bar, and an update nag. Screenshots are a
+> listing's first impression, so the site got three realistic events with real-sounding
+> attendees, the public page was taken signed out, and the demo content was deleted
+> afterwards.
+>
+> **The attendee table's buttons overlapped each other.** `wp-list-table widefat fixed`
+> divides the width equally between columns, which suits the four or five a core list
+> table has and not the ten this one reaches once dates, tickets and answers are all in
+> play — "Update" was drawn on top of "Resend", and email addresses wrapped mid-address.
+> Nothing had ever looked at that screen with every column present.
+>
+> **And the door showed a black rectangle.** The camera preview is created with the
+> `hidden` attribute set, which only hides an element while nothing gives it a `display` —
+> and plenty of stylesheets give `video` one. Every site that never taps *Scan* had a black
+> box sitting on its door screen.
+>
+> Both are the kind of defect that no test asserts and no reader notices: you have to look
+> at the thing.
+>
+> **C10.8, C10.12 and C10.11 taken before C10.7**, because the readme has to describe the
+> finished behaviour and one of these three changes what deleting the plugin does. The
+> plan's own table already lists C10.12 before C10.11, so the order inside this stage was
+> never the strict part.
+>
+> **C10.8 — a deleted event left its attendees behind.** `deleted_post` removed the
+> occurrence rows and nothing else, so every name, email address and phone number on that
+> event's bookings stayed in a table nothing pointed at: unreachable from every screen,
+> unreachable by the privacy exporter, and still personal data somebody is responsible
+> for. The cascade lives in the registration module, because bookings are its — with
+> registration off nothing listens, which is right, since there are no bookings.
+> **Trashing is deliberately not deletion**: a trashed event can be restored, and
+> restoring one whose attendee list was thrown away is worse than not restoring it.
+>
+> **A sabotage of the post-type guard passed, and the test was rewritten rather than
+> excused.** Removing the guard cannot delete the wrong bookings — a post's id is never an
+> event's id — so a row count cannot see it. What it does is run two DELETEs on every
+> post, page, attachment and revision the site ever removes, so the test counts queries
+> instead.
+>
+> **C10.12 — dbDelta reports what it decided to do, not what the database did.** It prints
+> "Added index" from its own comparison and never looks again, so an `ALTER` MySQL refuses
+> reads as a success — which is how C8.1 nearly shipped a check-in table whose uniqueness
+> guarantee was not there. Verification now happens inside `run_schema()`, which every
+> schema in the plugin already passes through, so there is no list of tables to keep in
+> step; anything missing fires `qevm_indexes_missing` rather than being swallowed.
+>
+> **C10.11 — deleting the plugin destroyed every registration, silently.** `uninstall.php`
+> consulted no option and dropped every table, while docs/database.md had promised since
+> before any of it was written that removal happens *only if* the owner asked. Resolved in
+> favour of the promise: the setting exists, it is off, and it is worded as what will
+> happen rather than as a feature name. Somebody removing the plugin to try another one
+> for an afternoon now keeps their guest list.
+>
+> **C10.6 — the block editor's strings could not be translated at all.**
+> `load_plugin_textdomain()` covers PHP and does nothing for JavaScript: scripts need
+> their own JSON translation files, and WordPress only loads those for handles that have
+> been told which text domain and directory to look in. Nothing called
+> `wp_set_script_translations()`, so every label, help text and placeholder in the four
+> blocks was permanently English — invisible on an English site and absolute on any other.
+>
+> The PHP side was already sound, and that is phpcs doing its job rather than luck:
+> `WordPress.WP.I18n` is configured with this plugin's text domain and runs on every
+> commit, so a missing domain or a missing translator comment has never been able to land.
+> The regenerated template carries **713 strings**.
+>
+> **RTL needed no CSS at all**, which was the point of writing it with logical properties
+> in the first place: `margin-inline-start` rather than `margin-left`, `text-align: start`
+> rather than `left`. Verified rather than assumed — the dev site was switched to Hebrew,
+> and the archive and a single event were measured at 1200px and 380px: `dir="rtl"`
+> applied, and **zero horizontal overflow** at both widths. The one physical `left` in the
+> stylesheet is the documented fallback for off-screen screen-reader text. The site was
+> switched back to English afterwards.
+>
+> **C10.5 — network activation set up one site out of two.** The throwaway test site was
+> converted to a real two-site network for this, and activating across it left site 2 with
+> the code loaded, the post type registered and **no roles at all**. Activation is one hook
+> call for the whole network while everything it does is per site: the tables carry the
+> site's own prefix, the roles live in the site's own options table, the rewrite rules are
+> the site's own. A site added to the network afterwards got nothing either — the same
+> failure arriving later and even less visibly, now handled on `wp_initialize_site`.
+>
+> **Uninstall was already right**, and it is worth saying so: it loops the network and
+> cleans each site in turn, and the run confirmed both sites came out with no tables, no
+> roles and no options. Not everything a stage-10 chunk looks at turns out to be broken.
+>
+> **What looked like a second defect was correct behaviour.** Site 2 had no registrations
+> table after activation, which is exactly right: a fresh install enables events only, and
+> module tables arrive when the module is switched on. Switching registration on for that
+> site created it. Worth chasing rather than assuming either way.
+>
+> **The environment was put back.** The database was exported before the conversion and
+> restored afterwards, and the network constants were removed from `wp-config.php` — the
+> tests site is single-site again and the suite is green on it. The four tests left behind
+> assert the *shape* of the fix, which is what a single-site suite can check; the
+> behaviour itself was verified against the real network and is recorded here.
+>
+> **C10.4 — the event editor had been fatally broken, and everything else was green.**
+> Opening the first block found a blank editor. No console error, no failed request, a 200
+> response: `selected( $enum, $enum )` in the custom-fields meta box, and WordPress's
+> `selected()` casts both sides to string, which a PHP enum cannot be. The fatal happened
+> inside `the_block_editor_meta_boxes()`, so the page died after printing the editor's
+> container and before printing the scripts that boot it. **With the Custom Fields module
+> on, nobody could create or edit an event at all.**
+>
+> Nothing caught it because nothing had ever opened the editor: 296 unit tests and 546
+> integration tests never render an admin screen, and the accessibility scan added in
+> C10.1 waited for a meta box — which is printed server-side and therefore present in a
+> page whose editor never started. That test now waits for the editor canvas first, and
+> putting the fatal back fails it.
+>
+> **A second finding underneath the first.** The Event Details block inserted as an
+> element with zero height: the renderer returned an empty details shell for an event with
+> no date, no location and no joining link, which is exactly what a new event is. Invisible
+> in the editor and unclickable; on the front end, invisible clutter. It now returns
+> nothing, and all four blocks show a placeholder saying what they will fill in with once
+> there is something to show.
+>
+> **This is the chunk the plan called an S**, on the grounds that CI already builds the
+> blocks and the front end ships no block JS — both true, and neither of them opens the
+> editor.
+>
+> **C10.3 — every screen was protected, and two of them protected the wrong thing.**
+> The mechanical half of this pass is already standing: phpcs runs the full `WordPress`
+> standard with only the file-naming rule excluded, so escaping, nonce verification and
+> input sanitising are enforced on every commit and were clean. Sweeping the admin-post
+> handlers for a nonce and a capability found nothing either — the ones that looked bare
+> delegate to a shared `authorised()`. CSV formula injection was already defused and the
+> cancellation token already uses `hash_equals()` with an expiry.
+>
+> What the linter cannot ask is whether the *right* capability is checked, and that is
+> where both findings were.
+>
+> **Any organiser could read any other organiser's attendee list.**
+> `manage_qevm_registrations` is site-wide: it says somebody manages guest lists, not
+> whose. Every attendee screen, every status change and the CSV export checked it and
+> nothing else, so an Event Organizer could open a colleague's event, read every name and
+> email address on it, export the lot and change people's statuses — against a role
+> documented in three places as covering *their own* events, in a plugin whose privacy
+> section promises those addresses go no further. `Registration\Access` now asks both
+> questions, the picker lists only what somebody may open, and an administrator still sees
+> everything.
+>
+> **And an organiser could not edit their own event after publishing it.**
+> `edit_published_qevm_events` and `delete_published_qevm_events` were grouped with the
+> manage-others capabilities. They are not about other people's posts: WordPress maps
+> `edit_post` on *any* published post through them. So the role could create an event,
+> publish it, and never touch it again — a plainly broken role that no test had noticed
+> because no test had ever logged in as one.
+>
+> **The second fix needed a different kind of test.** `add_roles()` only ever adds
+> capabilities, so that a site's own customisation survives an update — which means a role
+> already fixed in the database keeps working even after the list regresses. Sabotaging
+> the fix passed the behavioural test. The assertion is now against
+> `post_type_capabilities( false )` itself, which is what actually fails.
+>
+> **C10.2 — the benchmark found the thing benchmarks exist to find.** One month of the
+> calendar took **471 queries and 70ms** on a site with ten thousand events: the grid
+> builds an event object per occupied day, and one at a time that is a post read and a
+> meta read each. Invisible on the ten-event site anybody develops against. Fetching the
+> month's events together takes it to 3 queries and 19ms, and
+> `CalendarQueryCountTest` holds it there by asserting that twenty events in a month cost
+> no more queries than two — a ceiling rather than an exact count, so unrelated changes do
+> not fail it.
+>
+> **The first run measured nothing and looked excellent.** It reported the archive at
+> 1.2ms — over zero rows, because the seeded events had start times and no occurrence
+> rows, and the archive joins the occurrence table. The fixture was wrong, not the code.
+> The results table prints row counts now, for the same reason the stage 4 gate had to be
+> re-run against a calendar with events in it.
+>
+> **The benchmark data was then cleared out of the tests site**, because twenty thousand
+> rows left behind made the integration suite take minutes instead of seconds. The script
+> is idempotent and re-seeds on demand.
+>
+> **C10.1 — the screens nobody had scanned were the ones with the defects.** The door had
+> been audited in stage 8 and was clean. Extending the sweep to the other eleven screens
+> found two critical ones straight away: every field on the Settings screen was unlabelled
+> — WordPress's Settings API renders the title as a table heading, not as a `label for`,
+> unless you pass `label_for`, which nothing here did — and the attendee screen's event
+> picker was a bare `<select>` with no accessible name. Both are the kind of thing that is
+> invisible to somebody building the screen and immediately fatal to somebody using it
+> through a screen reader.
+>
+> **Two of the three failures on the first run were the harness, not the screens**, which
+> is the usual ratio and worth saying: a meta box in the block editor is attached but not
+> visible, and the attendee picker takes a value rather than a label. Both fixed in the
+> spec; neither was a defect in the plugin.
+>
+> **`docs/accessibility.md` leads with what is *not* covered.** Core's admin chrome and
+> the active theme are excluded from the scans, one engine is used rather than three, the
+> payment screen cannot be scanned without working keys, and automated rules find perhaps
+> a third of real problems. A page of claims with no limitations on it is a page nobody
+> should believe.
 
 **Gate:** every acceptance criterion passes on PHP 8.1 through 8.5 with `WP_DEBUG` and
 `SCRIPT_DEBUG` on and no notices.
@@ -1645,10 +2214,10 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | 5 · Communication | 4 | **C5.1–C5.4 ✓** — stage complete. Gate passed: 500 recipients queued in 0.21s, 497 sent, 3 failed and named. C5.1 shipped without a schema bump, which C5.4 found on a real site |
 | 6 · Recurring events | 10 | **C6.1–C6.7 ✓** — stage complete. C6.4 split in three and C6.5 in two; C6.6 and C6.7 were added by findings. Gate passed 10 of 10, after two of its own checks turned out to prove nothing |
 | 7 · Ticketing | 6 | **C7.1–C7.6 ✓** — stage complete, gate passed 8 of 8 plus the eight-process race. C7.5 and C7.6 were added by findings; a review of the stage found eight defects and six were real |
-| 8 · Event operations | 6 | **C8.1 ✓ · C8.2 ✓ · C8.3 ✓** |
-| 9 · Commerce | 7 | not started |
-| 10 · Release readiness | 12 | not started |
-| | **82** | |
+| 8 · Event operations | 8 | **Complete — C8.1 ✓ · C8.2 ✓ · C8.3 ✓ · C8.4a ✓ · C8.4b ✓ · C8.4c ✓ · C8.5 ✓ · C8.6 ✓ · gate 5/5** |
+| 9 · Commerce | 7 | **Complete — all seven chunks, C9.4 and C9.7 each split in two, gate 5/5.** Tested against the real WooCommerce; no live Stripe call has been made |
+| 10 · Release readiness | 12 | **C10.1–C10.8 ✓ · C10.11 ✓ · C10.12 ✓** — C10.9 and C10.10 are the release itself |
+| | **84** | |
 
 ---
 

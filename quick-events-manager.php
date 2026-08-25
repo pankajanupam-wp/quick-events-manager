@@ -106,7 +106,7 @@ define( 'QEVM_VERSION', '26.0' );
  * This must equal the highest version in includes/Install/Migrations/. A test
  * asserts it, because a migration added without bumping this would never run.
  */
-define( 'QEVM_DB_VERSION', 11 );
+define( 'QEVM_DB_VERSION', 12 );
 
 /**
  * Absolute path to this file.
@@ -186,6 +186,14 @@ require_once QEVM_PATH . 'includes/Autoloader.php';
 QuickEventsManager\Autoloader::register();
 
 register_activation_hook( __FILE__, array( 'QuickEventsManager\Plugin', 'activate' ) );
+
+/*
+ * A site added to a network while this is network-active needs the same setup
+ * every other site got when it was activated — its own tables, its own roles,
+ * its own rewrite rules. Nothing else runs for a new site, so without this it
+ * gets the code and none of the setup.
+ */
+add_action( 'wp_initialize_site', array( 'QuickEventsManager\Plugin', 'activate_new_site' ), 20, 1 );
 register_deactivation_hook( __FILE__, array( 'QuickEventsManager\Plugin', 'deactivate' ) );
 
 QuickEventsManager\Plugin::instance()->boot();

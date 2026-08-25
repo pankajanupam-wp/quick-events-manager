@@ -174,6 +174,33 @@ final class FeaturesScreen {
 									</p>
 									<input type="hidden" name="qevm_modules[]" value="<?php echo esc_attr( $id ); ?>" />
 								<?php endif; ?>
+
+								<?php
+								/*
+								 * Said before it happens, not after. Switching
+								 * this on switches something else off, and
+								 * finding that out by noticing a feature has
+								 * gone is how a site owner stops trusting the
+								 * screen.
+								 */
+								$qevm_clashes = $module instanceof \QuickEventsManager\Modules\Exclusive
+									? $module->conflicts()
+									: array();
+								?>
+								<?php foreach ( $qevm_clashes as $qevm_clash ) : ?>
+									<?php $qevm_other = $this->registry->get( $qevm_clash ); ?>
+									<?php if ( null !== $qevm_other ) : ?>
+										<p class="qevm-module-note qevm-module-note--conflict">
+											<?php
+											printf(
+												/* translators: %s: The name of the module that would be switched off. */
+												esc_html__( 'Cannot be used with %s. Switching this on switches that off.', 'quick-events-manager' ),
+												'<strong>' . esc_html( $qevm_other->title() ) . '</strong>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped on this line.
+											);
+											?>
+										</p>
+									<?php endif; ?>
+								<?php endforeach; ?>
 							</li>
 						<?php endforeach; ?>
 					</ul>

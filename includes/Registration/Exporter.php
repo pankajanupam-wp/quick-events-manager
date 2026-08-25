@@ -61,6 +61,8 @@ final class Exporter {
 		$event_id = isset( $_GET['event_id'] ) ? absint( wp_unslash( $_GET['event_id'] ) ) : 0;
 		$event    = new Event( $event_id );
 
+		Access::require_manage( $event_id );
+
 		/*
 		 * Sensitive answers are left out unless this request asks for them.
 		 *

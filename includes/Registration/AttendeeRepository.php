@@ -9,6 +9,7 @@ namespace QuickEventsManager\Registration;
 
 use QuickEventsManager\CustomFields\AnswerRepository;
 use QuickEventsManager\Domain\AttendeeStatus;
+use QuickEventsManager\Domain\RegistrationStatus;
 use QuickEventsManager\Install\Installer;
 
 defined( 'ABSPATH' ) || exit;
@@ -561,6 +562,85 @@ final class AttendeeRepository {
 
 		// Ten collisions against a 32^8 space means something is very wrong.
 		return 'QEVT-' . strtoupper( substr( md5( uniqid( '', true ) ), 0, 12 ) );
+	}
+
+	/**
+	 * Everybody expected at one date of one event.
+	 *
+	 * The door's list. Joined to the bookings so that only people with a place
+	 * are on it — a cancelled booking is not expected, and somebody on the
+	 * waiting list has no place yet, so neither belongs on a list whose purpose
+	 * is "who should be walking through this door".
+	 *
+	 * `occurrence_id = 0` on a booking means the event rather than a date within
+	 * it, which is every booking on an event that does not repeat. Those are
+	 * included for whichever date is being asked about, because that is the
+	 * only date they can be for.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int    $event_id      Event id.
+	 * @param int    $occurrence_id Date being run, or 0.
+	 * @param string $search        Match a name, an email or a ticket code.
+	 * @return Attendee[]
+	 */
+	public static function expected_for_occurrence( int $event_id, int $occurrence_id, string $search = '' ): array {
+		global $wpdb;
+
+		if ( $event_id <= 0 || ! self::table_exists() || ! Repository::table_exists() ) {
+			return array();
+		}
+
+		$occupying = RegistrationStatus::occupying_values();
+		$where     = array(
+			'r.event_id = %d',
+			'a.status = %s',
+			'r.status IN ( %s, %s )',
+			'( a.occurrence_id = %d OR a.occurrence_id = 0 )',
+		);
+
+		$params = array(
+			self::table(),
+			Repository::table(),
+			$event_id,
+			AttendeeStatus::Active->value,
+			$occupying[0],
+			$occupying[1],
+			max( 0, $occurrence_id ),
+		);
+
+		$search = trim( $search );
+
+		if ( '' !== $search ) {
+			$like     = '%' . $wpdb->esc_like( $search ) . '%';
+			$where[]  = '( a.name LIKE %s OR a.email LIKE %s OR a.ticket_code LIKE %s OR r.booker_name LIKE %s OR r.booker_email LIKE %s )';
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+		}
+
+		$clause = implode( ' AND ', $where );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $clause is built from the literals above; every value goes through prepare().
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT a.*, r.booker_name, r.booker_email, r.code AS booking_code
+				 FROM %i AS a
+				 INNER JOIN %i AS r ON a.registration_id = r.id
+				 WHERE {$clause}
+				 ORDER BY a.name ASC, a.id ASC",
+				$params
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		return array_map(
+			static fn( array $row ): Attendee => new Attendee( $row ),
+			(array) $rows
+		);
 	}
 
 	/**

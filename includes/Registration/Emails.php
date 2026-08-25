@@ -40,11 +40,48 @@ final class Emails {
 		add_action( 'qevm_registration_promoted', array( $this, 'send_promotion_notice' ), 10, 2 );
 
 		/*
+		 * The same two messages a free booking gets at the moment it is made.
+		 * A paid one gets them when the money arrives, because that is when the
+		 * place is really theirs.
+		 */
+		add_action( 'qevm_registration_paid', array( $this, 'send_attendee_confirmation' ), 10, 2 );
+		add_action( 'qevm_registration_paid', array( $this, 'send_organizer_notification' ), 20, 2 );
+
+		/*
 		 * The calendar file is produced at send time rather than stored on the
 		 * queue row, so this has to be hooked whenever registration is on and
 		 * not only when a message is being built.
 		 */
 		add_filter( 'qevm_email_attachments', array( __CLASS__, 'attach_calendar' ), 10, 2 );
+	}
+
+	/**
+	 * Whether a booking is waiting for somebody to pay.
+	 *
+	 * A booking that has not been paid for must not be told its place is
+	 * confirmed, and the organiser must not be told somebody is coming who may
+	 * yet walk away from the payment screen. Both messages go out when the
+	 * money arrives instead.
+	 *
+	 * Asked as a question rather than answered here: this module has no idea
+	 * what a payment is, and with paid tickets switched off nobody answers and
+	 * every booking is settled the moment it is made.
+	 *
+	 * @since 26.0
+	 *
+	 * @param Registration $registration The booking.
+	 * @return bool
+	 */
+	private static function awaits_payment( Registration $registration ) {
+		/**
+		 * Filter whether a booking is still waiting to be paid for.
+		 *
+		 * @since 26.0
+		 *
+		 * @param bool $awaiting        Whether it is.
+		 * @param int  $registration_id The booking.
+		 */
+		return (bool) apply_filters( 'qevm_booking_awaits_payment', false, $registration->id() );
 	}
 
 	/**
@@ -120,6 +157,10 @@ final class Emails {
 	 * @return void
 	 */
 	public function send_attendee_confirmation( Registration $registration, Event $event ) {
+		if ( self::awaits_payment( $registration ) ) {
+			return;
+		}
+
 		$waitlisted = RegistrationStatus::Waitlisted === $registration->status();
 
 		$subject = $waitlisted
@@ -211,6 +252,10 @@ final class Emails {
 	 * @return void
 	 */
 	public function send_organizer_notification( Registration $registration, Event $event ) {
+		if ( self::awaits_payment( $registration ) ) {
+			return;
+		}
+
 		$lines = array();
 
 		/* translators: 1: Attendee name, 2: Event title. */

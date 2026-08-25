@@ -23,6 +23,26 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 function qevm_uninstall_site() {
 	global $wpdb;
 
+	/*
+	 * Nothing is removed unless the site owner asked for it.
+	 *
+	 * This file used to drop every table unconditionally, which meant somebody
+	 * removing the plugin to try a different one for an afternoon lost every
+	 * registration, every attendee and every answer, with no warning and no way
+	 * to have said otherwise. docs/database.md had promised the opposite since
+	 * before any of it was written; an audit in stage 7 found the contradiction
+	 * and C10.11 resolved it in favour of the promise, because that is the one
+	 * of the two that cannot be undone if it is wrong.
+	 *
+	 * Read directly rather than through Settings::get(): this file runs with
+	 * the plugin already deactivated, so nothing of it is loaded.
+	 */
+	$qevm_settings = get_option( 'qevm_settings', array() );
+
+	if ( empty( $qevm_settings['delete_on_uninstall'] ) ) {
+		return;
+	}
+
 	$quick_events_manager_options = array(
 		'qevm_settings',
 		'qevm_enabled_modules',
@@ -30,6 +50,13 @@ function qevm_uninstall_site() {
 		'qevm_migration_lock',
 		'qevm_venue_promotion',
 		'qevm_organizer_promotion',
+
+		/*
+		 * The payment credentials. Leaving a live secret key in the database of
+		 * a site that has removed the plugin is the one leftover here that
+		 * could actually cost somebody money.
+		 */
+		'qevm_stripe_keys',
 	);
 
 	foreach ( $quick_events_manager_options as $quick_events_manager_option ) {
@@ -42,7 +69,7 @@ function qevm_uninstall_site() {
 	 * no autoloader and no class to ask. A capability added there and forgotten
 	 * here would survive deletion and quietly stay on every role.
 	 */
-	$quick_events_manager_roles = array( 'administrator', 'editor' );
+	$quick_events_manager_roles = array( 'administrator', 'editor', 'qevm_event_manager', 'qevm_event_organizer', 'qevm_event_staff' );
 	$quick_events_manager_caps  = array(
 		'edit_qevm_event',
 		'read_qevm_event',
@@ -81,6 +108,14 @@ function qevm_uninstall_site() {
 		'manage_qevm_checkins',
 	);
 
+	/*
+	 * The plugin's own roles go entirely, after their capabilities are stripped.
+	 * A role left behind is a role in every user's dropdown for a plugin that
+	 * is no longer installed — and anybody holding it keeps a job title that
+	 * grants nothing.
+	 */
+	$quick_events_manager_own_roles = array( 'qevm_event_manager', 'qevm_event_organizer', 'qevm_event_staff' );
+
 	foreach ( $quick_events_manager_roles as $quick_events_manager_role_name ) {
 		$quick_events_manager_role = get_role( $quick_events_manager_role_name );
 
@@ -90,6 +125,12 @@ function qevm_uninstall_site() {
 
 		foreach ( $quick_events_manager_caps as $quick_events_manager_cap ) {
 			$quick_events_manager_role->remove_cap( $quick_events_manager_cap );
+		}
+	}
+
+	foreach ( $quick_events_manager_own_roles as $quick_events_manager_own_role ) {
+		if ( null !== get_role( $quick_events_manager_own_role ) ) {
+			remove_role( $quick_events_manager_own_role );
 		}
 	}
 
@@ -107,6 +148,12 @@ function qevm_uninstall_site() {
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_ticket_types" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_checkins" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_transactions" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_order_items" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- As above.
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}qevm_orders" );
 }
 
 /*

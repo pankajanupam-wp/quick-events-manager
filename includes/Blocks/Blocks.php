@@ -97,7 +97,7 @@ final class Blocks {
 				continue;
 			}
 
-			register_block_type(
+			$type = register_block_type(
 				$metadata,
 				array(
 					'render_callback' => static function ( $attributes ) use ( $renderer ) {
@@ -105,6 +105,36 @@ final class Blocks {
 					},
 				)
 			);
+
+			self::translate( $type );
+		}
+	}
+
+	/**
+	 * Let the editor scripts be translated.
+	 *
+	 * **Without this every string in the block editor is English, permanently.**
+	 * `load_plugin_textdomain()` covers PHP and does nothing for JavaScript:
+	 * scripts need their own JSON translation files, and WordPress only loads
+	 * those for handles that have been told which text domain and directory to
+	 * look in. Nothing here did, so the four blocks' labels, help text and
+	 * placeholders were untranslatable — invisible on an English site and
+	 * absolute on any other. Found by the C10.6 sweep.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $type What register_block_type() returned.
+	 * @return void
+	 */
+	private static function translate( $type ) {
+		if ( ! function_exists( 'wp_set_script_translations' ) || ! is_object( $type ) ) {
+			return;
+		}
+
+		$handles = isset( $type->editor_script_handles ) ? (array) $type->editor_script_handles : array();
+
+		foreach ( $handles as $handle ) {
+			wp_set_script_translations( (string) $handle, 'quick-events-manager', QEVM_PATH . 'languages' );
 		}
 	}
 }

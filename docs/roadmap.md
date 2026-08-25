@@ -25,6 +25,13 @@ A plugin this size is only pleasant to use because most of it is switched off.
 - Attendees screen: search, status filtering, CSV export
 - Confirmation and notification emails, queued and retried rather than sent inline
 - Editable email templates, and one message to everybody registered for an event
+- Custom registration questions, with the answers reaching the CSV, the attendee screen and the privacy export
+- Reusable venues and organisers, with every event keeping its own copy of the address
+- Recurring events: rules, per-date bookings, per-date edits and "this and following"
+- Ticket types with their own capacity, price and sale window
+- Check-in: QR codes on confirmations, a door screen that works without JavaScript, and three named roles
+- Paid tickets through Stripe, with seat holds, webhooks and partial refunds
+- Selling through WooCommerce instead, for sites that already have a shop
 - Read-only REST API, GDPR export and erasure
 - The Features screen and module registry
 - Migration from 1.0, verified to preserve URLs
@@ -69,23 +76,39 @@ The shared machinery lives in `includes/Records/`, so the matching rule that dec
 
 ### 5. Ticketing
 
-Multiple ticket types per event, each with its own quantity, capacity and sale window. Early-bird pricing. The registrations table gains a ticket reference; capacity moves from per-event to per-type without losing the insert-then-rank guarantee.
+**Built.** Multiple ticket types per event behind the Level 3 **Ticketing** module, each with its own capacity, price and sale window, and the registrations table carrying which type a booking is for. Capacity became two limits rather than one, both ranked the same way: the event's is a shared, strictly ordered queue, because somebody who asked for three places must not watch every later single booking go in ahead of them; a ticket type's is a private queue, and a full one is skipped rather than left blocking people waiting for something else.
+
+Early-bird pricing turned out not to be a thing to build. It is a type whose sale window closes early and whose price is lower, which is why neither the schema nor the code contains the words. Prices are typed in whole units and stored in minor ones, rounded rather than truncated — `(int) ( 12.10 * 100 )` is 1209, and a penny a ticket is how money quietly goes wrong.
 
 ### 6. QR codes and check-in
 
-QR on confirmations, a mobile-friendly check-in screen, manual search, check-in timestamps, and a staff role that can check people in without being able to edit events. `manage_qevm_checkins` and `manage_qevm_registrations` are both granted from 26.0 for exactly this, kept apart from the post type's own capabilities so the door role is a different list rather than a smaller one. Granting a capability after release means a migration walking every role on every site; granting it before costs nothing.
+**Built.** A QR code per person on the confirmation, a door screen designed for one hand and one thumb, a camera scanner over the top of it, reversible check-ins, an attendance report and a REST endpoint for anything that wants to build its own door. `manage_qevm_checkins` and `manage_qevm_registrations` were granted from 26.0 for exactly this, kept apart from the post type's own capabilities, so the door role is a different list rather than a smaller one.
+
+The screen works with **no JavaScript at all**, and that is the mechanism rather than the fallback: every action is a form post, which is slower and completely reliable in a church hall with two bars of signal. The camera writes into the same code field a person can type into, so a locked-down phone, an older Android or a site not on HTTPS still runs the door.
+
+The QR encoder is written here rather than pulled in: version 1, level M, alphanumeric only — exactly what a ticket code is, and it refuses anything else. SVG rather than PNG, so nothing depends on GD or Imagick being present on somebody else's server.
+
+Three roles land with it — Event Manager, Event Organizer and Event Staff, the last of which can admit people and cannot edit a single post. Adding them is idempotent and never resets a site's own edits to them.
+
+Scanning the same ticket twice is the ordinary case, not an error: the second scan says *already checked in*, and the unique key on `(attendee_id, occurrence_id)` is what makes that true rather than a count that two phones can both read at once. Eight concurrent processes against one ticket admit exactly one person.
 
 ### 7. Payments
 
-The largest and riskiest piece, and the one to talk through before writing.
+**Built, and scoped down first** — [ADR-0010](adr/0010-payment-gateway-scope.md) cut three gateways to one. A `Commerce\Gateway` interface, documented as public API, with Stripe as the single first-party implementation; anything else can be written against it as a separate plugin with its own maintainer.
 
-A gateway interface first, then Stripe, Razorpay and PayPal against it. Money means refunds, partial refunds, failed and abandoned payments, currency handling, and an audit trail — none of which the current schema has. It also means the plugin starts handling things where being wrong is expensive rather than annoying.
+Orders, immutable line snapshots and one signed ledger, so a report written next year still adds up and reconciliation cannot disagree with itself. Money is integer minor units everywhere, formatted in exactly one place — including the number of decimal places, which is not always two.
 
-Nothing here stores card details; every gateway hands that off.
+Seat holds with an expiry sweep, because without them every abandoned checkout permanently eats a seat. Webhooks with signature verification and a timestamp window, because the endpoint is public and a signature stays valid for ever. Refunds full and partial, where only a full one frees the place.
+
+Nothing here stores card details: the card is entered on Stripe's side and never reaches the site.
 
 ### 8. WooCommerce integration
 
-An alternative to the built-in gateways for sites that already run Woo: an event ticket becomes a product, and Woo handles checkout, orders, refunds, coupons and taxes. Optional, and mutually exclusive with the built-in payment module.
+**Built.** For sites that already run a shop: a ticket type becomes a product, and Woo handles the basket, the payment, the tax and the refunds. The ticket type stays the one editable copy of a price — the product is a shopfront for it, never the other way round.
+
+Mutually exclusive with the built-in gateway, which needed a mechanism the module registry did not have: switching one on switches the other off, read from either end of the pair. Two things that both own a checkout do not fail loudly when both are on; they each half-work.
+
+A purchase for a full event joins the waiting list rather than overselling, because Woo does not know the room's capacity and the booking goes through the ordinary path.
 
 ### 9. Recurring events
 
@@ -103,13 +126,14 @@ Modelled as a series with a parent and generated occurrences, not as unrelated c
 
 Independent of the features above:
 
-- `npm run build` wired up and the compiled blocks confirmed present
-- Screenshots in `.wordpress-org/`
-- `SVN_USERNAME` and `SVN_PASSWORD` secrets on the GitHub repo — their absence already failed a release on a sibling plugin
-- An integration test suite against real WordPress and MySQL, covering the custom tables, REST routes and migrations that stubs cannot reach
-- A full security and performance pass over everything, not just the last thing built
-- `readme.txt` rewritten to describe the finished plugin
-- Translation template regenerated
+- ~~`npm run build` wired up and the compiled blocks confirmed present~~ — done, and all four blocks now open in the editor without the fatal that used to kill that screen
+- ~~Screenshots in `.wordpress-org/`~~ — done, and taking them found two visible defects
+- **`SVN_USERNAME` is still missing from the GitHub repo.** `SVN_PASSWORD` is there; both siblings have the pair. A tag pushed today fails at authentication after a green build, which is how a release on a sibling was already lost
+- ~~An integration test suite against real WordPress and MySQL~~ — 564 tests, including WooCommerce and eight-process concurrency runs
+- ~~A full security and performance pass~~ — done; both found real defects, recorded in the development plan
+- ~~`readme.txt` rewritten to describe the finished plugin~~ — done
+- ~~Translation template regenerated~~ — done, 713 strings, and the block editor's strings are translatable for the first time
+- Still to do: the final review and the `26.0` tag
 
 ## Not planned, ever
 

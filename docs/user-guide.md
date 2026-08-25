@@ -173,7 +173,44 @@ Leaving **Places** empty means as many as the event allows.
 
 Clearing a type's name removes it. If somebody already holds a ticket of that type it is **archived** instead: it stops being offered, and every booking that named it still says so on your attendee list and in your export.
 
-Prices are recorded but not yet shown on the form — that arrives with payments.
+Each type can have a **price**, and the form shows it beside the name. A price of nothing reads as "Free" rather than as a zero.
+
+What the site prices in is set once under **Events → Settings → Money**, which appears when **Paid tickets** is switched on under **Events → Features**. Orders already taken keep the currency they were taken in.
+
+## Charging for a place
+
+Switch on **Paid tickets** under **Events → Features**, then put your Stripe keys into **Events → Settings → Money**. Until both keys are there, priced tickets are still free to book — nothing is half-charged.
+
+Test keys and live keys are told apart automatically, and the screen says which you are using. A test key paired with a live one switches card payments off rather than failing in front of a customer.
+
+### What somebody paying sees
+
+They fill in the booking form as usual, and instead of landing back on the event they land on a short payment screen with the amount, their reference and a card form. The card is typed into Stripe's own form — it never reaches your site.
+
+**Their place is held while they pay**, for twenty minutes. If they close the tab, the place goes back and whoever is next on the waiting list gets it. Nobody is confirmed, and no confirmation email is sent, until the money has actually arrived.
+
+Somebody on the waiting list is never asked to pay. There is nothing to pay for until they have a place.
+
+### Refunds
+
+The attendee screen grows a **Payment** column for events that have taken money: what was paid, where the order stands, and a box to refund from.
+
+Leave the box empty to refund everything left; type an amount to refund part of it. A **full refund frees the place** and moves the waiting list on. A **partial refund does not** — somebody given a few pounds back is still coming.
+
+Refunding more than the order has left is refused rather than trimmed to fit, because a number that large usually means the wrong order.
+
+## Selling through WooCommerce instead
+
+If your site already runs WooCommerce, switch on **Sell through WooCommerce** under **Events → Features** and let the shop you already have do the work: the basket, the payment, the tax and the refunds are all Woo's.
+
+Switching it on switches **Paid tickets** off, and the Features screen says so before you do it. Two checkouts on one site is not a configuration anybody wants — neither breaks, and afterwards nobody can tell which one took the money.
+
+Each ticket type becomes a hidden, virtual product, kept in step with the ticket type whenever you save the event. **Edit prices on the event, not on the product**: the ticket type is the copy that counts, and it is the one capacity is counted against.
+
+When Woo marks an order paid, the booking is made and the usual confirmation goes out. When you refund it in Woo, the place is released and the waiting list moves on — you never have to do it in two places.
+
+One difference worth knowing: with Woo, a seat is not held while somebody is at the payment step, because Woo already owns the basket and the abandoned order. If an event fills while a purchase is in progress, that purchase becomes a waiting list place rather than an extra seat, and you can refund it from Woo.
+
 
 ## Copying an event
 
@@ -270,6 +307,46 @@ A few things worth knowing:
 
 Mail goes out in the background over the next few minutes rather than all at once, so the page comes back straight away. Under the box is a **Delivery** panel saying how many have gone, how many are waiting and how many failed, listing the addresses that did not work and why. While messages are still waiting you can withdraw them; that catches whatever has not gone yet and leaves booking confirmations alone. Anything already sent is gone — there is no unsend.
 
+## On the day: checking people in
+
+Switch **Check-in** on under **Events → Features**, and two things happen: confirmations start carrying a QR code for each person on the booking, and **Events → Check-in** appears.
+
+### The door screen
+
+Open **Events → Check-in** and pick the event. A repeating event opens on the next date, because somebody opening this at ten to seven is running tonight's door.
+
+You get one row per person who is actually coming, with a large **Check in** button beside each, and the count in words at the top — "12 of 40 in" — because that is the question you get asked every few minutes. Cancelled bookings and anybody still on the waiting list are not on the list: they have no place yet.
+
+Type or scan a code into the box at the top to admit somebody straight away.
+
+### Scanning
+
+Tap **Scan a ticket** and allow the camera. Point it at the QR code on somebody's phone or printout and they are admitted.
+
+If the camera does not work — an older phone, a work phone with the camera locked down, or a site that is not on HTTPS — every confirmation email also prints the code in plain text, one per person on the booking. Read it out and type it in. That is the same path the scanner uses, not a lesser one, and the whole screen works with JavaScript switched off.
+
+The code on the ticket is **not** the booking reference. A booking for three is three people who can arrive separately, so each has their own.
+
+### Somebody checked in by mistake
+
+Press **Undo** on their row. The check-in is marked as reversed rather than deleted, so the record of what happened at the door survives — and they can be checked in again afterwards.
+
+Scanning the same ticket twice is not an error. The screen says they are already in, along with when, so you know whether to let them past.
+
+### Who can run a door
+
+Switching Check-in on adds three roles you can give people under **Users**:
+
+| Role | Can do |
+| --- | --- |
+| Event Manager | Everything — events, attendees, settings, features |
+| Event Organizer | Their own events, their own attendees, and their own door |
+| Event Staff | Check people in. Nothing else — no editing, not even their own drafts |
+
+Give the person on the door **Event Staff**. They can admit people and cannot change anything about the event, so handing over a phone for the evening is safe.
+
+If you have already customised these roles yourself, updating the plugin leaves your changes alone.
+
 ## Add to calendar
 
 Every event page has an **Add to calendar** button that downloads an `.ics` file, plus a Google Calendar link. These work in Apple Calendar, Outlook, Google Calendar and anything else that reads iCalendar.
@@ -290,6 +367,8 @@ For example, to change how event cards look, copy `templates/event-list.php` to 
 
 **Events → Settings** is deliberately short:
 
+- **When the plugin is deleted** — off by default. Leave it off and removing the plugin leaves your events and attendees in the database, so reinstalling picks up where you left off. Tick it and deleting the plugin takes everything with it, permanently.
+- **Currency** — what prices on this site are in. Only shown once **Paid tickets** is on, and it does not rewrite what past orders were taken in.
 - **Event details** — whether the date and location appear automatically above the description. Turn it off if you would rather place them yourself with the Event Details block.
 - **Events per page** — how many the archive shows.
 - **Send notifications to** — leave empty to use your site's admin email.

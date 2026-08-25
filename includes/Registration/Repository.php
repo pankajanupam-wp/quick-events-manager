@@ -447,6 +447,67 @@ final class Repository {
 	}
 
 	/**
+	 * Find the booking an order is paying for.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $order_id Order id.
+	 * @return Registration|null
+	 */
+	public static function find_by_order( $order_id ) {
+		global $wpdb;
+
+		$order_id = (int) $order_id;
+
+		if ( ! self::table_exists() || $order_id <= 0 ) {
+			return null;
+		}
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT * FROM %i WHERE order_id = %d ORDER BY id ASC LIMIT 1', self::table(), $order_id ),
+			ARRAY_A
+		);
+
+		return null !== $row ? new Registration( $row ) : null;
+	}
+
+	/**
+	 * Record which order is paying for a booking.
+	 *
+	 * Narrow on purpose. There is no general `update()` on this repository and
+	 * there should not be: a booking's status goes through `update_status()`
+	 * so that the waiting list hears about it, and its places are fixed at
+	 * insert time so that ranking still means something. This writes one column
+	 * that is nobody else's business.
+	 *
+	 * @since 26.0
+	 *
+	 * @param int $id       Registration id.
+	 * @param int $order_id Order id.
+	 * @return bool
+	 */
+	public static function set_order( $id, $order_id ) {
+		global $wpdb;
+
+		$id = (int) $id;
+
+		if ( ! self::table_exists() || $id <= 0 ) {
+			return false;
+		}
+
+		return false !== $wpdb->update(
+			self::table(),
+			array(
+				'order_id'   => (int) $order_id,
+				'updated_at' => gmdate( 'Y-m-d H:i:s' ),
+			),
+			array( 'id' => $id ),
+			array( '%d', '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
 	 * Find a registration by its public code.
 	 *
 	 * @since 26.0
