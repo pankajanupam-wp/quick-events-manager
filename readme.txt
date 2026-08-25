@@ -182,7 +182,7 @@ Added:
 * Venue and organiser details, with reusable venue and organiser records as an option
 * Your own questions on the registration form
 * Event categories and tags
-* Event list, details and registration blocks, with matching shortcodes
+* Event list, details, registration and calendar blocks, with matching shortcodes
 * Free registration with capacity, waiting list and closing date
 * Group booking, with a name and a ticket reference for each person
 * Attendee management with search, status filtering and CSV export
@@ -194,12 +194,24 @@ Added:
 * Privacy exporters and erasers for attendee data
 * A consent checkbox with wording you control, recording what was agreed to and when
 * Translation support
+* A calendar, as a month grid or a list
+* Repeating events, with per-date bookings. Move one date, call one off, or split a series from a date onwards
+* Editable email wording, a queue that retries rather than sending inline, and one message to everybody registered for an event
+* A cancellation link, so somebody who cannot come can say so in one click
+* Automatic deletion of old registrations, if you want it
+* Ticket types, each with its own capacity, price and sale window
+* Paid tickets through Stripe, with seats held while somebody pays, and full or partial refunds
+* Selling through WooCommerce instead, for sites that already run a shop
+* Check-in: a QR code on every confirmation, a door screen that works without JavaScript, and a camera scanner over the top of it
+* Event Manager, Event Organizer and Event Staff roles
+* A setting for what happens to your data when the plugin is deleted — off, so nothing is destroyed unless you ask
 
 Changed:
 
 * Events moved from the generic `events` post type to `qevm_event`, keeping their existing `/events/` addresses. Existing events are migrated automatically.
 * Event archives now sort by start date instead of publish date.
 * Minimum requirements are WordPress 6.5 and PHP 8.1.
+* Deleting the plugin no longer removes your data unless you have asked it to.
 
 == Upgrade Notice ==
 

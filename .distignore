@@ -30,3 +30,9 @@ SECURITY.md
 CHANGELOG.md
 .wp-env.json
 .wp-env.override.json
+
+# Playwright's output. In .gitignore too, so a CI package never sees it — but a
+# package built from a working tree would, and dev artefacts must not reach
+# wordpress.org.
+test-results
+playwright-report

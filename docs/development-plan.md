@@ -1979,7 +1979,7 @@ script for `card_number`, `cardNumber`, `cvc`, `cvv` and the expiry fields.
 | **C10.12** | Verify indexes actually exist after an upgrade, rather than trusting dbDelta | S | **Done. Found in C8.1.** dbDelta reports "Added index" from its own comparison; the `ALTER` beneath it fails silently when existing data violates the constraint |
 | **C10.11** | The "Delete all data on uninstall" opt-in, and every table on the drop list | M | **Done. Found by the stage 7 audit.** docs/database.md promises removal happens *only if* the owner ticked a setting. There is no such setting and `uninstall.php` drops unconditionally — removing the plugin destroys every registration with no warning. Stages 8 and 9 add four more tables to that list |
 | **C10.9** | `SVN_USERNAME` / `SVN_PASSWORD` verified on the repo | S | **Checked, and it is not ready. `SVN_USERNAME` is missing** — the deploy would fail authentication exactly as a sibling's did |
-| **C10.10** | Final review; tag `26.0` | S | Tag must equal `Stable tag` exactly, no `v` prefix |
+| **C10.10** | Final review; tag `26.0` | S | **Review done; the tag is not mine to push.** Tag must equal `Stable tag` exactly, no `v` prefix |
 
 > **C10.9 — the repository is one secret short, and that is the whole point of the chunk.**
 > `gh secret list` shows `SVN_PASSWORD` on this repository and **no `SVN_USERNAME`**, while
@@ -2198,6 +2198,27 @@ script for `card_number`, `cardNumber`, `cvc`, `cvv` and the expiry fields.
 **Gate:** every acceptance criterion passes on PHP 8.1 through 8.5 with `WP_DEBUG` and
 `SCRIPT_DEBUG` on and no notices.
 
+**Gate result: no notices, and the package is clean.** The debug log was deleted, then
+every screen the suites reach was exercised with `WP_DEBUG`, `WP_DEBUG_LOG`,
+`WP_DEBUG_DISPLAY` and `SCRIPT_DEBUG` all on — 47 accessibility scenarios across twelve
+admin screens and the public pages, plus the five block-editor checks. **No debug log was
+created at all.**
+
+Versions: 8.5 on the host and 8.3 in the container were run here; 8.1, 8.2 and 8.4 are
+covered by the CI matrix in `.github/workflows/tests.yml`, which lints every shipped file
+on all five. Every shipped file parses on 8.5.
+
+**The final review found two things.** The changelog still described a much smaller
+plugin — no calendar, no recurrence, no tickets, no payments, no check-in, three blocks
+rather than four — which was a gap in C10.7's own readme work. And `test-results/` was in
+`.gitignore` but not `.distignore`, so a package built from a working tree would have
+shipped Playwright's output to wordpress.org. CI builds from a clean checkout and would
+not have, which is exactly the kind of difference worth catching before it matters.
+
+**What is left is not development.** `SVN_USERNAME` is missing from the repository
+(C10.9), and the `26.0` tag is a deliberate act by the maintainer, not something to
+automate at the end of a build.
+
 ---
 
 ## Progress
@@ -2216,7 +2237,7 @@ Update this as chunks land. It is the honest record, not an aspiration.
 | 7 · Ticketing | 6 | **C7.1–C7.6 ✓** — stage complete, gate passed 8 of 8 plus the eight-process race. C7.5 and C7.6 were added by findings; a review of the stage found eight defects and six were real |
 | 8 · Event operations | 8 | **Complete — C8.1 ✓ · C8.2 ✓ · C8.3 ✓ · C8.4a ✓ · C8.4b ✓ · C8.4c ✓ · C8.5 ✓ · C8.6 ✓ · gate 5/5** |
 | 9 · Commerce | 7 | **Complete — all seven chunks, C9.4 and C9.7 each split in two, gate 5/5.** Tested against the real WooCommerce; no live Stripe call has been made |
-| 10 · Release readiness | 12 | **C10.1–C10.8 ✓ · C10.11 ✓ · C10.12 ✓** — C10.9 and C10.10 are the release itself |
+| 10 · Release readiness | 12 | **C10.1–C10.8 ✓ · C10.10 review ✓ · C10.11 ✓ · C10.12 ✓** — gate passed with no notices. C10.9 is blocked on a missing repository secret; the tag itself is the maintainer's |
 | | **84** | |
 
 ---
