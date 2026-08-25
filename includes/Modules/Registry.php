@@ -49,6 +49,8 @@ final class Registry {
 			new \QuickEventsManager\Recurrence\RecurrenceModule(),
 			new \QuickEventsManager\Tickets\TicketsModule(),
 			new \QuickEventsManager\CheckIn\CheckInModule(),
+			new \QuickEventsManager\Commerce\CommerceModule(),
+			new \QuickEventsManager\Woo\WooModule(),
 			new \QuickEventsManager\Email\TemplatesModule(),
 		);
 
@@ -184,6 +186,20 @@ final class Registry {
 		}
 
 		if ( ! $this->is_enabled( $id ) ) {
+			/*
+			 * Anything this module cannot live beside goes off first. Two
+			 * modules that both want to own a checkout do not fail loudly when
+			 * both are on — they each half-work, and the site owner is left
+			 * with two payment paths and no idea which one took the money.
+			 *
+			 * Switched off rather than refused: somebody who has just asked for
+			 * WooCommerce has decided, and answering "no, turn the other one
+			 * off first" is a worse conversation than doing it.
+			 */
+			foreach ( $this->conflicts_with( $id ) as $conflict ) {
+				$this->disable( $conflict );
+			}
+
 			$stored   = (array) get_option( QEVM_OPTION_MODULES, array() );
 			$stored[] = $id;
 
@@ -202,6 +218,57 @@ final class Registry {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Which enabled modules cannot be on at the same time as this one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $id Module id.
+	 * @return array<int, string>
+	 */
+	public function conflicts_with( $id ) {
+		$module = $this->get( $id );
+
+		if ( null === $module ) {
+			return array();
+		}
+
+		$conflicting = array();
+
+		/*
+		 * What this module says, if it says anything. Returning early when it
+		 * does not was the first version, and it skipped the other half of the
+		 * question entirely: the module being switched on is often the one with
+		 * no opinion, and the one already on is the one that objects.
+		 */
+		if ( $module instanceof Exclusive ) {
+			foreach ( $module->conflicts() as $other ) {
+				if ( $this->is_enabled( $other ) ) {
+					$conflicting[] = (string) $other;
+				}
+			}
+		}
+
+		/*
+		 * Both directions, whichever end declared it. A module that names a
+		 * conflict is stating a fact about a pair, and requiring the other one
+		 * to repeat it is how the two lists drift apart.
+		 */
+		foreach ( $this->enabled_ids() as $enabled ) {
+			$other = $this->get( $enabled );
+
+			if ( $enabled === $id || ! $other instanceof Exclusive ) {
+				continue;
+			}
+
+			if ( in_array( $id, $other->conflicts(), true ) ) {
+				$conflicting[] = (string) $enabled;
+			}
+		}
+
+		return array_values( array_unique( $conflicting ) );
 	}
 
 	/**

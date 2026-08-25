@@ -33,7 +33,12 @@ parameters:
 	# WP-CLI is not a dependency and is absent when PHPStan runs, so the commands
 	# in includes/Cli/ would otherwise reference unresolvable classes. Scanned
 	# rather than bootstrapped: PHPStan only needs the signatures, not the code.
+	# WooCommerce is not a dependency either, and the bridge in includes/Woo/ is
+	# the one part of this codebase built entirely on assumptions about somebody
+	# else's API — so excluding it from analysis would leave the riskiest files
+	# unchecked. Signatures only; see the file's own note.
 	scanFiles:
+		- tests/phpstan/woocommerce.php
 		- tests/phpstan/wp-cli.php
 		- tests/phpstan/wp-cli-noop.php
 		- tests/phpstan/wp-cli-utils.php

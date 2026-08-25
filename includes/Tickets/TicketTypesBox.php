@@ -389,8 +389,28 @@ final class TicketTypesBox {
 
 			if ( $id > 0 ) {
 				TicketTypeRepository::update( $id, $values );
+
+				$saved = $id;
 			} else {
-				TicketTypeRepository::insert( (int) $post_id, $values );
+				$saved = TicketTypeRepository::insert( (int) $post_id, $values );
+			}
+
+			if ( $saved > 0 ) {
+				/**
+				 * Fires after a ticket type has been written.
+				 *
+				 * What a shopfront listens for. The WooCommerce bridge keeps a
+				 * product in step with the type through this, so the ticket
+				 * type stays the one editable copy of a price — two of those is
+				 * a support conversation waiting to happen, and the one people
+				 * would edit is not the one capacity is counted against.
+				 *
+				 * @since 26.0
+				 *
+				 * @param int $ticket_type_id The ticket type.
+				 * @param int $event_id       The event it belongs to.
+				 */
+				do_action( 'qevm_ticket_type_saved', (int) $saved, (int) $post_id );
 			}
 
 			++$position;

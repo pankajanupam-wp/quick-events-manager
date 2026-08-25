@@ -156,24 +156,6 @@ final class TicketType {
 	}
 
 	/**
-	 * Fewest of this type in one booking.
-	 *
-	 * @since 26.0
-	 */
-	public function min_per_order(): int {
-		return max( 1, (int) $this->get( 'min_per_order', 1 ) );
-	}
-
-	/**
-	 * Most of this type in one booking, or 0 for no limit of its own.
-	 *
-	 * @since 26.0
-	 */
-	public function max_per_order(): int {
-		return max( 0, (int) $this->get( 'max_per_order', 0 ) );
-	}
-
-	/**
 	 * Whether it is on offer.
 	 *
 	 * @since 26.0

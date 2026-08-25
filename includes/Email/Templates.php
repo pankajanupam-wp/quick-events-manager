@@ -53,17 +53,31 @@ final class Templates {
 	 * @return array<string, string>
 	 */
 	public static function placeholders() {
-		return array(
-			'attendee_name'  => __( 'The name on the booking', 'quick-events-manager' ),
-			'attendee_email' => __( 'The email address on the booking', 'quick-events-manager' ),
-			'event_title'    => __( 'The event', 'quick-events-manager' ),
-			'event_url'      => __( 'A link to the event', 'quick-events-manager' ),
-			'event_when'     => __( 'When it starts, in the event timezone', 'quick-events-manager' ),
-			'event_where'    => __( 'The venue, or the joining link for an online event', 'quick-events-manager' ),
-			'places'         => __( 'How many places were booked', 'quick-events-manager' ),
-			'reference'      => __( 'The booking reference', 'quick-events-manager' ),
-			'cancel_url'     => __( 'A link the attendee can cancel with', 'quick-events-manager' ),
-			'site_name'      => __( 'The name of this site', 'quick-events-manager' ),
+		/**
+		 * Filter the placeholders a template may use.
+		 *
+		 * For modules that carry their own value into a message — check-in adds
+		 * `{ticket_codes}` — so the editor lists everything that will actually
+		 * substitute, rather than only the ones this file knows about.
+		 *
+		 * @since 26.0
+		 *
+		 * @param array<string, string> $placeholders Placeholder name => what it means.
+		 */
+		return (array) apply_filters(
+			'qevm_email_placeholders',
+			array(
+				'attendee_name'  => __( 'The name on the booking', 'quick-events-manager' ),
+				'attendee_email' => __( 'The email address on the booking', 'quick-events-manager' ),
+				'event_title'    => __( 'The event', 'quick-events-manager' ),
+				'event_url'      => __( 'A link to the event', 'quick-events-manager' ),
+				'event_when'     => __( 'When it starts, in the event timezone', 'quick-events-manager' ),
+				'event_where'    => __( 'The venue, or the joining link for an online event', 'quick-events-manager' ),
+				'places'         => __( 'How many places were booked', 'quick-events-manager' ),
+				'reference'      => __( 'The booking reference', 'quick-events-manager' ),
+				'cancel_url'     => __( 'A link the attendee can cancel with', 'quick-events-manager' ),
+				'site_name'      => __( 'The name of this site', 'quick-events-manager' ),
+			)
 		);
 	}
 

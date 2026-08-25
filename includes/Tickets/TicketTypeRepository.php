@@ -371,14 +371,6 @@ final class TicketTypeRepository {
 			$row['currency'] = strtoupper( substr( sanitize_text_field( (string) ( $data['currency'] ?? '' ) ), 0, 3 ) );
 		}
 
-		if ( null === $only || in_array( 'min_per_order', $only, true ) ) {
-			$row['min_per_order'] = max( 1, (int) ( $data['min_per_order'] ?? 1 ) );
-		}
-
-		if ( null === $only || in_array( 'max_per_order', $only, true ) ) {
-			$row['max_per_order'] = max( 0, (int) ( $data['max_per_order'] ?? 0 ) );
-		}
-
 		if ( null === $only || in_array( 'status', $only, true ) ) {
 			$row['status'] = TicketTypeStatus::coerce( (string) ( $data['status'] ?? '' ) )->value;
 		}
@@ -411,7 +403,7 @@ final class TicketTypeRepository {
 	 * @return string[]
 	 */
 	private static function formats( array $row ): array {
-		$integers = array( 'event_id', 'occurrence_id', 'price_minor', 'capacity', 'min_per_order', 'max_per_order', 'sort_order' );
+		$integers = array( 'event_id', 'occurrence_id', 'price_minor', 'capacity', 'sort_order' );
 		$formats  = array();
 
 		foreach ( array_keys( $row ) as $column ) {
@@ -455,8 +447,6 @@ final class TicketTypeRepository {
 			price_minor bigint(20) unsigned NOT NULL DEFAULT 0,
 			currency char(3) NOT NULL DEFAULT '',
 			capacity int(10) unsigned NOT NULL DEFAULT 0,
-			min_per_order smallint(5) unsigned NOT NULL DEFAULT 1,
-			max_per_order smallint(5) unsigned NOT NULL DEFAULT 0,
 			sale_starts_utc datetime DEFAULT NULL,
 			sale_ends_utc datetime DEFAULT NULL,
 			sort_order smallint(5) unsigned NOT NULL DEFAULT 0,
