@@ -1406,6 +1406,14 @@ to move per-type first.
 > docs/database.md specifies it and `occurrence_id` is the column a per-date ticket type
 > will use — but it is worth revisiting in stage 10's performance pass rather than
 > pretending it earns its place now.
+>
+> **Revisited and dropped**, in the review at the end of stage 10 — the deferral above is
+> the only thing in this plan that named a later stage and would otherwise have been
+> quietly carried past it. An index nothing reads is not free: it is maintained on every
+> insert and every update for nothing. dbDelta will not remove one, so the removal is an
+> explicit `Installer::drop_indexes()`, and the schema version moves to 13. **The column
+> stays**: it is the key a per-date ticket type will use, and unlike `min_per_order` it
+> promises nobody that something is enforced when it is not.
 
 **Gate:** two ticket types with separate capacities sell out independently · the
 8-parallel-process test passes **per type** · archiving a type does not break existing

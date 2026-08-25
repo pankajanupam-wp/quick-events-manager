@@ -136,6 +136,47 @@ final class IndexVerificationTest extends TestCase {
 	}
 
 	/**
+	 * An index that serves no query is removed rather than maintained.
+	 *
+	 * `occ_status` on the ticket types table was written on every insert and
+	 * read by nothing: every query filters on `event_id`, and `occurrence_id`
+	 * is stored and never looked at. Stage 7 recorded it as worth revisiting in
+	 * stage 10's performance pass instead of pretending it earned its place.
+	 *
+	 * The column stays — it is the key a per-date ticket type will use, and
+	 * unlike the per-order limits that went in C9.1 it promises nobody that
+	 * anything is enforced.
+	 *
+	 * @return void
+	 */
+	public function test_an_index_nothing_reads_is_dropped() {
+		global $wpdb;
+
+		if ( ! \QuickEventsManager\Tickets\TicketTypeRepository::table_exists() ) {
+			( new \QuickEventsManager\Tickets\TicketsModule() )->activate();
+		}
+
+		$table = \QuickEventsManager\Tickets\TicketTypeRepository::table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Putting the old index back so the drop has something to remove.
+		$wpdb->query( "ALTER TABLE `{$table}` ADD KEY `occ_status` (`occurrence_id`, `status`)" );
+
+		Installer::drop_retired_columns();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reading the schema back.
+		$named = $wpdb->get_col( $wpdb->prepare( 'SHOW INDEX FROM %i', $table ), 2 );
+
+		$this->assertNotContains( 'occ_status', (array) $named, 'the index should be gone' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reading the schema back.
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM `{$table}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Our own table name.
+
+		$this->assertContains( 'occurrence_id', (array) $columns, 'and the column should not be' );
+
+		$this->restore_schema();
+	}
+
+	/**
 	 * Every index in the statement is checked, including the primary key.
 	 *
 	 * @return void

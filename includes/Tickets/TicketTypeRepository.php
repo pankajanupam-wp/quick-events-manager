@@ -454,8 +454,7 @@ final class TicketTypeRepository {
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
-			KEY event (event_id),
-			KEY occ_status (occurrence_id, status)
+			KEY event (event_id)
 		) {$collate};";
 	}
 }

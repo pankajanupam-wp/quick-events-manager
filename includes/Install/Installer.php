@@ -102,6 +102,69 @@ final class Installer {
 	 */
 	public static function drop_retired_columns() {
 		self::drop_columns( 'ticket_types', array( 'min_per_order', 'max_per_order' ) );
+
+		/*
+		 * `occ_status` on the ticket types table served no query: every read
+		 * filters on `event_id`, and `occurrence_id` is written and never read.
+		 * An index nothing reads is not free — it is maintained on every insert
+		 * and every update, for nothing — and stage 7 recorded it as worth
+		 * revisiting in stage 10's performance pass rather than pretending it
+		 * earned its place. This is that revisit.
+		 *
+		 * The column stays. It is the key a per-date ticket type will use, it
+		 * is specified in docs/database.md, and unlike `min_per_order` it makes
+		 * no promise to anybody that something is enforced when it is not.
+		 */
+		self::drop_indexes( 'ticket_types', array( 'occ_status' ) );
+	}
+
+	/**
+	 * Drop indexes from one of the plugin's tables, if they are there.
+	 *
+	 * What dbDelta will not do is remove an index, any more than it removes a
+	 * column: one taken out of a `CREATE TABLE` statement stays on every site
+	 * that already had it. Idempotent, and quiet about anything already gone.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string             $name    Unprefixed table name.
+	 * @param array<int, string> $indexes Index names.
+	 * @return void
+	 */
+	public static function drop_indexes( $name, array $indexes ) {
+		global $wpdb;
+
+		$table = self::table( $name );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema question about our own table.
+		$exists = (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+
+		if ( ! $exists ) {
+			return;
+		}
+
+		foreach ( $indexes as $index ) {
+			$index = preg_replace( '/[^a-z0-9_]/', '', (string) $index );
+
+			if ( '' === $index ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema question about our own table.
+			$present = $wpdb->get_results( $wpdb->prepare( 'SHOW INDEX FROM %i WHERE Key_name = %s', $table, $index ) );
+
+			if ( array() === (array) $present ) {
+				continue;
+			}
+
+			/*
+			 * Interpolated for the same reason the column drop is: MySQL takes
+			 * neither a table nor an index name as a bound parameter in DDL,
+			 * and both are ours.
+			 */
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange -- A schema change is the purpose; see above.
+			$wpdb->query( "ALTER TABLE `{$table}` DROP INDEX `{$index}`" );
+		}
 	}
 
 	/**

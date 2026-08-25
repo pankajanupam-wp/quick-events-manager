@@ -413,10 +413,17 @@ CREATE TABLE {prefix}qevm_ticket_types (
     created_at       datetime     NOT NULL,
     updated_at       datetime     NOT NULL,
     PRIMARY KEY  (id),
-    KEY event      (event_id),
-    KEY occ_status (occurrence_id, status)
+    KEY event      (event_id)
 );
 ```
+
+> **`KEY occ_status` was here and is gone**, dropped in the review at the end of stage 10.
+> It served no query — every read filters on `event_id`, and `occurrence_id` is written
+> and never read — and an index nothing reads is still maintained on every insert and
+> every update. Stage 7 recorded it as worth revisiting rather than pretending it earned
+> its place; this is that revisit. The column stays, because it is the key a per-date
+> ticket type will use. dbDelta removes neither, so the removal is an explicit
+> `Installer::drop_indexes()` and the schema version moves to 13.
 
 `occurrence_id = 0` means the type applies to every occurrence of the event.
 `capacity = 0` means unlimited. A free ticket type is `price_minor = 0` — free and
