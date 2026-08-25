@@ -24,6 +24,9 @@ use QuickEventsManager\Domain\FieldType;
 use QuickEventsManager\Calendar\CalendarModule;
 use QuickEventsManager\Modules\Registry;
 use QuickEventsManager\Registration\RegistrationModule;
+use QuickEventsManager\Registration\RegistrationService;
+use QuickEventsManager\Registration\Repository;
+use QuickEventsManager\CheckIn\CheckInModule;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( 1 );
@@ -252,6 +255,48 @@ if ( $past instanceof WP_Post ) {
 	wp_update_post( wp_slash( $past_post ), true );
 } else {
 	wp_insert_post( wp_slash( $past_post ), true );
+}
+
+/*
+ * The door needs a module, somebody to check in, and nobody already checked in.
+ *
+ * The admin accessibility run scans the check-in screen with a list on it, and
+ * a list with nobody on it proves nothing — the same mistake the stage 4
+ * calendar scan made when it scanned an empty month. So check-in is switched on
+ * and the fixture books a place if the event has none.
+ */
+$modules = (array) get_option( QEVM_OPTION_MODULES, array() );
+
+if ( ! in_array( CheckInModule::ID, $modules, true ) ) {
+	$modules[] = CheckInModule::ID;
+
+	update_option( QEVM_OPTION_MODULES, array_values( $modules ) );
+
+	( new CheckInModule() )->activate();
+}
+
+if ( 0 === Repository::count_for_event( $event_id ) ) {
+	$booked = ( new RegistrationService() )->create(
+		$event_id,
+		array(
+			'name'       => 'Door Fixture',
+			'email'      => 'door-fixture@example.test',
+			'quantity'   => 1,
+			'consent'    => true,
+
+			/*
+			 * This event asks a required question, because the public run
+			 * scans a form that has one. A booking that does not answer it is
+			 * refused — correctly — so the fixture answers it.
+			 */
+			'qevm_field' => array( 1 => array( 'fsession0001' => 'Morning' ) ),
+		),
+		RegistrationService::CONTEXT_MANUAL
+	);
+
+	if ( is_wp_error( $booked ) ) {
+		WP_CLI::warning( 'Could not book the door fixture: ' . $booked->get_error_message() );
+	}
 }
 
 /*

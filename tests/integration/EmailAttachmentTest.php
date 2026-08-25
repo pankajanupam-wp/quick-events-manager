@@ -101,7 +101,13 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->drain();
 
-		$this->assertCount( 1, $this->captured(), 'exactly one attachment' );
+		/*
+		 * The calendar file is here, rather than being the only file here.
+		 * Switching check-in on adds a QR code to the same message, which is
+		 * correct and is not this file's subject — asserting a count made these
+		 * pass only while that module happened to be off.
+		 */
+		$this->assertSame( 1, $this->count_calendars(), 'exactly one calendar file' );
 
 		$attachment = $this->captured()[0];
 
@@ -135,7 +141,7 @@ final class EmailAttachmentTest extends TestCase {
 		$this->drain();
 
 		$this->assertSame( RegistrationStatus::Waitlisted, $second->status() );
-		$this->assertSame( array(), $this->captured() );
+		$this->assertSame( array(), $this->captured(), 'a provisional place carries neither a calendar nor a ticket' );
 	}
 
 	/**
@@ -187,7 +193,7 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->drain();
 
-		$this->assertCount( 1, $this->captured(), 'a promoted place is a real place' );
+		$this->assertSame( 1, $this->count_calendars(), 'a promoted place is a real place' );
 		$this->assertStringContainsString( 'BEGIN:VCALENDAR', $this->captured()[0][0] );
 	}
 
@@ -208,7 +214,15 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->drain();
 
-		$this->assertSame( array(), $this->captured() );
+		/*
+		 * No calendar file, rather than no files at all. An undated event has
+		 * nothing to put in a diary, which is this file's subject — but the
+		 * booking is still confirmed, so with check-in on the same message
+		 * carries a ticket. Asserting "nothing at all" passed only while that
+		 * module happened to be off, and failed the moment a benchmark left
+		 * every module enabled on the test site.
+		 */
+		$this->assertSame( 0, $this->count_calendars() );
 	}
 
 	/**
@@ -225,7 +239,7 @@ final class EmailAttachmentTest extends TestCase {
 
 		$this->drain();
 
-		$this->assertCount( 1, $this->captured(), 'the booking should have attached one' );
+		$this->assertSame( 1, $this->count_calendars(), 'the booking should have attached one' );
 
 		$this->attachments = array();
 
@@ -236,6 +250,28 @@ final class EmailAttachmentTest extends TestCase {
 			$this->captured(),
 			'an unrelated email must not carry an event calendar'
 		);
+	}
+
+	/**
+	 * How many calendar files were attached.
+	 *
+	 * Counted by PHPMailer's own type field — index 4 of the attachment tuple —
+	 * rather than by "how many attachments were there", because
+	 * other modules attach their own things to the same message — check-in puts
+	 * a QR code on a confirmation — and this file is about the calendar.
+	 *
+	 * @return int
+	 */
+	private function count_calendars() {
+		$calendars = 0;
+
+		foreach ( $this->captured() as $file ) {
+			if ( isset( $file[4] ) && false !== strpos( (string) $file[4], 'text/calendar' ) ) {
+				++$calendars;
+			}
+		}
+
+		return $calendars;
 	}
 
 	/**

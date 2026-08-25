@@ -75,10 +75,17 @@ final class CheckInRepository {
 	 * this table means one thing only: somebody is already checked in for that
 	 * attendee and that date. The caller reads the existing row to say when.
 	 *
-	 * `$wpdb->insert()` suppresses errors and returns false, so a duplicate key
-	 * looks the same as any other failure here. That is why the caller checks
-	 * for an existing row rather than trusting a reason code: the outcome that
-	 * matters — the person is already in — is true either way.
+	 * `$wpdb->insert()` returns false for a duplicate key exactly as it does for
+	 * any other failure, so the caller checks for an existing row rather than
+	 * trusting a reason code: the outcome that matters — the person is already
+	 * in — is true either way.
+	 *
+	 * It does **not** suppress the error, which this docblock used to claim.
+	 * With `show_errors` on, as it is under WP_DEBUG and in the test suite, a
+	 * second scan printed a MySQL duplicate-key error into the page and into
+	 * the test output. Expected duplicates are silenced around the insert for
+	 * the same reason the ledger's are: an answer this method has is not a
+	 * fault to report.
 	 *
 	 * @since 26.0
 	 *
@@ -95,6 +102,8 @@ final class CheckInRepository {
 			return 0;
 		}
 
+		$previous = $wpdb->suppress_errors( true );
+
 		$inserted = $wpdb->insert(
 			self::table(),
 			array(
@@ -106,6 +115,8 @@ final class CheckInRepository {
 			),
 			array( '%d', '%d', '%s', '%d', '%s' )
 		);
+
+		$wpdb->suppress_errors( $previous );
 
 		return $inserted ? (int) $wpdb->insert_id : 0;
 	}

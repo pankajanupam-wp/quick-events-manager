@@ -109,6 +109,113 @@ final class CheckInModule implements Module {
 		 * carrying them — no setting, no branch in somebody else's code.
 		 */
 		add_filter( 'qevm_email_attachments', array( __CLASS__, 'attach_tickets' ), 10, 2 );
+
+		/*
+		 * And the same codes in words. A QR is unreadable to the person holding
+		 * it: if the camera on the door will not start — an older phone, a work
+		 * phone with the camera locked down, a site not on HTTPS — there has to
+		 * be something a human can read out and somebody can type in. The
+		 * booking reference is not it; the door admits attendees, and a booking
+		 * for three is three of them.
+		 */
+		add_filter( 'qevm_attendee_email', array( __CLASS__, 'add_ticket_codes' ), 10, 2 );
+		add_filter( 'qevm_promotion_email', array( __CLASS__, 'add_ticket_codes' ), 10, 2 );
+		add_filter( 'qevm_email_placeholders', array( __CLASS__, 'offer_placeholder' ), 10, 1 );
+
+		( new RestController() )->register();
+
+		if ( is_admin() ) {
+			( new DoorScreen() )->register();
+		}
+	}
+
+	/**
+	 * Print each person's ticket code in the message.
+	 *
+	 * Answers `qevm_attendee_email` and `qevm_promotion_email`. The lines are
+	 * added to the built-in wording, and the same list is offered as
+	 * `{ticket_codes}` so a site that has written its own template can place it
+	 * wherever it likes — a template replaces the body outright, so appending
+	 * to it would reach nobody who had edited one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $email        Message being built. Keys: to, subject, body, headers, values.
+	 * @param mixed $registration The booking.
+	 * @return array<string, mixed>
+	 */
+	public static function add_ticket_codes( $email, $registration ) {
+		$email = is_array( $email ) ? $email : array();
+
+		if ( ! is_object( $registration ) || ! method_exists( $registration, 'id' ) ) {
+			return $email;
+		}
+
+		$attendees = \QuickEventsManager\Registration\AttendeeRepository::for_registration( (int) $registration->id() );
+
+		if ( array() === $attendees ) {
+			return $email;
+		}
+
+		$lines = array();
+
+		foreach ( $attendees as $attendee ) {
+			$code = $attendee->ticket_code();
+
+			if ( '' === $code ) {
+				continue;
+			}
+
+			$lines[] = 1 === count( $attendees )
+				? $code
+				: sprintf(
+					/* translators: 1: Attendee name. 2: Their ticket code. */
+					__( '%1$s — %2$s', 'quick-events-manager' ),
+					$attendee->name(),
+					$code
+				);
+		}
+
+		if ( array() === $lines ) {
+			return $email;
+		}
+
+		$codes = implode( "\n", $lines );
+
+		$email['values']                 = isset( $email['values'] ) && is_array( $email['values'] ) ? $email['values'] : array();
+		$email['values']['ticket_codes'] = $codes;
+
+		$email['body'] = (string) ( $email['body'] ?? '' )
+			. "\n\n"
+			. _n(
+				'Your ticket is attached. If the code will not scan, this is the code on it:',
+				'A ticket for each person is attached. If a code will not scan, these are the codes on them:',
+				count( $lines ),
+				'quick-events-manager'
+			)
+			. "\n"
+			. $codes;
+
+		return $email;
+	}
+
+	/**
+	 * Offer `{ticket_codes}` to the template editor.
+	 *
+	 * Answers `qevm_email_placeholders`, so the list somebody is shown while
+	 * writing a template is the list that will actually substitute.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $placeholders Placeholders offered so far.
+	 * @return array<string, string>
+	 */
+	public static function offer_placeholder( $placeholders ) {
+		$placeholders = is_array( $placeholders ) ? $placeholders : array();
+
+		$placeholders['ticket_codes'] = __( 'The ticket code for each person on the booking', 'quick-events-manager' );
+
+		return $placeholders;
 	}
 
 	/**
