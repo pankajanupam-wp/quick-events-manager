@@ -98,7 +98,12 @@ async function signIn( page ) {
 	await page.fill( '#user_pass', PASSWORD );
 	await page.click( '#wp-submit' );
 
-	await expect( page.locator( '#wpadminbar' ) ).toBeVisible();
+	/*
+	 * Longer than the default. This is the first authenticated request a
+	 * freshly installed site serves, and a slow one is a red build that says
+	 * nothing about accessibility.
+	 */
+	await expect( page.locator( '#wpadminbar' ) ).toBeVisible( { timeout: 30_000 } );
 }
 
 test.describe( 'admin screens', () => {
@@ -230,17 +235,20 @@ test.describe( 'every other admin screen', () => {
 		await page.goto( '/wp-admin/edit.php?post_type=qevm_event&page=qevm-attendees' );
 
 		/*
-		 * By the option's own text. The picker appends the date to each title,
-		 * so an exact label match finds nothing and a regular expression is not
-		 * something selectOption takes.
+		 * The event's id is read from the picker and then used as an address.
+		 * Selecting an option and pressing Enter submits the form in some
+		 * browsers and quietly does nothing in others — it worked locally and
+		 * left CI sitting on the picker with no list to scan. The screen takes
+		 * the id in the query string, so ask for it directly.
 		 */
 		const value = await page
 			.locator( `#qevm-event-picker option:has-text("${ EVENT }")` )
 			.first()
 			.getAttribute( 'value' );
 
-		await page.locator( '#qevm-event-picker' ).selectOption( value );
-		await page.locator( '#qevm-event-picker' ).press( 'Enter' );
+		await page.goto(
+			`/wp-admin/edit.php?post_type=qevm_event&page=qevm-attendees&event_id=${ value }`
+		);
 
 		/*
 		 * The list is the point of the screen. A scan of the empty state proves

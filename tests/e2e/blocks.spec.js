@@ -36,7 +36,7 @@ async function signIn( page ) {
 	await page.fill( '#user_pass', PASSWORD );
 	await page.click( '#wp-submit' );
 
-	await expect( page.locator( '#wpadminbar' ) ).toBeVisible();
+	await expect( page.locator( '#wpadminbar' ) ).toBeVisible( { timeout: 30_000 } );
 }
 
 /**

@@ -176,10 +176,15 @@ jobs:
       # there is no lockfile to install from. That is a deliberate choice the
       # PHP side makes too — each CI run resolving current dependencies is how
       # a break in a dependency is found here rather than by a user.
-      - name: Install browser tooling
+      # The build as well as the browser: this job runs the block-editor spec,
+      # and blocks are registered from build/, which is not committed. Without
+      # it the inserter has no plugin blocks in it and four tests fail looking
+      # for something that was never built.
+      - name: Install browser tooling and build the blocks
         working-directory: quick-events-manager
         run: |
           npm install --no-audit --no-fund
+          npm run build
           npx playwright install --with-deps chromium
 
       # An event with registration switched on, and the rewrite rules flushed.
@@ -190,6 +195,18 @@ jobs:
           npx --yes @wordpress/env run cli wp plugin activate quick-events-manager
           npx --yes @wordpress/env run cli \
             wp eval-file wp-content/plugins/quick-events-manager/tests/e2e/fixture.php
+
+      # A fresh WordPress is slow on its first few requests — update checks,
+      # cron, caches that do not exist yet — and the suite runs with retries
+      # switched off on purpose, because an accessibility result that only
+      # appears on the second attempt is one nobody can act on. That makes a
+      # cold first request a red build about nothing, so warm the pages the
+      # suite opens before asking it to time anything.
+      - name: Warm the site
+        run: |
+          for path in / /events/ /qevm-calendar-fixture/ /wp-login.php; do
+            curl -fsS -o /dev/null "http://localhost:8888${path}" || true
+          done
 
       - name: Run axe-core
         working-directory: quick-events-manager
