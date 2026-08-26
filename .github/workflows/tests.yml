@@ -102,6 +102,20 @@ jobs:
         with:
           node-version: '20'
 
+      # The blocks, before WordPress starts, because the suite covers block
+      # registration and that reads build/. Without this the integration job
+      # tests a state no installed site is ever in: a plugin whose build output
+      # is missing, where every block is skipped and the test that asks whether
+      # gating one block took another down with it fails for the wrong reason.
+      #
+      # The Build blocks job proves the sources compile; this is here so the
+      # PHP that reads their output has something to read.
+      - name: Build blocks
+        working-directory: quick-events-manager
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
       - name: Describe the environment
         run: |
           echo '{ "plugins": [ "./quick-events-manager" ] }' > .wp-env.json

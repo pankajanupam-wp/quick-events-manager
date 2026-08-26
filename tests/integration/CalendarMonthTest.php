@@ -407,6 +407,17 @@ final class CalendarMonthTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_block_is_not_registered_with_the_module_off() {
+		/*
+		 * Blocks are registered from build/, which is not committed. Without a
+		 * build there is nothing to register and nothing to gate, and the
+		 * assertions below would fail while saying something untrue about the
+		 * gating. Skipped rather than silently passed, so the reason is on the
+		 * screen: run `npm run build`.
+		 */
+		if ( ! is_readable( QEVM_PATH . 'build/event-list/block.json' ) ) {
+			$this->markTestSkipped( 'The blocks have not been built — run npm run build.' );
+		}
+
 		$this->assertArrayHasKey( 'event-calendar', \QuickEventsManager\Blocks\Blocks::MODULE_BLOCKS );
 
 		$this->assertSame(
