@@ -52,9 +52,13 @@ jobs:
 
       # build/ is gitignored, so the blocks have to be compiled here or the
       # published package ships without them and every block silently vanishes.
+      # `npm install` rather than `npm ci`: package-lock.json is gitignored, so
+      # there is no lockfile to install from. Left as `npm ci` this fails at the
+      # step before the upload — a tag that builds, tests, and then cannot
+      # publish.
       - name: Build blocks
         run: |
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
           for block in event-list event-details event-registration; do
             test -f "build/${block}/block.json" || { echo "::error::build/${block}/block.json missing"; exit 1; }

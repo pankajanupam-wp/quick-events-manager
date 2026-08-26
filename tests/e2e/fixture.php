@@ -267,6 +267,23 @@ if ( $past instanceof WP_Post ) {
  */
 $modules = (array) get_option( QEVM_OPTION_MODULES, array() );
 
+/*
+ * Email templates too. The admin sweep scans that screen, and a screen belonging
+ * to a module nobody switched on simply is not there — which on a fresh site is
+ * a failure that says "element not found" rather than "this module is off".
+ */
+if ( ! in_array( 'email_templates', $modules, true ) ) {
+	$modules[] = 'email_templates';
+
+	update_option( QEVM_OPTION_MODULES, $modules );
+
+	$templates = $registry->get( 'email_templates' );
+
+	if ( null !== $templates ) {
+		$templates->activate();
+	}
+}
+
 if ( ! in_array( CheckInModule::ID, $modules, true ) ) {
 	$modules[] = CheckInModule::ID;
 

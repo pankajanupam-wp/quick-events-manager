@@ -172,6 +172,24 @@ abstract class TestCase extends PHPUnitTestCase {
 		if ( ! Repository::table_exists() || ! AttendeeRepository::table_exists() ) {
 			( new RegistrationModule() )->activate();
 		}
+
+		/*
+		 * And its hooks, if the boot did not already add them.
+		 *
+		 * Modules register at boot from the stored option, and this method
+		 * writes that option afterwards — so on a database where registration
+		 * was already on, the hooks are there and this does nothing, and on a
+		 * fresh one they are not there at all. Every machine that had run the
+		 * suite before was the first case and CI was the second, which is how
+		 * twenty-four commerce tests passed here and errored there: nothing
+		 * answered `qevm_booking_order`, so a paid booking never got an order.
+		 *
+		 * Guarded rather than unconditional, because registering twice means
+		 * two confirmation emails for one booking.
+		 */
+		if ( false === has_filter( 'qevm_occurrence_is_protected', array( RegistrationModule::class, 'protect_booked_occurrence' ) ) ) {
+			( new RegistrationModule() )->register();
+		}
 	}
 
 	/**

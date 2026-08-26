@@ -206,6 +206,30 @@ final class Plugin {
 	 */
 	private static function activate_site() {
 		Installer::install();
+
+		/*
+		 * The tables, and this line is the whole of a fresh install working.
+		 *
+		 * Activation used to call `install()` — capabilities and roles, no
+		 * tables — and then `Runner::run()`, which stamps the stored schema
+		 * version as current once the migrations are through. `maybe_upgrade()`
+		 * is the only other thing that creates tables and it runs *only* when
+		 * the stored version is behind, so on a brand-new site it never ran
+		 * again: the version said "up to date" and the occurrences table had
+		 * never been created at all.
+		 *
+		 * Nothing noticed because every environment this was developed in had
+		 * been through a version bump, which is exactly when `maybe_upgrade()`
+		 * does fire. On a genuinely fresh install the event archive and the
+		 * calendar are both empty, because both read the occurrences table.
+		 * Found when CI ran the accessibility suite against a site installed
+		 * five minutes earlier.
+		 *
+		 * Structure before data, the same order `maybe_upgrade()` uses: a
+		 * migration may depend on a column dbDelta has just added.
+		 */
+		Installer::upgrade_schema();
+
 		Runner::run();
 
 		/*

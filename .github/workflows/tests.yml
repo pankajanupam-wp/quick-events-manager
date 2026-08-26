@@ -206,9 +206,14 @@ jobs:
 
       # The build output is not committed, so a broken block source has to be
       # caught here rather than at deploy time.
+      #
+      # `npm install` rather than `npm ci`, for the reason the accessibility job
+      # gives above: package-lock.json is gitignored, and `npm ci` refuses to
+      # run without one. This job asked for a lockfile that this repository has
+      # decided not to keep, and failed on every push in twelve seconds.
       - name: Install and build
         run: |
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       - name: Confirm every block was built

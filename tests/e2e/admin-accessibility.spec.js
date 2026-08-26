@@ -178,7 +178,13 @@ test.describe( 'every other admin screen', () => {
 	test( 'the events list', async ( { page } ) => {
 		await page.goto( '/wp-admin/edit.php?post_type=qevm_event' );
 
-		await expect( page.locator( '#the-list tr' ).first() ).toBeVisible();
+		/*
+		 * A longer wait than the default, and only here. This is the first
+		 * admin list a freshly installed site renders, and WordPress does its
+		 * update checks on that request: six seconds against a five-second
+		 * default is a red build that says nothing about accessibility.
+		 */
+		await expect( page.locator( '#the-list tr' ).first() ).toBeVisible( { timeout: 30_000 } );
 
 		await expectNoViolations( page, 'the events list' );
 	} );
