@@ -5,10 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
 
-use QEM\Events\Event;
-use QEM\Events\Meta;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,7 +27,7 @@ final class EventMetaBox {
 	/**
 	 * Nonce action.
 	 */
-	const NONCE = 'qem_save_event_registration';
+	const NONCE = 'qevm_save_event_registration';
 
 	/**
 	 * Hook into the editor.
@@ -38,7 +38,7 @@ final class EventMetaBox {
 	 */
 	public function register() {
 		add_action( 'add_meta_boxes', array( $this, 'add' ) );
-		add_action( 'save_post_' . QEM_POST_TYPE, array( $this, 'save' ), 10, 2 );
+		add_action( 'save_post_' . QEVM_POST_TYPE, array( $this, 'save' ), 10, 2 );
 	}
 
 	/**
@@ -50,10 +50,10 @@ final class EventMetaBox {
 	 */
 	public function add() {
 		add_meta_box(
-			'qem-event-registration',
+			'qevm-event-registration',
 			__( 'Registration', 'quick-events-manager' ),
 			array( $this, 'render' ),
-			QEM_POST_TYPE,
+			QEVM_POST_TYPE,
 			'side',
 			'default'
 		);
@@ -74,31 +74,31 @@ final class EventMetaBox {
 		$closes   = (string) $event->meta( Meta::REGISTRATION_CLOSES );
 		$taken    = Repository::count_taken( $event->id() );
 
-		wp_nonce_field( self::NONCE, 'qem_event_registration_nonce' );
+		wp_nonce_field( self::NONCE, 'qevm_event_registration_nonce' );
 		?>
-		<p class="qem-checkbox">
+		<p class="qevm-checkbox">
 			<label>
-				<input type="checkbox" name="qem_registration_enabled" value="1" <?php checked( $enabled ); ?> />
+				<input type="checkbox" name="qevm_registration_enabled" value="1" <?php checked( $enabled ); ?> />
 				<strong><?php esc_html_e( 'Let people register', 'quick-events-manager' ); ?></strong>
 			</label>
 		</p>
 
 		<p>
-			<label for="qem_capacity"><?php esc_html_e( 'Places available', 'quick-events-manager' ); ?></label><br />
-			<input type="number" min="0" step="1" id="qem_capacity" name="qem_capacity" class="small-text"
+			<label for="qevm_capacity"><?php esc_html_e( 'Places available', 'quick-events-manager' ); ?></label><br />
+			<input type="number" min="0" step="1" id="qevm_capacity" name="qevm_capacity" class="small-text"
 				value="<?php echo esc_attr( (string) $capacity ); ?>" />
 			<span class="description"><?php esc_html_e( '0 for unlimited', 'quick-events-manager' ); ?></span>
 		</p>
 
 		<p>
-			<label for="qem_registration_closes"><?php esc_html_e( 'Registration closes', 'quick-events-manager' ); ?></label><br />
-			<input type="datetime-local" id="qem_registration_closes" name="qem_registration_closes"
+			<label for="qevm_registration_closes"><?php esc_html_e( 'Registration closes', 'quick-events-manager' ); ?></label><br />
+			<input type="datetime-local" id="qevm_registration_closes" name="qevm_registration_closes"
 				value="<?php echo esc_attr( '' !== $closes ? str_replace( ' ', 'T', substr( Meta::to_local( $closes, $event->timezone() ), 0, 16 ) ) : '' ); ?>" />
 			<span class="description"><?php esc_html_e( 'Leave empty to accept registrations until the event starts.', 'quick-events-manager' ); ?></span>
 		</p>
 
 		<?php if ( $taken > 0 ) : ?>
-			<p class="qem-registration-count">
+			<p class="qevm-registration-count">
 				<?php
 				printf(
 					/* translators: %s: Number of places taken. */
@@ -107,7 +107,7 @@ final class EventMetaBox {
 				);
 				?>
 				<br />
-				<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . QEM_POST_TYPE . '&page=' . AttendeesScreen::SLUG . '&event_id=' . $event->id() ) ); ?>">
+				<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . QEVM_POST_TYPE . '&page=' . AttendeesScreen::SLUG . '&event_id=' . $event->id() ) ); ?>">
 					<?php esc_html_e( 'View attendees', 'quick-events-manager' ); ?>
 				</a>
 			</p>
@@ -121,16 +121,16 @@ final class EventMetaBox {
 	 * @since 26.0
 	 *
 	 * @param int      $post_id Event id.
-	 * @param \WP_Post $post    Event.
+	 * @param \WP_Post $post    Event. Unused; part of the save_post signature.
 	 * @return void
 	 */
-	public function save( $post_id, $post ) {
+	public function save( $post_id, $post ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by the save_post hook signature.
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
 
-		$nonce = isset( $_POST['qem_event_registration_nonce'] )
-			? sanitize_text_field( wp_unslash( $_POST['qem_event_registration_nonce'] ) )
+		$nonce = isset( $_POST['qevm_event_registration_nonce'] )
+			? sanitize_text_field( wp_unslash( $_POST['qevm_event_registration_nonce'] ) )
 			: '';
 
 		if ( '' === $nonce || ! wp_verify_nonce( $nonce, self::NONCE ) ) {
@@ -141,11 +141,11 @@ final class EventMetaBox {
 			return;
 		}
 
-		update_post_meta( $post_id, Meta::REGISTRATION_ENABLED, isset( $_POST['qem_registration_enabled'] ) ? 1 : 0 );
-		update_post_meta( $post_id, Meta::CAPACITY, isset( $_POST['qem_capacity'] ) ? absint( wp_unslash( $_POST['qem_capacity'] ) ) : 0 );
+		update_post_meta( $post_id, Meta::REGISTRATION_ENABLED, isset( $_POST['qevm_registration_enabled'] ) ? 1 : 0 );
+		update_post_meta( $post_id, Meta::CAPACITY, isset( $_POST['qevm_capacity'] ) ? absint( wp_unslash( $_POST['qevm_capacity'] ) ) : 0 );
 
-		$closes_local = isset( $_POST['qem_registration_closes'] )
-			? str_replace( 'T', ' ', sanitize_text_field( wp_unslash( $_POST['qem_registration_closes'] ) ) )
+		$closes_local = isset( $_POST['qevm_registration_closes'] )
+			? str_replace( 'T', ' ', sanitize_text_field( wp_unslash( $_POST['qevm_registration_closes'] ) ) )
 			: '';
 
 		if ( 16 === strlen( $closes_local ) ) {

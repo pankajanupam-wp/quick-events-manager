@@ -5,7 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
+
+use QuickEventsManager\CustomFields\Answers;
+use QuickEventsManager\Domain\RegistrationStatus;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,12 +26,32 @@ final class FormHandler {
 	/**
 	 * Nonce action.
 	 */
-	const NONCE = 'qem_register';
+	const NONCE = 'qevm_register';
 
 	/**
 	 * Query argument carrying the outcome back to the event page.
 	 */
-	const RESULT_ARG = 'qem_result';
+	const RESULT_ARG = 'qevm_result';
+
+	/**
+	 * Query argument naming a stashed submission.
+	 */
+	const STASH_ARG = 'qevm_form';
+
+	/**
+	 * Transient prefix for a stashed submission.
+	 */
+	const STASH_PREFIX = 'qevm_form_';
+
+	/**
+	 * How long a failed submission is kept.
+	 *
+	 * Long enough to survive a slow redirect and a moment's confusion, short
+	 * enough that personal data does not sit in the options table. It is
+	 * deleted on read in the ordinary case; this is the backstop for a visitor
+	 * who closes the tab.
+	 */
+	const STASH_TTL = 900;
 
 	/**
 	 * Hook into admin-post.
@@ -38,8 +61,8 @@ final class FormHandler {
 	 * @return void
 	 */
 	public function register() {
-		add_action( 'admin_post_nopriv_qem_register', array( $this, 'handle' ) );
-		add_action( 'admin_post_qem_register', array( $this, 'handle' ) );
+		add_action( 'admin_post_nopriv_qevm_register', array( $this, 'handle' ) );
+		add_action( 'admin_post_qevm_register', array( $this, 'handle' ) );
 	}
 
 	/**
@@ -63,61 +86,270 @@ final class FormHandler {
 		 * it removes the bulk of automated submissions without putting a
 		 * CAPTCHA in front of real attendees.
 		 */
-		if ( ! empty( $_POST['qem_website'] ) ) {
+		if ( ! empty( $_POST['qevm_website'] ) ) {
 			$this->redirect( $event_id, 'success', '' );
 		}
 
-		$input = array(
-			'name'     => isset( $_POST['qem_name'] ) ? wp_unslash( $_POST['qem_name'] ) : '',
-			'email'    => isset( $_POST['qem_email'] ) ? wp_unslash( $_POST['qem_email'] ) : '',
-			'phone'    => isset( $_POST['qem_phone'] ) ? wp_unslash( $_POST['qem_phone'] ) : '',
-			'quantity' => isset( $_POST['qem_quantity'] ) ? wp_unslash( $_POST['qem_quantity'] ) : 1,
-		);
+		$input = self::collect_input();
 
 		$result = ( new RegistrationService() )->create( $event_id, $input );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $event_id, 'error', $result->get_error_message() );
+			$this->redirect(
+				$event_id,
+				'error',
+				$result->get_error_message(),
+				self::stash( $result, $input )
+			);
 		}
 
 		$this->redirect(
 			$event_id,
-			Registration::STATUS_WAITLISTED === $result->status() ? 'waitlisted' : 'success',
-			''
+			RegistrationStatus::Waitlisted === $result->status() ? 'waitlisted' : 'success',
+			'',
+			'',
+			$result->id()
 		);
+	}
+
+	/**
+	 * Everything the form submitted, unslashed and otherwise untouched.
+	 *
+	 * Split out of handle() so a test can see it. handle() checks a nonce, reads
+	 * $_POST and ends in a redirect, so what it collected was never observable —
+	 * and the gate found that it collected the wrong thing: the custom answers
+	 * were rendered on the form and checked by the service, and nothing between
+	 * the two carried them. Every integration test passed, because they all call
+	 * the service directly and never cross this boundary.
+	 *
+	 * The nonce and the honeypot stay in handle(): they are facts about the
+	 * request rather than about its contents.
+	 *
+	 * Unslashed but not sanitised. RegistrationService is the single point where
+	 * a registration is validated, and it sanitises each field as it validates
+	 * it: sanitize_text_field() for the name and phone, sanitize_email() plus
+	 * is_email() for the address, absint() for the quantity. The REST controller
+	 * hands the service the same raw shape, so both transports get identical
+	 * treatment. Sanitising a second time here would be the more obviously safe
+	 * thing to do, and is exactly what makes validation drift: two places would
+	 * then define what a valid name is, and only one of them would be updated
+	 * the next time that changes.
+	 *
+	 * @since 26.0
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function collect_input() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the caller; sanitised in RegistrationService::create(), which is the single validation path both transports share.
+		return array(
+			'name'                => isset( $_POST['qevm_name'] ) ? wp_unslash( $_POST['qevm_name'] ) : '',
+			'email'               => isset( $_POST['qevm_email'] ) ? wp_unslash( $_POST['qevm_email'] ) : '',
+			'phone'               => isset( $_POST['qevm_phone'] ) ? wp_unslash( $_POST['qevm_phone'] ) : '',
+			'quantity'            => isset( $_POST['qevm_quantity'] ) ? wp_unslash( $_POST['qevm_quantity'] ) : 1,
+			'occurrence_id'       => isset( $_POST['qevm_occurrence_id'] ) ? wp_unslash( $_POST['qevm_occurrence_id'] ) : 0,
+			'ticket_type_id'      => isset( $_POST['qevm_ticket_type_id'] ) ? wp_unslash( $_POST['qevm_ticket_type_id'] ) : 0,
+
+			/*
+			 * One name per further place, keyed by position. wp_unslash() walks
+			 * an array, and RegistrationService::guest_names() is what decides
+			 * which keys are real — anything past the quantity is discarded
+			 * there rather than trusted here.
+			 */
+			'guests'              => isset( $_POST['qevm_guest_name'] ) ? wp_unslash( $_POST['qevm_guest_name'] ) : array(),
+
+			/*
+			 * The answers to the event's own questions, keyed by place and then
+			 * by field key. Passed through whole and checked in
+			 * CustomFields\Answers against the definitions, which is the only
+			 * place that knows what was asked — a question's type decides
+			 * whether a value is a string or a list, and a choice question
+			 * accepts only what it offered.
+			 *
+			 * This line is the whole reason the gate exists. The form rendered
+			 * the questions and the service checked them, and nothing carried
+			 * them between the two: every answer anybody typed into the public
+			 * form was dropped here, silently, while every integration test
+			 * passed because they call the service directly.
+			 */
+			Answers::FIELD_PREFIX => isset( $_POST[ Answers::FIELD_PREFIX ] ) ? wp_unslash( $_POST[ Answers::FIELD_PREFIX ] ) : array(),
+
+			/*
+			 * Only whether the box was ticked. What was agreed to is read from
+			 * the site's own settings when the row is written, never from the
+			 * request — a submission does not get to name the wording it
+			 * consented to.
+			 */
+			'consent'             => ! empty( $_POST['qevm_consent'] ),
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	}
 
 	/**
 	 * Send the visitor back to the event with the outcome attached.
 	 *
-	 * The message is passed in the URL rather than a transient or the session,
-	 * because there is no session for a logged-out visitor and a transient
-	 * keyed on anything stable would need an identifier we deliberately do not
-	 * store. It is escaped on output at the other end.
+	 * The result code and a short message travel in the URL, because neither is
+	 * personal and both must survive a visitor who bookmarks the page. What was
+	 * typed does not go there — see stash(), which is the other half of this.
 	 *
 	 * @since 26.0
 	 *
 	 * @param int    $event_id Event id.
 	 * @param string $status   One of success, waitlisted, error.
 	 * @param string $message  Message to display.
+	 * @param string $token    Stash token for a failed submission, if there is one.
+	 * @param int    $registration_id The booking that was made, or 0.
 	 * @return void
 	 */
-	private function redirect( $event_id, $status, $message ) {
+	private function redirect( $event_id, $status, $message, $token = '', $registration_id = 0 ) {
 		$url = $event_id > 0 ? get_permalink( $event_id ) : home_url( '/' );
 
 		if ( ! $url ) {
 			$url = home_url( '/' );
 		}
 
+		/**
+		 * Filter where somebody goes after booking.
+		 *
+		 * The event page, unless something has a reason to send them somewhere
+		 * else first — a booking that has to be paid for goes to the checkout.
+		 * This module does not know what a checkout is, which is why this is a
+		 * filter rather than a branch.
+		 *
+		 * @since 26.0
+		 *
+		 * @param string $url             Where they were going.
+		 * @param int    $registration_id The booking, or 0 when there is not one.
+		 */
+		$url = (string) apply_filters( 'qevm_booking_destination', $url, (int) $registration_id );
+
 		$args = array( self::RESULT_ARG => $status );
 
 		if ( '' !== $message ) {
-			$args['qem_message'] = rawurlencode( $message );
+			$args['qevm_message'] = rawurlencode( $message );
 		}
 
-		wp_safe_redirect( add_query_arg( $args, $url ) . '#qem-registration' );
+		if ( '' !== $token ) {
+			$args[ self::STASH_ARG ] = $token;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, $url ) . '#qevm-registration' );
 
 		exit;
+	}
+
+	/**
+	 * Keep a failed submission long enough to render it again.
+	 *
+	 * Post/redirect/get throws the submission away, which is what makes a
+	 * refresh safe and what makes the form come back empty. Empty is a real
+	 * problem: somebody who mistyped one character retypes their name, email,
+	 * phone and every guest name, and a screen reader user re-reads the whole
+	 * form to do it.
+	 *
+	 * **Not in the URL.** The result code and a short message go there because
+	 * neither is personal. Names, addresses and phone numbers cannot: a query
+	 * string is written to every access log the request passes through, kept
+	 * in browser history, and sent onward in the Referer header to any
+	 * third-party asset the page loads. Putting an attendee's email there
+	 * would leak it to places nobody audits.
+	 *
+	 * So the values live in a transient and the URL carries only a random
+	 * token. The token identifies the *attempt*, not the person, is used once,
+	 * and expires on its own — which is also the answer to the objection this
+	 * method used to carry, that a transient would need an identifier the
+	 * plugin deliberately does not store.
+	 *
+	 * @since 26.0
+	 *
+	 * @param \WP_Error            $error Errors from the service.
+	 * @param array<string, mixed> $input What was submitted.
+	 * @return string Token, or an empty string if nothing could be stored.
+	 */
+	private static function stash( \WP_Error $error, array $input ) {
+		$fields = array();
+
+		foreach ( $error->get_error_codes() as $code ) {
+			$data  = $error->get_error_data( $code );
+			$field = is_array( $data ) && isset( $data['field'] ) ? (string) $data['field'] : '_';
+
+			// First message per field wins; they are ordered as validated.
+			if ( ! isset( $fields[ $field ] ) ) {
+				$fields[ $field ] = (string) $error->get_error_message( $code );
+			}
+		}
+
+		$token = wp_generate_password( 20, false, false );
+
+		$stored = set_transient(
+			self::STASH_PREFIX . $token,
+			array(
+				'errors' => $fields,
+				'values' => array(
+					'name'                => isset( $input['name'] ) ? sanitize_text_field( (string) $input['name'] ) : '',
+					'email'               => isset( $input['email'] ) ? sanitize_text_field( (string) $input['email'] ) : '',
+					'phone'               => isset( $input['phone'] ) ? sanitize_text_field( (string) $input['phone'] ) : '',
+					'quantity'            => isset( $input['quantity'] ) ? absint( $input['quantity'] ) : 1,
+					'occurrence_id'       => isset( $input['occurrence_id'] ) ? absint( $input['occurrence_id'] ) : 0,
+					'ticket_type_id'      => isset( $input['ticket_type_id'] ) ? absint( $input['ticket_type_id'] ) : 0,
+					'guests'              => RegistrationService::guest_names(
+						isset( $input['guests'] ) ? $input['guests'] : array(),
+						RegistrationService::MAX_PLACES
+					),
+
+					/*
+					 * Stashed raw. The form repopulates from these, and a value
+					 * cleaned here would be cleaned twice — once on the way into
+					 * the stash and once on the way back through validation —
+					 * which is how a submission comes back subtly different from
+					 * what somebody typed. Escaping happens where it is printed.
+					 */
+					Answers::FIELD_PREFIX => isset( $input[ Answers::FIELD_PREFIX ] ) && is_array( $input[ Answers::FIELD_PREFIX ] )
+						? $input[ Answers::FIELD_PREFIX ]
+						: array(),
+				),
+			),
+			self::STASH_TTL
+		);
+
+		return $stored ? $token : '';
+	}
+
+	/**
+	 * Read back a stashed submission, and consume it.
+	 *
+	 * Deleted on read, so that a shared or bookmarked URL does not show
+	 * somebody else's half-filled form, and a refresh does not keep resurfacing
+	 * an error the visitor has already dealt with.
+	 *
+	 * @since 26.0
+	 *
+	 * @return array{errors: array<string, string>, values: array<string, mixed>}
+	 */
+	private static function take_stash() {
+		$empty = array(
+			'errors' => array(),
+			'values' => array(),
+		);
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading a redirect result, which changes nothing.
+		$token = isset( $_GET[ self::STASH_ARG ] ) ? sanitize_key( wp_unslash( $_GET[ self::STASH_ARG ] ) ) : '';
+
+		if ( '' === $token ) {
+			return $empty;
+		}
+
+		$stash = get_transient( self::STASH_PREFIX . $token );
+
+		delete_transient( self::STASH_PREFIX . $token );
+
+		if ( ! is_array( $stash ) ) {
+			return $empty;
+		}
+
+		return array(
+			'errors' => isset( $stash['errors'] ) && is_array( $stash['errors'] ) ? $stash['errors'] : array(),
+			'values' => isset( $stash['values'] ) && is_array( $stash['values'] ) ? $stash['values'] : array(),
+		);
 	}
 
 	/**
@@ -125,7 +357,7 @@ final class FormHandler {
 	 *
 	 * @since 26.0
 	 *
-	 * @return array{status: string, message: string}|null
+	 * @return array{status: string, message: string, errors: array<string, string>, values: array<string, mixed>}|null
 	 */
 	public static function current_result() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only display of the redirect's own arguments.
@@ -133,19 +365,65 @@ final class FormHandler {
 			return null;
 		}
 
-		$status  = sanitize_key( wp_unslash( $_GET[ self::RESULT_ARG ] ) );
-		$message = isset( $_GET['qem_message'] )
-			? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qem_message'] ) ) )
-			: '';
+		$status = sanitize_key( wp_unslash( $_GET[ self::RESULT_ARG ] ) );
+
+		/*
+		 * The decode has to happen before the sanitise, not after: the value was
+		 * rawurlencode()d into the redirect, so sanitising first would strip
+		 * nothing useful and then hand percent-escapes back to the caller. The
+		 * sniff only looks at the function wrapping the superglobal directly and
+		 * cannot see that sanitize_text_field() encloses the whole expression.
+		 */
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize_text_field() wraps the decode; see above.
+		$message = isset( $_GET['qevm_message'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['qevm_message'] ) ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! in_array( $status, array( 'success', 'waitlisted', 'error' ), true ) ) {
 			return null;
 		}
 
+		$stash = self::take_stash();
+
 		return array(
 			'status'  => $status,
 			'message' => $message,
+			'errors'  => $stash['errors'],
+			'values'  => $stash['values'],
 		);
+	}
+
+	/**
+	 * The value to put back in a field after a failed submission.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed>|null $result Result from current_result().
+	 * @param string                    $field  Field name.
+	 * @param mixed                     $fallback Value when there is nothing to restore.
+	 * @return mixed
+	 */
+	public static function value( $result, $field, $fallback = '' ) {
+		if ( ! is_array( $result ) || 'error' !== $result['status'] ) {
+			return $fallback;
+		}
+
+		return isset( $result['values'][ $field ] ) ? $result['values'][ $field ] : $fallback;
+	}
+
+	/**
+	 * The error message for one field, if it has one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param array<string, mixed>|null $result Result from current_result().
+	 * @param string                    $field  Field name.
+	 * @return string
+	 */
+	public static function error( $result, $field ) {
+		if ( ! is_array( $result ) || 'error' !== $result['status'] ) {
+			return '';
+		}
+
+		return isset( $result['errors'][ $field ] ) ? (string) $result['errors'][ $field ] : '';
 	}
 }

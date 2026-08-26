@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "qevm/event-calendar",
+	"title": "Event Calendar",
+	"category": "widgets",
+	"icon": "calendar-alt",
+	"description": "A month of events as a grid, with a list view alongside it.",
+	"textdomain": "quick-events-manager",
+	"supports": { "html": false },
+	"attributes": {
+		"month": { "type": "string", "default": "" },
+		"view": { "type": "string", "default": "" }
+	},
+	"editorScript": "file:./index.js"
+}

@@ -5,7 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Modules;
+namespace QuickEventsManager\Modules;
+
+use QuickEventsManager\Domain\ModuleLevel;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -60,10 +62,8 @@ interface Module {
 	 * never has to read past the top of the page.
 	 *
 	 * @since 26.0
-	 *
-	 * @return int
 	 */
-	public function level();
+	public function level(): ModuleLevel;
 
 	/**
 	 * Whether this module can be switched off.

@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Modules;
+namespace QuickEventsManager\Modules;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -40,15 +40,25 @@ final class Registry {
 	 */
 	public function __construct() {
 		$modules = array(
-			new \QEM\Events\EventsModule(),
-			new \QEM\Registration\RegistrationModule(),
+			new \QuickEventsManager\Events\EventsModule(),
+			new \QuickEventsManager\Registration\RegistrationModule(),
+			new \QuickEventsManager\Venues\VenuesModule(),
+			new \QuickEventsManager\Organizers\OrganizersModule(),
+			new \QuickEventsManager\CustomFields\CustomFieldsModule(),
+			new \QuickEventsManager\Calendar\CalendarModule(),
+			new \QuickEventsManager\Recurrence\RecurrenceModule(),
+			new \QuickEventsManager\Tickets\TicketsModule(),
+			new \QuickEventsManager\CheckIn\CheckInModule(),
+			new \QuickEventsManager\Commerce\CommerceModule(),
+			new \QuickEventsManager\Woo\WooModule(),
+			new \QuickEventsManager\Email\TemplatesModule(),
 		);
 
 		/**
 		 * Filter the feature modules available on the Features screen.
 		 *
 		 * This is the extension point for add-on plugins: return your own
-		 * object implementing QEM\Modules\Module and it gains a toggle, an
+		 * object implementing QuickEventsManager\Modules\Module and it gains a toggle, an
 		 * activation routine and the same enabled/disabled guarantees as a
 		 * bundled module.
 		 *
@@ -56,9 +66,20 @@ final class Registry {
 		 *
 		 * @param Module[] $modules Module instances.
 		 */
-		$modules = apply_filters( 'qem_modules', $modules );
+		$filtered = apply_filters( 'qevm_modules', $modules );
 
-		foreach ( $modules as $module ) {
+		/*
+		 * PHPStan reads the @param above as the filter's return type and so
+		 * calls the instanceof below redundant. It is not. That docblock is the
+		 * contract this hook publishes; it describes what a well-behaved filter
+		 * hands back and cannot compel another plugin to do so. A filter that
+		 * returns a string, or an array with one stray value in it, must not be
+		 * able to fatal the Features screen for every site that installed the
+		 * add-on. Documented type and trusted type are different things, and
+		 * this is the boundary between them.
+		 */
+		foreach ( (array) $filtered as $module ) {
+			// @phpstan-ignore instanceof.alwaysTrue (Third-party filter output is untrusted; see above.)
 			if ( $module instanceof Module ) {
 				$this->modules[ $module->id() ] = $module;
 			}
@@ -99,7 +120,7 @@ final class Registry {
 	 * @return string[]
 	 */
 	public function enabled_ids() {
-		$stored = get_option( QEM_OPTION_MODULES, array() );
+		$stored = get_option( QEVM_OPTION_MODULES, array() );
 
 		if ( ! is_array( $stored ) ) {
 			$stored = array();
@@ -165,10 +186,24 @@ final class Registry {
 		}
 
 		if ( ! $this->is_enabled( $id ) ) {
-			$stored   = (array) get_option( QEM_OPTION_MODULES, array() );
+			/*
+			 * Anything this module cannot live beside goes off first. Two
+			 * modules that both want to own a checkout do not fail loudly when
+			 * both are on — they each half-work, and the site owner is left
+			 * with two payment paths and no idea which one took the money.
+			 *
+			 * Switched off rather than refused: somebody who has just asked for
+			 * WooCommerce has decided, and answering "no, turn the other one
+			 * off first" is a worse conversation than doing it.
+			 */
+			foreach ( $this->conflicts_with( $id ) as $conflict ) {
+				$this->disable( $conflict );
+			}
+
+			$stored   = (array) get_option( QEVM_OPTION_MODULES, array() );
 			$stored[] = $id;
 
-			update_option( QEM_OPTION_MODULES, array_values( array_unique( $stored ) ) );
+			update_option( QEVM_OPTION_MODULES, array_values( array_unique( $stored ) ) );
 
 			$module->activate();
 
@@ -179,10 +214,61 @@ final class Registry {
 			 *
 			 * @param string $id Module id.
 			 */
-			do_action( 'qem_module_enabled', $id );
+			do_action( 'qevm_module_enabled', $id );
 		}
 
 		return true;
+	}
+
+	/**
+	 * Which enabled modules cannot be on at the same time as this one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param string $id Module id.
+	 * @return array<int, string>
+	 */
+	public function conflicts_with( $id ) {
+		$module = $this->get( $id );
+
+		if ( null === $module ) {
+			return array();
+		}
+
+		$conflicting = array();
+
+		/*
+		 * What this module says, if it says anything. Returning early when it
+		 * does not was the first version, and it skipped the other half of the
+		 * question entirely: the module being switched on is often the one with
+		 * no opinion, and the one already on is the one that objects.
+		 */
+		if ( $module instanceof Exclusive ) {
+			foreach ( $module->conflicts() as $other ) {
+				if ( $this->is_enabled( $other ) ) {
+					$conflicting[] = (string) $other;
+				}
+			}
+		}
+
+		/*
+		 * Both directions, whichever end declared it. A module that names a
+		 * conflict is stating a fact about a pair, and requiring the other one
+		 * to repeat it is how the two lists drift apart.
+		 */
+		foreach ( $this->enabled_ids() as $enabled ) {
+			$other = $this->get( $enabled );
+
+			if ( $enabled === $id || ! $other instanceof Exclusive ) {
+				continue;
+			}
+
+			if ( in_array( $id, $other->conflicts(), true ) ) {
+				$conflicting[] = (string) $enabled;
+			}
+		}
+
+		return array_values( array_unique( $conflicting ) );
 	}
 
 	/**
@@ -201,9 +287,9 @@ final class Registry {
 		}
 
 		if ( $this->is_enabled( $id ) ) {
-			$stored = array_diff( (array) get_option( QEM_OPTION_MODULES, array() ), array( $id ) );
+			$stored = array_diff( (array) get_option( QEVM_OPTION_MODULES, array() ), array( $id ) );
 
-			update_option( QEM_OPTION_MODULES, array_values( $stored ) );
+			update_option( QEVM_OPTION_MODULES, array_values( $stored ) );
 
 			$module->deactivate();
 
@@ -214,7 +300,7 @@ final class Registry {
 			 *
 			 * @param string $id Module id.
 			 */
-			do_action( 'qem_module_disabled', $id );
+			do_action( 'qevm_module_disabled', $id );
 		}
 
 		return true;

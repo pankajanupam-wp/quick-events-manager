@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,52 +25,52 @@ final class Meta {
 	/**
 	 * The canonical sortable start time, `Y-m-d H:i:s` in UTC.
 	 */
-	const START_UTC = '_qem_start_utc';
+	const START_UTC = '_qevm_start_utc';
 
 	/**
 	 * The canonical sortable end time, `Y-m-d H:i:s` in UTC.
 	 */
-	const END_UTC = '_qem_end_utc';
+	const END_UTC = '_qevm_end_utc';
 
 	/**
 	 * Start time as the organiser typed it, `Y-m-d H:i:s`.
 	 */
-	const START_LOCAL = '_qem_start_local';
+	const START_LOCAL = '_qevm_start_local';
 
 	/**
 	 * End time as the organiser typed it, `Y-m-d H:i:s`.
 	 */
-	const END_LOCAL = '_qem_end_local';
+	const END_LOCAL = '_qevm_end_local';
 
 	/**
 	 * PHP timezone identifier the local times are expressed in.
 	 */
-	const TIMEZONE = '_qem_timezone';
+	const TIMEZONE = '_qevm_timezone';
 
 	/**
 	 * Whether the event has no meaningful time of day.
 	 */
-	const ALL_DAY = '_qem_all_day';
+	const ALL_DAY = '_qevm_all_day';
 
 	/**
 	 * Whether the event happens online.
 	 */
-	const IS_ONLINE = '_qem_is_online';
+	const IS_ONLINE = '_qevm_is_online';
 
 	/**
 	 * Joining URL for an online event.
 	 */
-	const ONLINE_URL = '_qem_online_url';
+	const ONLINE_URL = '_qevm_online_url';
 
 	/**
 	 * Venue fields.
 	 */
-	const VENUE_NAME    = '_qem_venue_name';
-	const VENUE_ADDRESS = '_qem_venue_address';
-	const VENUE_CITY    = '_qem_venue_city';
-	const VENUE_REGION  = '_qem_venue_region';
-	const VENUE_POSTAL  = '_qem_venue_postal_code';
-	const VENUE_COUNTRY = '_qem_venue_country';
+	const VENUE_NAME    = '_qevm_venue_name';
+	const VENUE_ADDRESS = '_qevm_venue_address';
+	const VENUE_CITY    = '_qevm_venue_city';
+	const VENUE_REGION  = '_qevm_venue_region';
+	const VENUE_POSTAL  = '_qevm_venue_postal_code';
+	const VENUE_COUNTRY = '_qevm_venue_country';
 
 	/**
 	 * Reserved for the reusable-venues module.
@@ -80,22 +80,43 @@ final class Meta {
 	 * venues into reusable records can populate it without a schema change or
 	 * a second migration.
 	 */
-	const VENUE_ID = '_qem_venue_id';
+	const VENUE_ID = '_qevm_venue_id';
+
+	/**
+	 * The reusable organiser this event points at, or 0.
+	 *
+	 * The counterpart to VENUE_ID, and read only while the organisers module
+	 * is enabled. The event's own organiser fields below are kept whatever the
+	 * module is doing, so an event never loses its contact details.
+	 */
+	const ORGANIZER_ID = '_qevm_organizer_id';
 
 	/**
 	 * Organizer fields.
 	 */
-	const ORGANIZER_NAME  = '_qem_organizer_name';
-	const ORGANIZER_EMAIL = '_qem_organizer_email';
-	const ORGANIZER_PHONE = '_qem_organizer_phone';
-	const ORGANIZER_URL   = '_qem_organizer_url';
+	const ORGANIZER_NAME  = '_qevm_organizer_name';
+	const ORGANIZER_EMAIL = '_qevm_organizer_email';
+	const ORGANIZER_PHONE = '_qevm_organizer_phone';
+	const ORGANIZER_URL   = '_qevm_organizer_url';
 
 	/**
 	 * Registration fields, written by the Registration module.
 	 */
-	const CAPACITY             = '_qem_capacity';
-	const REGISTRATION_CLOSES  = '_qem_registration_closes_utc';
-	const REGISTRATION_ENABLED = '_qem_registration_enabled';
+	const CAPACITY             = '_qevm_capacity';
+	const REGISTRATION_CLOSES  = '_qevm_registration_closes_utc';
+	const REGISTRATION_ENABLED = '_qevm_registration_enabled';
+
+	/**
+	 * Recurrence, written by the Recurrence module.
+	 *
+	 * The rule is stored as an RFC 5545 RRULE string; see
+	 * QuickEventsManager\Recurrence\Rule for why a string rather than an array.
+	 * The series uuid groups an event with the other half of itself after a
+	 * "this and following" split.
+	 */
+	const RECURRENCE_RULE       = '_qevm_recurrence_rule';
+	const SERIES_UUID           = '_qevm_series_uuid';
+	const RECURRENCE_EXCLUSIONS = '_qevm_recurrence_exclusions';
 
 	/**
 	 * The format every stored datetime uses.
@@ -116,7 +137,7 @@ final class Meta {
 	public static function register() {
 		foreach ( self::definitions() as $key => $definition ) {
 			register_post_meta(
-				QEM_POST_TYPE,
+				QEVM_POST_TYPE,
 				$key,
 				array(
 					'type'              => $definition['type'],
@@ -144,28 +165,136 @@ final class Meta {
 		$boolean = array( __CLASS__, 'sanitize_boolean' );
 
 		return array(
-			self::START_UTC            => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::END_UTC              => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::START_LOCAL          => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::END_LOCAL            => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::TIMEZONE             => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_timezone' ) ),
-			self::ALL_DAY              => array( 'type' => 'boolean', 'default' => false, 'sanitize' => $boolean ),
-			self::IS_ONLINE            => array( 'type' => 'boolean', 'default' => false, 'sanitize' => $boolean ),
-			self::ONLINE_URL           => array( 'type' => 'string', 'default' => '', 'sanitize' => 'esc_url_raw' ),
-			self::VENUE_NAME           => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_ADDRESS        => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_CITY           => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_REGION         => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_POSTAL         => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_COUNTRY        => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::VENUE_ID             => array( 'type' => 'integer', 'default' => 0, 'sanitize' => 'absint' ),
-			self::ORGANIZER_NAME       => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::ORGANIZER_EMAIL      => array( 'type' => 'string', 'default' => '', 'sanitize' => 'sanitize_email' ),
-			self::ORGANIZER_PHONE      => array( 'type' => 'string', 'default' => '', 'sanitize' => $text ),
-			self::ORGANIZER_URL        => array( 'type' => 'string', 'default' => '', 'sanitize' => 'esc_url_raw' ),
-			self::CAPACITY             => array( 'type' => 'integer', 'default' => 0, 'sanitize' => 'absint' ),
-			self::REGISTRATION_CLOSES  => array( 'type' => 'string', 'default' => '', 'sanitize' => array( __CLASS__, 'sanitize_datetime' ) ),
-			self::REGISTRATION_ENABLED => array( 'type' => 'boolean', 'default' => false, 'sanitize' => $boolean ),
+			self::START_UTC             => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::END_UTC               => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::START_LOCAL           => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::END_LOCAL             => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::TIMEZONE              => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_timezone' ),
+			),
+			self::ALL_DAY               => array(
+				'type'     => 'boolean',
+				'default'  => false,
+				'sanitize' => $boolean,
+			),
+			self::IS_ONLINE             => array(
+				'type'     => 'boolean',
+				'default'  => false,
+				'sanitize' => $boolean,
+			),
+			self::ONLINE_URL            => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'esc_url_raw',
+			),
+			self::VENUE_NAME            => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_ADDRESS         => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_CITY            => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_REGION          => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_POSTAL          => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_COUNTRY         => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::VENUE_ID              => array(
+				'type'     => 'integer',
+				'default'  => 0,
+				'sanitize' => 'absint',
+			),
+			self::ORGANIZER_ID          => array(
+				'type'     => 'integer',
+				'default'  => 0,
+				'sanitize' => 'absint',
+			),
+			self::ORGANIZER_NAME        => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::ORGANIZER_EMAIL       => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'sanitize_email',
+			),
+			self::ORGANIZER_PHONE       => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => $text,
+			),
+			self::ORGANIZER_URL         => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'esc_url_raw',
+			),
+			self::CAPACITY              => array(
+				'type'     => 'integer',
+				'default'  => 0,
+				'sanitize' => 'absint',
+			),
+			self::REGISTRATION_CLOSES   => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_datetime' ),
+			),
+			self::REGISTRATION_ENABLED  => array(
+				'type'     => 'boolean',
+				'default'  => false,
+				'sanitize' => $boolean,
+			),
+			self::RECURRENCE_RULE       => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_rrule' ),
+			),
+			self::SERIES_UUID           => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( __CLASS__, 'sanitize_uuid' ),
+			),
+			self::RECURRENCE_EXCLUSIONS => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => array( \QuickEventsManager\Recurrence\Exclusions::class, 'sanitize' ),
+			),
 		);
 	}
 
@@ -236,6 +365,62 @@ final class Meta {
 	 */
 	public static function sanitize_boolean( $value ) {
 		return (bool) filter_var( $value, FILTER_VALIDATE_BOOLEAN );
+	}
+
+	/**
+	 * Keep a recurrence rule only if it parses and validates.
+	 *
+	 * A rule that cannot be read is stored as '' rather than kept as typed. The
+	 * alternative is a value that sits in the database looking like a rule,
+	 * generates nothing, and gives the organiser an event that repeats in the
+	 * editor and not on the site.
+	 *
+	 * Normalised through the rule object on the way in, so what is stored is the
+	 * canonical form — `FREQ` first, parts in RFC order, no stray whitespace.
+	 * Two identical rules typed differently then compare equal as strings, which
+	 * is what makes "did the rule change" answerable without parsing.
+	 *
+	 * One parameter, deliberately. WordPress calls a sanitise callback as
+	 * `( $value, $meta_key, $meta_type )`, and a callback that declares a second
+	 * parameter receives the meta key in it — which is how
+	 * `'sanitize_callback' => 'sanitize_title'` fatals a REST route. The
+	 * regression is locked down in tests/unit/RegressionTest.php.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string Canonical RRULE, or ''.
+	 */
+	public static function sanitize_rrule( $value ) {
+		if ( ! is_string( $value ) || '' === trim( $value ) ) {
+			return '';
+		}
+
+		$rule = \QuickEventsManager\Recurrence\Rule::from_string( $value );
+
+		if ( null === $rule || is_wp_error( $rule->validate() ) ) {
+			return '';
+		}
+
+		return $rule->to_string();
+	}
+
+	/**
+	 * Keep a uuid only if it looks like one.
+	 *
+	 * @since 26.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_uuid( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+
+		$value = strtolower( trim( $value ) );
+
+		return wp_is_uuid( $value, 4 ) ? $value : '';
 	}
 
 	/**

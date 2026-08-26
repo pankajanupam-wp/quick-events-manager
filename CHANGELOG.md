@@ -12,16 +12,18 @@ It ships as one release. Nothing is published until the whole of [docs/roadmap.m
 
 - Events with start and end dates and times, and a real timezone per event
 - All-day events and online events with a joining link
-- Venue and organiser details
+- Venue and organiser details, with reusable venue and organiser records as an option
+- Your own questions on the registration form
 - Event categories and tags
 - A Features screen for switching capability on a module at a time
 - Free registration with capacity, automatic waiting list and a closing date
 - Attendee management with search, status filtering and CSV export
 - Confirmation emails to attendees and notifications to the organiser
+- One message to everybody registered for an event, with a chosen audience, a test send, a per-recipient delivery record and a withdraw button for anything not yet sent
 - Event List, Event Details and Event Registration blocks, with matching shortcodes
 - "Add to calendar" `.ics` downloads and Google Calendar links
 - `schema.org/Event` JSON-LD for search engines
-- A read-only REST API at `/wp-json/qem/v1/`
+- A read-only REST API at `/wp-json/qevm/v1/`
 - GDPR exporters and erasers for attendee data
 - Translation support
 
@@ -31,9 +33,9 @@ Calendar view, custom registration fields, email templates, reusable venues and 
 
 ### Changed
 
-- Events moved from the generic `events` post type to `qem_event`, keeping their existing `/events/` URLs. Existing events are migrated automatically on first admin load.
+- Events moved from the generic `events` post type to `qevm_event`, keeping their existing `/events/` URLs. Existing events are migrated automatically on first admin load.
 - Event archives sort by start date rather than publish date.
-- Minimum requirements raised to WordPress 5.0 and PHP 7.4.
+- Minimum requirements raised to WordPress 6.5 and PHP 8.1.
 
 ### Security
 

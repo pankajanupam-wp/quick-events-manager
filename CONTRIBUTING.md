@@ -44,7 +44,11 @@ Good pull requests, roughly in order of how welcome they are:
 
 ## House style
 
-The code follows WordPress coding standards: tabs, `array()` long syntax, Yoda conditions, spaces inside parens. PHP 7.4 is the floor, so no arrow functions in shipped code, no typed properties, no constructor promotion.
+The code follows WordPress coding standards: tabs, `array()` long syntax, Yoda conditions, spaces inside parens. `composer lint` checks all of it, and CI fails if it does not pass.
+
+PHP 8.1 is the floor, so enums, readonly properties, typed properties, constructor promotion, union types and `match` are all available and expected — not merely permitted. Nothing newer than 8.1, though: `composer lint:syntax` parses every shipped file on each supported version, which is what catches an 8.2-only feature slipping in.
+
+The full rules live in [docs/engineering-standards.md](docs/engineering-standards.md). It is the constitution of the project, and it is worth reading before your first pull request rather than after.
 
 Two things matter more than style:
 
@@ -56,7 +60,7 @@ Two things matter more than style:
 
 The plugin's organising idea is that a fresh install does one thing and everything else is opted into. A feature that is off must register no hooks, create no tables and enqueue no assets.
 
-If you are adding something substantial, add a class implementing `QEM\Modules\Module` and register it through the `qem_modules` filter. See `includes/Registration/RegistrationModule.php` for a worked example.
+If you are adding something substantial, add a class implementing `QuickEventsManager\Modules\Module` and register it through the `qevm_modules` filter. See `includes/Registration/RegistrationModule.php` for a worked example.
 
 ## Testing philosophy
 

@@ -5,7 +5,9 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Registration;
+namespace QuickEventsManager\Registration;
+
+use QuickEventsManager\Domain\RegistrationStatus;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -15,26 +17,6 @@ defined( 'ABSPATH' ) || exit;
  * @since 26.0
  */
 final class Registration {
-
-	/**
-	 * Confirmed: counted against capacity, has a place.
-	 */
-	const STATUS_CONFIRMED = 'confirmed';
-
-	/**
-	 * Pending: counted against capacity, awaiting something.
-	 */
-	const STATUS_PENDING = 'pending';
-
-	/**
-	 * Waitlisted: not counted, will be offered a place if one frees up.
-	 */
-	const STATUS_WAITLISTED = 'waitlisted';
-
-	/**
-	 * Cancelled: not counted, frees the place.
-	 */
-	const STATUS_CANCELLED = 'cancelled';
 
 	/**
 	 * Row data.
@@ -48,56 +30,10 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array|object $row Database row.
+	 * @param array<string, mixed>|object $row Database row.
 	 */
 	public function __construct( $row ) {
 		$this->data = (array) $row;
-	}
-
-	/**
-	 * Statuses that occupy a place.
-	 *
-	 * @since 26.0
-	 *
-	 * @return string[]
-	 */
-	public static function occupying_statuses() {
-		return array( self::STATUS_CONFIRMED, self::STATUS_PENDING );
-	}
-
-	/**
-	 * Every valid status.
-	 *
-	 * @since 26.0
-	 *
-	 * @return string[]
-	 */
-	public static function statuses() {
-		return array(
-			self::STATUS_CONFIRMED,
-			self::STATUS_PENDING,
-			self::STATUS_WAITLISTED,
-			self::STATUS_CANCELLED,
-		);
-	}
-
-	/**
-	 * Human-readable label for a status.
-	 *
-	 * @since 26.0
-	 *
-	 * @param string $status Status key.
-	 * @return string
-	 */
-	public static function status_label( $status ) {
-		$labels = array(
-			self::STATUS_CONFIRMED  => __( 'Confirmed', 'quick-events-manager' ),
-			self::STATUS_PENDING    => __( 'Pending', 'quick-events-manager' ),
-			self::STATUS_WAITLISTED => __( 'Waitlisted', 'quick-events-manager' ),
-			self::STATUS_CANCELLED  => __( 'Cancelled', 'quick-events-manager' ),
-		);
-
-		return isset( $labels[ $status ] ) ? $labels[ $status ] : $status;
 	}
 
 	/**
@@ -105,12 +41,12 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $key     Column name.
-	 * @param mixed  $default Fallback.
+	 * @param string $key      Column name.
+	 * @param mixed  $fallback Returned when the column is absent.
 	 * @return mixed
 	 */
-	public function get( $key, $default = '' ) {
-		return isset( $this->data[ $key ] ) ? $this->data[ $key ] : $default;
+	public function get( $key, $fallback = '' ) {
+		return isset( $this->data[ $key ] ) ? $this->data[ $key ] : $fallback;
 	}
 
 	/**
@@ -136,6 +72,38 @@ final class Registration {
 	}
 
 	/**
+	 * The date booked, or 0 when the event has only one.
+	 *
+	 * Zero is not "unknown". It means the booking is for the event rather than
+	 * for a date within it, which is every booking on an event that does not
+	 * repeat — and capacity, the waiting list and the duplicate check all read
+	 * it that way.
+	 *
+	 * @since 26.0
+	 *
+	 * @return int
+	 */
+	public function occurrence_id() {
+		return (int) $this->get( 'occurrence_id', 0 );
+	}
+
+	/**
+	 * The kind of place booked, or 0 when the event offers only one.
+	 *
+	 * On the booking rather than only on the people, because capacity is ranked
+	 * here — see Repository::insert_with_capacity(). Attendee rows carry the
+	 * same value so that a roster and a check-in list can say which ticket
+	 * somebody holds without joining back.
+	 *
+	 * @since 26.0
+	 *
+	 * @return int
+	 */
+	public function ticket_type_id() {
+		return (int) $this->get( 'ticket_type_id', 0 );
+	}
+
+	/**
 	 * Public reference code.
 	 *
 	 * @since 26.0
@@ -147,47 +115,62 @@ final class Registration {
 	}
 
 	/**
-	 * Status key.
+	 * Where this registration stands.
+	 *
+	 * An unrecognised column value falls back to Confirmed rather than
+	 * throwing. The row exists and somebody is expecting a place; refusing to
+	 * render the attendee list because one status is corrupt helps nobody.
 	 *
 	 * @since 26.0
-	 *
-	 * @return string
 	 */
-	public function status() {
-		return (string) $this->get( 'status' );
+	public function status(): RegistrationStatus {
+		return RegistrationStatus::coerce( $this->get( 'status' ), RegistrationStatus::Confirmed );
 	}
 
 	/**
-	 * Attendee name.
+	 * The status as stored, for queries, REST payloads and CSV.
 	 *
 	 * @since 26.0
-	 *
-	 * @return string
 	 */
-	public function name() {
-		return (string) $this->get( 'name' );
+	public function status_value(): string {
+		return $this->status()->value;
 	}
 
 	/**
-	 * Attendee email.
+	 * The name of the person who made the booking.
+	 *
+	 * Not "the attendee": a booking may cover several people, and each of them
+	 * has a name of their own on the attendees table. See
+	 * docs/adr/0004-registration-attendee-split.md.
 	 *
 	 * @since 26.0
 	 *
 	 * @return string
 	 */
-	public function email() {
-		return (string) $this->get( 'email' );
+	public function booker_name() {
+		return (string) $this->get( 'booker_name' );
 	}
 
 	/**
-	 * Attendee phone.
+	 * The booker's email address, where the confirmation goes.
 	 *
 	 * @since 26.0
 	 *
 	 * @return string
 	 */
-	public function phone() {
-		return (string) $this->get( 'phone' );
+	public function booker_email() {
+		return (string) $this->get( 'booker_email' );
+	}
+
+	/**
+	 * The booker's phone number, if they gave one.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string
+	 */
+	public function booker_phone() {
+		return (string) $this->get( 'booker_phone' );
 	}
 
 	/**
@@ -213,11 +196,45 @@ final class Registration {
 	}
 
 	/**
+	 * Which consent wording was agreed to, if any.
+	 *
+	 * A fingerprint of the text, not the text: see
+	 * QuickEventsManager\Privacy\Consent.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string
+	 */
+	public function consent_version() {
+		return (string) $this->get( 'consent_version' );
+	}
+
+	/**
+	 * When consent was given, in UTC.
+	 *
+	 * @since 26.0
+	 *
+	 * @return string Empty when no consent was recorded.
+	 */
+	public function consent_at() {
+		return (string) $this->get( 'consent_at', '' );
+	}
+
+	/**
+	 * Whether this registration carries a record of consent.
+	 *
+	 * @since 26.0
+	 */
+	public function has_consent(): bool {
+		return '' !== $this->consent_version() && '' !== $this->consent_at();
+	}
+
+	/**
 	 * Extra fields stored as JSON.
 	 *
 	 * @since 26.0
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function fields() {
 		$raw = $this->get( 'fields', '' );
@@ -235,11 +252,9 @@ final class Registration {
 	 * Whether this registration occupies a place.
 	 *
 	 * @since 26.0
-	 *
-	 * @return bool
 	 */
-	public function occupies_place() {
-		return in_array( $this->status(), self::occupying_statuses(), true );
+	public function occupies_place(): bool {
+		return $this->status()->occupies_place();
 	}
 
 	/**
@@ -247,20 +262,20 @@ final class Registration {
 	 *
 	 * @since 26.0
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function to_array() {
 		return array(
-			'id'         => $this->id(),
-			'event_id'   => $this->event_id(),
-			'code'       => $this->code(),
-			'status'     => $this->status(),
-			'name'       => $this->name(),
-			'email'      => $this->email(),
-			'phone'      => $this->phone(),
-			'quantity'   => $this->quantity(),
-			'fields'     => $this->fields(),
-			'created_at' => $this->created_at(),
+			'id'           => $this->id(),
+			'event_id'     => $this->event_id(),
+			'code'         => $this->code(),
+			'status'       => $this->status_value(),
+			'booker_name'  => $this->booker_name(),
+			'booker_email' => $this->booker_email(),
+			'booker_phone' => $this->booker_phone(),
+			'quantity'     => $this->quantity(),
+			'fields'       => $this->fields(),
+			'created_at'   => $this->created_at(),
 		);
 	}
 }

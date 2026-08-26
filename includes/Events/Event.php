@@ -5,7 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
+
+use QuickEventsManager\Organizers\Organizer;
+use QuickEventsManager\Venues\Venue;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,18 +24,23 @@ defined( 'ABSPATH' ) || exit;
 final class Event {
 
 	/**
-	 * The underlying post.
+	 * The underlying post, or null when the id resolved to nothing.
 	 *
-	 * @var \WP_Post
+	 * Nullable because get_post() returns null for an id that does not exist,
+	 * and callers routinely construct an Event straight from a request
+	 * parameter. is_valid() is the guard, and it is only meaningful because
+	 * this can genuinely be null.
+	 *
+	 * @var \WP_Post|null
 	 */
-	private $post;
+	private ?\WP_Post $post;
 
 	/**
 	 * Meta values, read once per event.
 	 *
 	 * @var array<string, mixed>|null
 	 */
-	private $meta = null;
+	private ?array $meta = null;
 
 	/**
 	 * Wrap a post or post id.
@@ -53,7 +61,7 @@ final class Event {
 	 * @return bool
 	 */
 	public function is_valid() {
-		return $this->post instanceof \WP_Post && QEM_POST_TYPE === $this->post->post_type;
+		return $this->post instanceof \WP_Post && QEVM_POST_TYPE === $this->post->post_type;
 	}
 
 	/**
@@ -87,13 +95,13 @@ final class Event {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $key     Meta key.
-	 * @param mixed  $default Value to return when the key is absent.
+	 * @param string $key      Meta key.
+	 * @param mixed  $fallback Returned when the key is absent.
 	 * @return mixed
 	 */
-	public function meta( $key, $default = '' ) {
+	public function meta( $key, $fallback = '' ) {
 		if ( ! $this->is_valid() ) {
-			return $default;
+			return $fallback;
 		}
 
 		if ( null === $this->meta ) {
@@ -101,7 +109,7 @@ final class Event {
 		}
 
 		if ( ! isset( $this->meta[ $key ][0] ) ) {
-			return $default;
+			return $fallback;
 		}
 
 		return $this->meta[ $key ][0];
@@ -236,21 +244,38 @@ final class Event {
 	 * @return string
 	 */
 	public function venue_summary() {
-		$parts = array_filter(
-			array(
-				(string) $this->meta( Meta::VENUE_NAME ),
-				(string) $this->meta( Meta::VENUE_ADDRESS ),
-				(string) $this->meta( Meta::VENUE_CITY ),
-				(string) $this->meta( Meta::VENUE_REGION ),
-				(string) $this->meta( Meta::VENUE_POSTAL ),
-				(string) $this->meta( Meta::VENUE_COUNTRY ),
-			),
-			static function ( $part ) {
-				return '' !== $part;
-			}
-		);
+		return $this->venue()->summary();
+	}
 
-		return implode( ', ', $parts );
+	/**
+	 * Where this event is.
+	 *
+	 * Resolves a venue record when the venues module is on and this event names
+	 * one, and the event's own address meta otherwise. Every caller goes through
+	 * here rather than reading the meta keys directly, so the six render paths
+	 * cannot disagree about which source wins.
+	 *
+	 * @since 26.0
+	 *
+	 * @return Venue
+	 */
+	public function venue() {
+		return Venue::for_event( $this );
+	}
+
+	/**
+	 * Who to contact about this event.
+	 *
+	 * Resolves an organiser record when the organisers module is on and this
+	 * event names one, and the event's own organiser meta otherwise — the same
+	 * rule as venue(), for the same reason.
+	 *
+	 * @since 26.0
+	 *
+	 * @return Organizer
+	 */
+	public function organizer() {
+		return Organizer::for_event( $this );
 	}
 
 	/**

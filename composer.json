@@ -15,20 +15,54 @@
 		"source": "https://github.com/pankajanupam-wp/quick-events-manager"
 	},
 	"require": {
-		"php": ">=7.4"
+		"php": ">=8.1"
 	},
 	"require-dev": {
-		"phpunit/phpunit": "^9.6 || ^10.5"
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"phpcompatibility/phpcompatibility-wp": "^2.1",
+		"phpstan/extension-installer": "^1.4",
+		"phpstan/phpstan": "^2.1",
+		"phpunit/phpunit": "^10.5 || ^11.5 || ^12.0",
+		"squizlabs/php_codesniffer": "^3.11",
+		"szepeviktor/phpstan-wordpress": "^2.0",
+		"wp-coding-standards/wpcs": "^3.1"
 	},
 	"extra": {
-		"note": "PHPUnit is capped at 10.5 deliberately: PHPUnit 11 deprecates @dataProvider in favour of PHP 8 attributes, which cannot be used while the plugin still supports PHP 7.4. No composer.lock is committed, so each PHP version in CI resolves the PHPUnit release that supports it."
+		"note": "Nothing here is a runtime dependency. The shipped package contains no vendor directory: autoloading is a hand-written PSR-4 autoloader, and two plugins bundling different versions of one package is an unfixable class of WordPress conflict. See docs/adr/0007-no-runtime-dependencies.md.",
+		"note-phpunit": "No composer.lock is committed, so each PHP version in CI resolves the PHPUnit release that supports it. The cap at 10.5 that existed while PHP 7.4 was supported is gone: PHPUnit 11 replaces @dataProvider with PHP 8 attributes, which the minimum of 8.1 now permits."
 	},
 	"scripts": {
 		"test": "phpunit",
-		"i18n": "for po in languages/*.po; do msgfmt --check-format -o \"${po%.po}.mo\" \"$po\" || exit 1; done && echo 'Compiled all .po files.'",
-		"lint": "find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l"
+		"test:integration": [
+			"cd .. && npx --yes @wordpress/env run tests-cli wp plugin activate quick-events-manager",
+			"cd .. && npx --yes @wordpress/env run tests-cli --env-cwd=wp-content/plugins/quick-events-manager php vendor/bin/phpunit -c phpunit-integration.xml.dist"
+		],
+		"lint": "phpcs",
+		"lint:fix": "phpcbf",
+		"lint:syntax": "find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l",
+		"analyse": "phpstan analyse --memory-limit=1G",
+		"check": [
+			"@lint:syntax",
+			"@lint",
+			"@analyse",
+			"@test"
+		],
+		"i18n": "for po in languages/*.po; do msgfmt --check-format -o \"${po%.po}.mo\" \"$po\" || exit 1; done && echo 'Compiled all .po files.'"
+	},
+	"scripts-descriptions": {
+		"test": "Run the unit suite.",
+		"test:integration": "Run the integration suite against real WordPress and MySQL. Needs `npx @wordpress/env start` from the plugins root first. The `cd ..` is deliberate: wp-env takes its environment from the .wp-env.json beside the plugins, and running it from inside a plugin would define a second one.",
+		"lint": "Check WordPress Coding Standards.",
+		"lint:fix": "Fix what WordPress Coding Standards can fix automatically.",
+		"lint:syntax": "Parse every PHP file, proving the plugin loads on this PHP version.",
+		"analyse": "Run static analysis.",
+		"check": "Everything CI runs, in the order CI runs it."
 	},
 	"config": {
-		"sort-packages": true
+		"sort-packages": true,
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true,
+			"phpstan/extension-installer": true
+		}
 	}
 }

@@ -5,10 +5,10 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
-use QEM\Events\Event;
-use QEM\Events\Meta;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,7 +25,7 @@ final class Ics {
 	/**
 	 * Query variable that triggers the download.
 	 */
-	const QUERY_VAR = 'qem_ics';
+	const QUERY_VAR = 'qevm_ics';
 
 	/**
 	 * Hook into request handling.
@@ -45,8 +45,8 @@ final class Ics {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $vars Public query variables.
-	 * @return array
+	 * @param array<int, string> $vars Public query variables.
+	 * @return array<int, string>
 	 */
 	public function add_query_var( $vars ) {
 		$vars[] = self::QUERY_VAR;
@@ -86,7 +86,7 @@ final class Ics {
 	 * @return void
 	 */
 	public function maybe_download() {
-		if ( ! is_singular( QEM_POST_TYPE ) || ! get_query_var( self::QUERY_VAR ) ) {
+		if ( ! is_singular( QEVM_POST_TYPE ) || ! get_query_var( self::QUERY_VAR ) ) {
 			return;
 		}
 
@@ -153,7 +153,7 @@ final class Ics {
 			$lines[] = 'LOCATION:' . self::escape_text( $location );
 		}
 
-		$organizer = (string) $event->meta( Meta::ORGANIZER_EMAIL );
+		$organizer = $event->organizer()->email();
 
 		if ( '' !== $organizer && is_email( $organizer ) ) {
 			$lines[] = 'ORGANIZER:mailto:' . $organizer;
@@ -177,7 +177,7 @@ final class Ics {
 	 * @return string
 	 */
 	private static function uid( Event $event ) {
-		return sprintf( 'qem-%d@%s', $event->id(), wp_parse_url( home_url(), PHP_URL_HOST ) );
+		return sprintf( 'qevm-%d@%s', $event->id(), wp_parse_url( home_url(), PHP_URL_HOST ) );
 	}
 
 	/**

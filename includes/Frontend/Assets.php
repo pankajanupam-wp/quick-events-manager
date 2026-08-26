@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,7 +23,23 @@ final class Assets {
 	/**
 	 * Handle for the front-end stylesheet.
 	 */
-	const HANDLE = 'qem-frontend';
+	const HANDLE = 'qevm-frontend';
+
+	/**
+	 * Handle for the registration form's script.
+	 *
+	 * The only script the plugin puts on the front end, and it loads on pages
+	 * that show a registration form and nowhere else.
+	 */
+	const FORM_HANDLE = 'qevm-registration';
+
+	/**
+	 * Handle for the calendar's script.
+	 *
+	 * Loaded only on pages that render a calendar. Everything it does is an
+	 * enhancement over markup that works without it.
+	 */
+	const CALENDAR_HANDLE = 'qevm-calendar';
 
 	/**
 	 * Hook into asset loading.
@@ -46,16 +62,18 @@ final class Assets {
 	public function register_assets() {
 		wp_register_style(
 			self::HANDLE,
-			QEM_URL . 'assets/css/frontend.css',
+			QEVM_URL . 'assets/css/frontend.css',
 			array(),
-			QEM_VERSION
+			QEVM_VERSION
 		);
+
+		self::register_form_script();
 
 		/*
 		 * A single-event page always shows details, so enqueue eagerly there.
 		 * Everywhere else waits until a block or shortcode asks.
 		 */
-		if ( is_singular( QEM_POST_TYPE ) || is_post_type_archive( QEM_POST_TYPE ) ) {
+		if ( is_singular( QEVM_POST_TYPE ) || is_post_type_archive( QEVM_POST_TYPE ) ) {
 			self::enqueue_frontend();
 		}
 	}
@@ -72,9 +90,79 @@ final class Assets {
 	 */
 	public static function enqueue_frontend() {
 		if ( ! wp_style_is( self::HANDLE, 'registered' ) ) {
-			wp_register_style( self::HANDLE, QEM_URL . 'assets/css/frontend.css', array(), QEM_VERSION );
+			wp_register_style( self::HANDLE, QEVM_URL . 'assets/css/frontend.css', array(), QEVM_VERSION );
 		}
 
 		wp_enqueue_style( self::HANDLE );
+	}
+
+	/**
+	 * Enqueue the script that reveals a name field per guest.
+	 *
+	 * Called by the renderer when a form is actually output, so a site that
+	 * never takes registrations never loads it — and neither does an event page
+	 * whose registration has closed.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public static function enqueue_registration_form() {
+		self::register_form_script();
+
+		wp_enqueue_script( self::FORM_HANDLE );
+	}
+
+	/**
+	 * Enqueue the calendar's navigation and keyboard script.
+	 *
+	 * Called by the renderer when a calendar is actually output, so a site with
+	 * the module switched on but no calendar on any page never loads it.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	public static function enqueue_calendar() {
+		if ( ! wp_script_is( self::CALENDAR_HANDLE, 'registered' ) ) {
+			wp_register_script(
+				self::CALENDAR_HANDLE,
+				QEVM_URL . 'assets/js/calendar.js',
+				array(),
+				QEVM_VERSION,
+				true
+			);
+		}
+
+		wp_enqueue_script( self::CALENDAR_HANDLE );
+	}
+
+	/**
+	 * Register — but do not enqueue — the registration form's script.
+	 *
+	 * Deferred rather than loaded in the head. The rows it manages are hidden
+	 * by an attribute in the markup, not by the script, so there is no state to
+	 * correct before the page paints and nothing to be gained by blocking the
+	 * parser for it.
+	 *
+	 * @since 26.0
+	 *
+	 * @return void
+	 */
+	private static function register_form_script() {
+		if ( wp_script_is( self::FORM_HANDLE, 'registered' ) ) {
+			return;
+		}
+
+		wp_register_script(
+			self::FORM_HANDLE,
+			QEVM_URL . 'assets/js/registration.js',
+			array(),
+			QEVM_VERSION,
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
+		);
 	}
 }

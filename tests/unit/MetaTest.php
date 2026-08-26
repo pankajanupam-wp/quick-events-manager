@@ -10,12 +10,15 @@
  * @package QuickEventsManager
  */
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use QEM\Events\Meta;
+use QuickEventsManager\Events\Meta;
 
 /**
- * @covers \QEM\Events\Meta
+ * Meta key registration, sanitisation and UTC conversion.
  */
+#[CoversClass( Meta::class )]
 final class MetaTest extends TestCase {
 
 	/**
@@ -56,11 +59,10 @@ final class MetaTest extends TestCase {
 	 * zone, including the half-hour and three-quarter-hour offsets that catch
 	 * out anything storing a plain integer offset.
 	 *
-	 * @dataProvider timezone_provider
-	 *
 	 * @param string $timezone Timezone identifier.
 	 * @return void
 	 */
+	#[DataProvider( 'timezone_provider' )]
 	public function test_round_trip_is_lossless( $timezone ) {
 		$local = '2026-03-15 09:45:00';
 
@@ -94,10 +96,10 @@ final class MetaTest extends TestCase {
 	 */
 	public function test_utc_is_independent_of_the_site_timezone() {
 		WP_Stub_State::$options['timezone_string'] = 'America/New_York';
-		$first = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
+		$first                                     = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
 
 		WP_Stub_State::$options['timezone_string'] = 'Australia/Sydney';
-		$second = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
+		$second                                    = Meta::to_utc( '2026-09-01 18:00:00', 'Asia/Kolkata' );
 
 		$this->assertSame( $first, $second, 'Changing the site timezone must not move an event.' );
 	}
@@ -119,11 +121,10 @@ final class MetaTest extends TestCase {
 	 * coerced. A half-understood date sorts into the wrong place in silence,
 	 * which is worse than having no date at all.
 	 *
-	 * @dataProvider bad_datetime_provider
-	 *
 	 * @param mixed $value Value that must not be accepted.
 	 * @return void
 	 */
+	#[DataProvider( 'bad_datetime_provider' )]
 	public function test_unusable_datetimes_are_rejected( $value ) {
 		$this->assertSame( '', Meta::sanitize_datetime( $value ) );
 	}
@@ -265,21 +266,33 @@ final class MetaTest extends TestCase {
 	 */
 	public function test_all_meta_keys_are_prefixed_and_protected() {
 		foreach ( array_keys( Meta::definitions() ) as $key ) {
-			$this->assertStringStartsWith( '_qem_', $key, "Meta key {$key} is not prefixed." );
+			$this->assertStringStartsWith( '_qevm_', $key, "Meta key {$key} is not prefixed." );
 		}
 	}
 
 	/**
-	 * Every definition has a callable sanitiser. An unsanitised meta key is
-	 * how untrusted input reaches the database.
+	 * Every meta key's sanitiser actually neutralises hostile input.
+	 *
+	 * This used to assert that each definition's `sanitize` entry was
+	 * callable. PHPStan showed that could never fail: definitions() declares
+	 * the array shape, the shape says `callable`, and PHPStan enforces the
+	 * declaration — so the assertion tested a docblock rather than any
+	 * behaviour, and would have passed just as happily against a sanitiser
+	 * that did nothing at all. Running each one is the check that was meant.
 	 *
 	 * @return void
 	 */
-	public function test_every_meta_key_has_a_sanitiser() {
+	public function test_every_meta_key_has_a_sanitiser_that_works() {
+		$hostile = '<script>alert(1)</script>';
+
 		foreach ( Meta::definitions() as $key => $definition ) {
-			$this->assertTrue(
-				is_callable( $definition['sanitize'] ),
-				"Meta key {$key} has no callable sanitize_callback."
+			$clean = call_user_func( $definition['sanitize'], $hostile );
+
+			$this->assertIsScalar( $clean, "Meta key {$key} sanitised to something that cannot be stored." );
+			$this->assertStringNotContainsString(
+				'<',
+				(string) $clean,
+				"Meta key {$key} let markup through its sanitiser."
 			);
 		}
 	}

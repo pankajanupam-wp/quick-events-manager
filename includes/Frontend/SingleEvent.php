@@ -5,17 +5,17 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
-use QEM\Admin\Settings;
-use QEM\Events\Event;
+use QuickEventsManager\Admin\Settings;
+use QuickEventsManager\Events\Event;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
  * Puts the details and the registration form on a single event page.
  *
- * Uses `the_content` rather than a `single-qem_event.php` template. A template
+ * Uses `the_content` rather than a `single-qevm_event.php` template. A template
  * takeover only works in classic themes — a block theme renders singles through
  * its own block template and never looks at the plugin's file. Filtering the
  * content works in both, because a block theme's template still ends up calling
@@ -56,7 +56,7 @@ final class SingleEvent {
 	 * @return string
 	 */
 	public function append_details( $content ) {
-		if ( ! is_singular( QEM_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+		if ( ! is_singular( QEVM_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
 			return $content;
 		}
 

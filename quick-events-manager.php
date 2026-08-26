@@ -4,9 +4,9 @@
  * Plugin URI:        https://www.pankajanupam.com/wordpress-plugins/quick-events-manager/
  * Description:       Create events, publish them, and take free registrations. Start simple and switch on more features only when you need them.
  * Version:           26.0
- * Requires at least: 5.0
+ * Requires at least: 6.5
  * Tested up to:      7.0
- * Requires PHP:      7.4
+ * Requires PHP:      8.1
  * Author:            Pankaj Anupam
  * Author URI:        https://www.pankajanupam.com
  * License:           GPL-2.0-or-later
@@ -36,40 +36,97 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/*
+ * Refuse to load on an unsupported platform, and say why.
+ *
+ * WordPress reads the Requires PHP and Requires at least headers and blocks
+ * activation and auto-update accordingly, so this guard is not the first line
+ * of defence. It is the second: a site that is already active and whose host
+ * then downgrades PHP gets an admin notice here rather than a fatal error and
+ * a white screen.
+ *
+ * This has to happen before the autoloader, because the classes in src/ use
+ * enums and readonly properties. Those are parse errors on PHP below 8.1, and
+ * a parse error cannot be caught by any check that runs after the file loads.
+ *
+ * Everything above this point must itself parse on ancient PHP, which is why
+ * this block uses nothing newer than a closure.
+ *
+ * See docs/adr/0002-php-and-wordpress-versions.md.
+ */
+if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
+	add_action(
+		'admin_notices',
+		static function () {
+			echo '<div class="notice notice-error"><p>';
+			printf(
+				/* translators: 1: Required PHP version, 2: PHP version currently running. */
+				esc_html__( 'Quick Events Manager requires PHP %1$s or newer. This site is running PHP %2$s, so the plugin has not been loaded.', 'quick-events-manager' ),
+				'8.1',
+				esc_html( PHP_VERSION )
+			);
+			echo '</p></div>';
+		}
+	);
+
+	return;
+}
+
+if ( version_compare( get_bloginfo( 'version' ), '6.5', '<' ) ) {
+	add_action(
+		'admin_notices',
+		static function () {
+			echo '<div class="notice notice-error"><p>';
+			printf(
+				/* translators: 1: Required WordPress version, 2: WordPress version currently running. */
+				esc_html__( 'Quick Events Manager requires WordPress %1$s or newer. This site is running WordPress %2$s, so the plugin has not been loaded.', 'quick-events-manager' ),
+				'6.5',
+				esc_html( get_bloginfo( 'version' ) )
+			);
+			echo '</p></div>';
+		}
+	);
+
+	return;
+}
+
 /**
  * Plugin version, kept in sync with the header and the readme stable tag.
  */
-define( 'QEM_VERSION', '26.0' );
+define( 'QEVM_VERSION', '26.0' );
 
 /**
  * Schema version for the custom tables.
  *
- * Bumped only when a table changes, which is far less often than the plugin
- * version. The installer compares this against the stored qem_db_version and
- * runs dbDelta() when they differ, so an upgrade that touches no table costs
- * nothing on the front end.
+ * An integer, bumped once per migration, and far less often than the plugin
+ * version. The runner compares it against the stored qevm_db_version to decide
+ * what is outstanding, so an upgrade with no migration behind it costs a single
+ * option read.
+ *
+ * This must equal the highest version in includes/Install/Migrations/. A test
+ * asserts it, because a migration added without bumping this would never run.
  */
-define( 'QEM_DB_VERSION', '1' );
+define( 'QEVM_DB_VERSION', 13 );
 
 /**
  * Absolute path to this file.
  */
-define( 'QEM_FILE', __FILE__ );
+define( 'QEVM_FILE', __FILE__ );
 
 /**
  * Plugin directory path, with trailing slash.
  */
-define( 'QEM_PATH', plugin_dir_path( __FILE__ ) );
+define( 'QEVM_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
  * Plugin directory URL, with trailing slash.
  */
-define( 'QEM_URL', plugin_dir_url( __FILE__ ) );
+define( 'QEVM_URL', plugin_dir_url( __FILE__ ) );
 
 /**
  * Plugin basename, e.g. quick-events-manager/quick-events-manager.php.
  */
-define( 'QEM_BASENAME', plugin_basename( __FILE__ ) );
+define( 'QEVM_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
  * Post type key for events.
@@ -77,41 +134,66 @@ define( 'QEM_BASENAME', plugin_basename( __FILE__ ) );
  * Version 1.0 registered the bare key `events`, which is generic enough that
  * any other event plugin or theme registering the same key silently wins.
  * The prefixed key is namespaced to this plugin; the public `/events/` URLs
- * are preserved by the rewrite slug instead, and Migrator moves existing rows
- * across. Never change this value again — it is written into wp_posts.
+ * are preserved by the rewrite slug instead, and migration 1 moves existing
+ * rows across. Never change this value again — it is written into wp_posts.
  */
-define( 'QEM_POST_TYPE', 'qem_event' );
+define( 'QEVM_POST_TYPE', 'qevm_event' );
+
+/**
+ * Post type key for reusable venues.
+ *
+ * Registered only while the venues module is enabled. Events keep their flat
+ * address meta whether or not it is, so this post type is somewhere to put an
+ * address that repeats, never the only place an address can live.
+ */
+define( 'QEVM_POST_TYPE_VENUE', 'qevm_venue' );
+
+/**
+ * Post type key for reusable organisers.
+ *
+ * Spelled the American way to match `_qevm_organizer_*`, which 26.0 already
+ * registered and which cannot change. Everything a user reads says "organiser".
+ */
+define( 'QEVM_POST_TYPE_ORGANIZER', 'qevm_organizer' );
 
 /**
  * Taxonomy key for event categories.
  */
-define( 'QEM_TAX_CATEGORY', 'qem_event_category' );
+define( 'QEVM_TAX_CATEGORY', 'qevm_event_category' );
 
 /**
  * Taxonomy key for event tags.
  */
-define( 'QEM_TAX_TAG', 'qem_event_tag' );
+define( 'QEVM_TAX_TAG', 'qevm_event_tag' );
 
 /**
  * Option holding the ids of the feature modules the site has switched on.
  */
-define( 'QEM_OPTION_MODULES', 'qem_enabled_modules' );
+define( 'QEVM_OPTION_MODULES', 'qevm_enabled_modules' );
 
 /**
  * Option holding general plugin settings.
  */
-define( 'QEM_OPTION_SETTINGS', 'qem_settings' );
+define( 'QEVM_OPTION_SETTINGS', 'qevm_settings' );
 
 /**
  * Option holding the installed schema version.
  */
-define( 'QEM_OPTION_DB_VERSION', 'qem_db_version' );
+define( 'QEVM_OPTION_DB_VERSION', 'qevm_db_version' );
 
-require_once QEM_PATH . 'includes/Autoloader.php';
+require_once QEVM_PATH . 'includes/Autoloader.php';
 
-QEM\Autoloader::register();
+QuickEventsManager\Autoloader::register();
 
-register_activation_hook( __FILE__, array( 'QEM\Plugin', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'QEM\Plugin', 'deactivate' ) );
+register_activation_hook( __FILE__, array( 'QuickEventsManager\Plugin', 'activate' ) );
 
-QEM\Plugin::instance()->boot();
+/*
+ * A site added to a network while this is network-active needs the same setup
+ * every other site got when it was activated — its own tables, its own roles,
+ * its own rewrite rules. Nothing else runs for a new site, so without this it
+ * gets the code and none of the setup.
+ */
+add_action( 'wp_initialize_site', array( 'QuickEventsManager\Plugin', 'activate_new_site' ), 20, 1 );
+register_deactivation_hook( __FILE__, array( 'QuickEventsManager\Plugin', 'deactivate' ) );
+
+QuickEventsManager\Plugin::instance()->boot();

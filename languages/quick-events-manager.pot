@@ -1,0 +1,3164 @@
+# Copyright (C) 2026 Pankaj Anupam
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Quick Events Manager 26.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/quick-events-manager\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-08-25T09:01:29+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: quick-events-manager\n"
+
+#. Plugin Name of the plugin
+#: quick-events-manager.php
+#: includes/Privacy/Privacy.php:344
+msgid "Quick Events Manager"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: quick-events-manager.php
+msgid "https://www.pankajanupam.com/wordpress-plugins/quick-events-manager/"
+msgstr ""
+
+#. Description of the plugin
+#: quick-events-manager.php
+msgid "Create events, publish them, and take free registrations. Start simple and switch on more features only when you need them."
+msgstr ""
+
+#. Author of the plugin
+#: quick-events-manager.php
+msgid "Pankaj Anupam"
+msgstr ""
+
+#. Author URI of the plugin
+#: quick-events-manager.php
+msgid "https://www.pankajanupam.com"
+msgstr ""
+
+#: includes/Admin/FeaturesScreen.php:79
+#: includes/Admin/FeaturesScreen.php:80
+#: includes/Admin/FeaturesScreen.php:100
+#: includes/Admin/FeaturesScreen.php:122
+msgid "Features"
+msgstr ""
+
+#: includes/Admin/FeaturesScreen.php:115
+#: includes/Admin/FeaturesScreen.php:224
+msgid "You do not have permission to manage features."
+msgstr ""
+
+#: includes/Admin/FeaturesScreen.php:125
+msgid "Quick Events Manager starts simple. Switch on only what you need — anything you leave off adds nothing to your site, loads no code and creates no database tables."
+msgstr ""
+
+#: includes/Admin/FeaturesScreen.php:130
+msgid "Features updated."
+msgstr ""
+
+#: includes/Admin/FeaturesScreen.php:173
+msgid "Always on — this is what the plugin does."
+msgstr ""
+
+#. translators: %s: The name of the module that would be switched off.
+#: includes/Admin/FeaturesScreen.php:197
+#, php-format
+msgid "Cannot be used with %s. Switching this on switches that off."
+msgstr ""
+
+#: includes/Admin/FeaturesScreen.php:209
+msgid "Save features"
+msgstr ""
+
+#: includes/Admin/Settings.php:59
+#: includes/Admin/Settings.php:609
+msgid "Event Settings"
+msgstr ""
+
+#: includes/Admin/Settings.php:60
+msgid "Settings"
+msgstr ""
+
+#: includes/Admin/Settings.php:87
+msgid "Display"
+msgstr ""
+
+#: includes/Admin/Settings.php:89
+msgid "How events appear on the front end of your site."
+msgstr ""
+
+#: includes/Admin/Settings.php:96
+msgid "Event details"
+msgstr ""
+
+#: includes/Admin/Settings.php:104
+msgid "Events per page"
+msgstr ""
+
+#: includes/Admin/Settings.php:113
+msgid "Notifications"
+msgstr ""
+
+#: includes/Admin/Settings.php:115
+msgid "Where messages about your events are sent."
+msgstr ""
+
+#: includes/Admin/Settings.php:122
+msgid "Send notifications to"
+msgstr ""
+
+#: includes/Admin/Settings.php:138
+msgid "Money"
+msgstr ""
+
+#: includes/Admin/Settings.php:140
+msgid "What prices on this site are in."
+msgstr ""
+
+#: includes/Admin/Settings.php:147
+msgid "Currency"
+msgstr ""
+
+#: includes/Admin/Settings.php:156
+msgid "Stripe keys"
+msgstr ""
+
+#: includes/Admin/Settings.php:175
+msgid "Privacy"
+msgstr ""
+
+#: includes/Admin/Settings.php:177
+msgid "What people agree to when they register, and what is recorded about it."
+msgstr ""
+
+#: includes/Admin/Settings.php:184
+msgid "Consent wording"
+msgstr ""
+
+#: includes/Admin/Settings.php:193
+msgid "Delete registrations after"
+msgstr ""
+
+#: includes/Admin/Settings.php:214
+msgid "I agree to my details being stored so the organiser can contact me about this event."
+msgstr ""
+
+#: includes/Admin/Settings.php:388
+msgid "Show the date, time and location above the description on a single event page"
+msgstr ""
+
+#: includes/Admin/Settings.php:391
+msgid "Turn this off if you would rather place the details yourself with the Event Details block."
+msgstr ""
+
+#: includes/Admin/Settings.php:432
+msgid "Prices already recorded keep the currency they were taken in."
+msgstr ""
+
+#: includes/Admin/Settings.php:453
+msgid "Publishable key"
+msgstr ""
+
+#: includes/Admin/Settings.php:455
+msgid "Starts pk_test_ or pk_live_. Safe to appear in a page."
+msgstr ""
+
+#: includes/Admin/Settings.php:458
+msgid "Secret key"
+msgstr ""
+
+#: includes/Admin/Settings.php:460
+msgid "Starts sk_test_ or sk_live_. Never share it."
+msgstr ""
+
+#: includes/Admin/Settings.php:463
+msgid "Webhook signing secret"
+msgstr ""
+
+#: includes/Admin/Settings.php:465
+msgid "Starts whsec_. Stripe shows it when you add the endpoint."
+msgstr ""
+
+#: includes/Admin/Settings.php:484
+msgid "Saved. Leave empty to keep it."
+msgstr ""
+
+#: includes/Admin/Settings.php:493
+msgid "Add this address as a webhook endpoint in your Stripe dashboard, for the payment_intent events:"
+msgstr ""
+
+#: includes/Admin/Settings.php:501
+msgid "One of these keys is a test key and the other is a live one. Card payments are switched off until they match."
+msgstr ""
+
+#: includes/Admin/Settings.php:507
+msgid "Test mode."
+msgstr ""
+
+#: includes/Admin/Settings.php:508
+msgid "No real money will move while these are test keys."
+msgstr ""
+
+#: includes/Admin/Settings.php:528
+msgid "Leave empty to use the site administration email."
+msgstr ""
+
+#: includes/Admin/Settings.php:546
+msgid "days"
+msgstr ""
+
+#: includes/Admin/Settings.php:549
+msgid "0 keeps registrations for ever, which is the default."
+msgstr ""
+
+#. translators: %d: Smallest retention period that can be set, in days.
+#: includes/Admin/Settings.php:555
+#, php-format
+msgid "Set a number and every registration for an event that finished that long ago is deleted, along with its attendees and their answers. This cannot be undone and there is no copy kept. Counted from when the event ended, not from when somebody registered. The smallest period is %d days."
+msgstr ""
+
+#: includes/Admin/Settings.php:577
+msgid "Shown beside a checkbox people have to tick before they can register. Links and simple emphasis are allowed — link your privacy policy here."
+msgstr ""
+
+#: includes/Admin/Settings.php:580
+msgid "Leave this empty to stop asking for consent at all."
+msgstr ""
+
+#. translators: %s: Short fingerprint identifying the current consent wording.
+#: includes/Admin/Settings.php:587
+#, php-format
+msgid "Current version: %s. Registrations record this alongside the time consent was given, so you can tell which wording somebody agreed to. Editing the wording gives it a new version; earlier wordings are not kept."
+msgstr ""
+
+#: includes/Admin/Settings.php:605
+msgid "You do not have permission to change these settings."
+msgstr ""
+
+#: includes/Calendar/CalendarModule.php:51
+msgid "Calendar view"
+msgstr ""
+
+#: includes/Calendar/CalendarModule.php:62
+msgid "Show your events as a month grid, with a list view alongside it."
+msgstr ""
+
+#: includes/CheckIn/CheckInModule.php:56
+msgid "Check-in"
+msgstr ""
+
+#: includes/CheckIn/CheckInModule.php:67
+msgid "Mark people off as they arrive, from a phone at the door. Two people can work the same door without checking anybody in twice."
+msgstr ""
+
+#. translators: 1: Attendee name. 2: Their ticket code.
+#. translators: 1: Attendee name. 2: What happened, e.g. "Checked in."
+#. translators: 1: Audience name, 2: Number of people in it.
+#. translators: 1: Event title. 2: Ticket type name.
+#: includes/CheckIn/CheckInModule.php:173
+#: includes/CheckIn/DoorScreen.php:378
+#: includes/Email/BroadcastForm.php:102
+#: includes/Woo/Products.php:105
+#, php-format
+msgid "%1$s — %2$s"
+msgstr ""
+
+#: includes/CheckIn/CheckInModule.php:190
+msgid "Your ticket is attached. If the code will not scan, this is the code on it:"
+msgid_plural "A ticket for each person is attached. If a code will not scan, these are the codes on them:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/CheckIn/CheckInModule.php:216
+msgid "The ticket code for each person on the booking"
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:76
+msgid "That ticket is not one of this event's."
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:98
+#: includes/CheckIn/CheckInService.php:249
+msgid "That ticket could not be found."
+msgstr ""
+
+#. translators: %s: The time they were checked in, e.g. "18:42".
+#: includes/CheckIn/CheckInService.php:123
+#, php-format
+msgid "Already checked in at %s."
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:141
+#: includes/CheckIn/CheckInService.php:152
+msgid "Checked in."
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:147
+msgid "That check-in could not be recorded."
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:243
+msgid "This ticket was cancelled."
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:253
+msgid "This booking was cancelled."
+msgstr ""
+
+#: includes/CheckIn/CheckInService.php:257
+msgid "This booking is on the waiting list, so it has no place yet."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:91
+msgid "Scan a ticket"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:92
+msgid "Stop scanning"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:93
+msgid "This browser cannot use the camera. Type the code instead."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:94
+msgid "Point the camera at the ticket."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:109
+#: includes/CheckIn/DoorScreen.php:110
+#: includes/CheckIn/DoorScreen.php:164
+#: includes/CheckIn/DoorScreen.php:315
+#: includes/CheckIn/DoorScreen.php:472
+msgid "Check in"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:154
+#: includes/CheckIn/DoorScreen.php:341
+#: includes/CheckIn/DoorScreen.php:524
+#: includes/CheckIn/RestController.php:123
+msgid "You do not have permission to check people in."
+msgstr ""
+
+#. translators: 1: How many people are in. 2: How many are expected.
+#: includes/CheckIn/DoorScreen.php:236
+#, php-format
+msgid "%1$s of %2$s in"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:249
+msgid "Find somebody"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:251
+msgid "Name, email or ticket code"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:253
+msgid "Search"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:257
+msgid "Show everybody"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:268
+#: templates/registration-form.php:139
+msgid "Which date"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:276
+msgid "Go"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:310
+msgid "Ticket code"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:313
+msgid "QEVT-…"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:348
+msgid "No ticket code was given."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:400
+msgid "Nobody matches that."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:401
+msgid "Nobody is expected at this date yet."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:420
+msgid "Guest"
+msgstr ""
+
+#. translators: %s: The time they arrived, e.g. "18:42".
+#: includes/CheckIn/DoorScreen.php:434
+#, php-format
+msgid "In at %s"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:472
+msgid "Undo"
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:506
+msgid "Taken back out."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:506
+msgid "That was not undone."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:596
+msgid "Done."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:619
+msgid "There are no events to check anybody in to."
+msgstr ""
+
+#: includes/CheckIn/DoorScreen.php:624
+msgid "Which door are you on?"
+msgstr ""
+
+#. translators: %s: The ticket code the QR encodes.
+#: includes/CheckIn/Qr.php:166
+#, php-format
+msgid "QR code for ticket %s"
+msgstr ""
+
+#: includes/Commerce/Assets.php:62
+msgid "Paying…"
+msgstr ""
+
+#: includes/Commerce/Assets.php:63
+msgid "The payment could not be completed. Your card has not been charged."
+msgstr ""
+
+#: includes/Commerce/Assets.php:64
+msgid "Your browser blocked the payment form. Check for a script blocker and reload the page."
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:70
+#: includes/Domain/TransactionKind.php:55
+msgid "Payment"
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:93
+#: includes/Frontend/Renderer.php:343
+msgid "Free"
+msgstr ""
+
+#. translators: %s: Amount refunded.
+#: includes/Commerce/AttendeePayments.php:106
+#, php-format
+msgid "%s refunded"
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:145
+msgid "Amount to refund"
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:152
+#: includes/Domain/TransactionKind.php:54
+msgid "Refund"
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:167
+msgid "You do not have permission to refund a booking."
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:180
+#: includes/Commerce/Refunds.php:46
+msgid "That order could not be found."
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:192
+msgid "Refunded by the organiser"
+msgstr ""
+
+#: includes/Commerce/AttendeePayments.php:200
+msgid "Refunded."
+msgstr ""
+
+#: includes/Commerce/Checkout.php:352
+#: includes/Registration/AttendeesScreen.php:689
+#: includes/Registration/Exporter.php:220
+msgid "Standard"
+msgstr ""
+
+#: includes/Commerce/CommerceModule.php:60
+msgid "Paid tickets"
+msgstr ""
+
+#: includes/Commerce/CommerceModule.php:71
+msgid "Charge for a place. Orders, payments and refunds are kept as a ledger, so what an event earned last year still adds up next year."
+msgstr ""
+
+#. translators: 1: First currency code. 2: Second currency code.
+#: includes/Commerce/Money.php:304
+#, php-format
+msgid "Cannot combine %1$s with %2$s."
+msgstr ""
+
+#: includes/Commerce/Refunds.php:50
+msgid "There is nothing to refund on an order that was never paid."
+msgstr ""
+
+#: includes/Commerce/Refunds.php:56
+msgid "This order has already been refunded in full."
+msgstr ""
+
+#. translators: %s: Amount still refundable.
+#: includes/Commerce/Refunds.php:72
+#, php-format
+msgid "Only %s is left to refund on this order."
+msgstr ""
+
+#: includes/Commerce/Refunds.php:81
+msgid "The gateway this order was paid through is not available."
+msgstr ""
+
+#: includes/Commerce/Stripe/Client.php:113
+#: includes/Commerce/Stripe/Client.php:146
+#: includes/Commerce/Stripe/Gateway.php:87
+#: includes/Commerce/Stripe/Gateway.php:161
+msgid "This site is not set up to take card payments yet."
+msgstr ""
+
+#: includes/Commerce/Stripe/Client.php:193
+msgid "We could not reach the payment provider. Please try again in a moment."
+msgstr ""
+
+#: includes/Commerce/Stripe/Client.php:204
+#: includes/Commerce/Stripe/Gateway.php:126
+#: includes/Commerce/Stripe/Gateway.php:192
+msgid "The payment provider sent back something we could not read."
+msgstr ""
+
+#: includes/Commerce/Stripe/Client.php:214
+msgid "The payment could not be started."
+msgstr ""
+
+#: includes/Commerce/Stripe/Gateway.php:61
+msgid "Card"
+msgstr ""
+
+#: includes/Commerce/Stripe/Gateway.php:91
+msgid "There is nothing to pay for this booking."
+msgstr ""
+
+#: includes/Commerce/Stripe/Gateway.php:167
+msgid "There is no payment on this order to refund."
+msgstr ""
+
+#. translators: %s: the question that was not answered.
+#: includes/CustomFields/Answers.php:226
+#, php-format
+msgid "Please answer \"%s\"."
+msgstr ""
+
+#. translators: 1: the question that was not answered, 2: which guest it belongs to.
+#: includes/CustomFields/Answers.php:233
+#, php-format
+msgid "Please answer \"%1$s\" for guest %2$d."
+msgstr ""
+
+#: includes/CustomFields/CustomFieldsModule.php:60
+msgid "Custom registration questions"
+msgstr ""
+
+#: includes/CustomFields/CustomFieldsModule.php:71
+msgid "Ask your own questions when somebody registers — dietary needs, a session choice, anything you need to know."
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:69
+msgid "Registration questions"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:93
+msgid "Extra questions asked when somebody registers. Leave the question blank to remove it."
+msgstr ""
+
+#. translators: %d: question number.
+#: includes/CustomFields/FieldsMetaBox.php:124
+#, php-format
+msgid "Question %d"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:125
+msgid "New question"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:133
+msgid "Question"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:139
+msgid "Answer"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:161
+msgid "Choices, one per line"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:164
+msgid "Only used by the three \"choose\" answers."
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:168
+msgid "Help text"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:174
+msgid "Position"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:183
+msgid "An answer is required"
+msgstr ""
+
+#: includes/CustomFields/FieldsMetaBox.php:191
+msgid "The answer is sensitive — dietary needs, access requirements, health"
+msgstr ""
+
+#: includes/Domain/AttendeeStatus.php:70
+msgid "Active"
+msgstr ""
+
+#: includes/Domain/AttendeeStatus.php:71
+#: includes/Domain/EmailStatus.php:88
+#: includes/Domain/OccurrenceStatus.php:64
+#: includes/Domain/RegistrationStatus.php:78
+msgid "Cancelled"
+msgstr ""
+
+#: includes/Domain/EmailStatus.php:84
+msgid "Queued"
+msgstr ""
+
+#: includes/Domain/EmailStatus.php:85
+msgid "Sending"
+msgstr ""
+
+#: includes/Domain/EmailStatus.php:86
+msgid "Sent"
+msgstr ""
+
+#: includes/Domain/EmailStatus.php:87
+#: includes/Domain/TransactionStatus.php:59
+msgid "Failed"
+msgstr ""
+
+#: includes/Domain/FieldType.php:126
+msgid "Short answer"
+msgstr ""
+
+#: includes/Domain/FieldType.php:127
+msgid "Long answer"
+msgstr ""
+
+#: includes/Domain/FieldType.php:128
+msgid "Email address"
+msgstr ""
+
+#: includes/Domain/FieldType.php:129
+msgid "Phone number"
+msgstr ""
+
+#: includes/Domain/FieldType.php:130
+msgid "Number"
+msgstr ""
+
+#: includes/Domain/FieldType.php:131
+#: includes/Recurrence/DatesScreen.php:242
+#: includes/Registration/AttendeesScreen.php:458
+#: includes/Registration/AttendeesScreen.php:843
+#: includes/Registration/Exporter.php:162
+msgid "Date"
+msgstr ""
+
+#: includes/Domain/FieldType.php:132
+msgid "Choose one (dropdown)"
+msgstr ""
+
+#: includes/Domain/FieldType.php:133
+msgid "Choose one (list)"
+msgstr ""
+
+#: includes/Domain/FieldType.php:134
+msgid "Yes or no"
+msgstr ""
+
+#: includes/Domain/FieldType.php:135
+msgid "Choose any"
+msgstr ""
+
+#: includes/Domain/Frequency.php:93
+msgid "Daily"
+msgstr ""
+
+#: includes/Domain/Frequency.php:94
+msgid "Weekly"
+msgstr ""
+
+#: includes/Domain/Frequency.php:95
+msgid "Monthly"
+msgstr ""
+
+#: includes/Domain/Frequency.php:96
+msgid "Yearly"
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:53
+msgid "The basics"
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:54
+msgid "Taking registrations"
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:55
+msgid "Going further"
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:56
+msgid "Advanced"
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:67
+msgid "Everything you need to publish events. This is always on."
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:68
+msgid "Let people sign up, and keep track of who is coming."
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:69
+msgid "More control over how registration works and how your events look."
+msgstr ""
+
+#: includes/Domain/ModuleLevel.php:70
+msgid "For larger or more complex events."
+msgstr ""
+
+#: includes/Domain/OccurrenceStatus.php:63
+msgid "Scheduled"
+msgstr ""
+
+#: includes/Domain/OccurrenceStatus.php:65
+msgid "Rescheduled"
+msgstr ""
+
+#: includes/Domain/OrderStatus.php:92
+msgid "Paid"
+msgstr ""
+
+#: includes/Domain/OrderStatus.php:95
+msgid "Partly refunded"
+msgstr ""
+
+#: includes/Domain/OrderStatus.php:98
+msgid "Refunded"
+msgstr ""
+
+#: includes/Domain/OrderStatus.php:101
+msgid "Payment failed"
+msgstr ""
+
+#: includes/Domain/OrderStatus.php:104
+msgid "Abandoned"
+msgstr ""
+
+#: includes/Domain/OrderStatus.php:108
+msgid "Awaiting payment"
+msgstr ""
+
+#: includes/Domain/RegistrationStatus.php:75
+msgid "Pending"
+msgstr ""
+
+#: includes/Domain/RegistrationStatus.php:76
+msgid "Confirmed"
+msgstr ""
+
+#: includes/Domain/RegistrationStatus.php:77
+msgid "Waitlisted"
+msgstr ""
+
+#: includes/Domain/TicketTypeStatus.php:58
+msgid "Archived"
+msgstr ""
+
+#: includes/Domain/TicketTypeStatus.php:62
+#: includes/Tickets/TicketTypesBox.php:103
+#: includes/Tickets/TicketTypesBox.php:287
+msgid "On sale"
+msgstr ""
+
+#: includes/Domain/TransactionStatus.php:56
+msgid "Succeeded"
+msgstr ""
+
+#: includes/Domain/TransactionStatus.php:63
+msgid "In progress"
+msgstr ""
+
+#: includes/Domain/Weekday.php:204
+msgid "Monday"
+msgstr ""
+
+#: includes/Domain/Weekday.php:205
+msgid "Tuesday"
+msgstr ""
+
+#: includes/Domain/Weekday.php:206
+msgid "Wednesday"
+msgstr ""
+
+#: includes/Domain/Weekday.php:207
+msgid "Thursday"
+msgstr ""
+
+#: includes/Domain/Weekday.php:208
+msgid "Friday"
+msgstr ""
+
+#: includes/Domain/Weekday.php:209
+msgid "Saturday"
+msgstr ""
+
+#: includes/Domain/Weekday.php:210
+msgid "Sunday"
+msgstr ""
+
+#: includes/Email/Broadcast.php:100
+msgid "Confirmed places only"
+msgstr ""
+
+#: includes/Email/Broadcast.php:104
+msgid "Confirmed places and the waiting list"
+msgstr ""
+
+#: includes/Email/Broadcast.php:108
+msgid "Everybody still registered, including unconfirmed bookings"
+msgstr ""
+
+#: includes/Email/Broadcast.php:169
+#: includes/Email/Broadcast.php:276
+#: includes/Events/Duplicator.php:162
+#: includes/Registration/AttendeesScreen.php:130
+#: includes/Registration/AttendeesScreen.php:1012
+#: includes/Registration/Exporter.php:81
+#: includes/Registration/RegistrationService.php:110
+#: includes/Registration/RegistrationService.php:123
+#: includes/Rest/EventsController.php:213
+msgid "That event could not be found."
+msgstr ""
+
+#: includes/Email/Broadcast.php:181
+msgid "Choose who the message is for."
+msgstr ""
+
+#: includes/Email/Broadcast.php:233
+msgid "The message could not be queued, so nothing was sent. Check that Quick Events Manager has finished upgrading — its email queue table is missing."
+msgstr ""
+
+#: includes/Email/Broadcast.php:282
+msgid "Your account has no email address to send a test to."
+msgstr ""
+
+#. translators: %s: Subject line of the message being tested.
+#: includes/Email/Broadcast.php:304
+#, php-format
+msgid "[Test] %s"
+msgstr ""
+
+#: includes/Email/Broadcast.php:313
+msgid "The test could not be queued."
+msgstr ""
+
+#: includes/Email/Broadcast.php:378
+msgid "A message needs both a subject and something to say."
+msgstr ""
+
+#: includes/Email/Broadcast.php:420
+msgid "Sample Attendee"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:75
+msgid "Email everybody"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:78
+msgid "One message to everyone in the audience you choose below. The search and status filters further up this page do not affect who it goes to."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:82
+msgid "Each person is emailed once, however many bookings they made. Guests booked by somebody else are reached through whoever booked, because that is the only address on the booking."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:93
+msgid "Who it goes to"
+msgstr ""
+
+#. translators: %s: Number of people.
+#: includes/Email/BroadcastForm.php:107
+#, php-format
+msgid "%s person"
+msgid_plural "%s people"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Email/BroadcastForm.php:118
+msgid "People who cancelled their booking are never included."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:124
+#: includes/Email/TemplatesScreen.php:118
+msgid "Subject"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:130
+#: includes/Email/BroadcastForm.php:254
+#: includes/Email/TemplatesScreen.php:128
+msgid "Message"
+msgstr ""
+
+#. translators: %s: Comma-separated list of placeholder names.
+#: includes/Email/BroadcastForm.php:139
+#, php-format
+msgid "Placeholders you can use: %s"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:148
+#: includes/Email/TemplatesScreen.php:137
+msgid "Format"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:152
+#: includes/Email/TemplatesScreen.php:142
+msgid "Plain text"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:153
+#: includes/Email/TemplatesScreen.php:145
+msgid "HTML"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:161
+msgid "Send me a test first"
+msgstr ""
+
+#. translators: %s: Number of people the message goes to.
+#: includes/Email/BroadcastForm.php:169
+#, php-format
+msgid "Email %s person"
+msgid_plural "Email %s people"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Email/BroadcastForm.php:178
+msgid "The button counts the default audience. Whichever audience you choose, the notice afterwards says how many were actually queued. Sending cannot be undone once a message has left, though anything still waiting can be withdrawn below."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:206
+msgid "Delivery"
+msgstr ""
+
+#. translators: 1: Number sent, 2: Number waiting, 3: Number failed.
+#: includes/Email/BroadcastForm.php:212
+#, php-format
+msgid "%1$s sent, %2$s waiting to go, %3$s failed."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:221
+msgid "This covers every email about this event — confirmations as well as anything you sent from here. Mail leaves in the background, so a number waiting is normal for a few minutes after sending."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:231
+msgid "Withdraw anything I sent from here that has not gone yet"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:235
+msgid "Confirmations are left alone."
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:250
+msgid "Emails that could not be delivered"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:253
+#: includes/Events/MetaBox.php:182
+#: includes/Venues/VenueMetaBox.php:69
+#: includes/Venues/VenueMetaBox.php:155
+msgid "Address"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:255
+msgid "Tried"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:256
+msgid "What went wrong"
+msgstr ""
+
+#: includes/Email/BroadcastForm.php:282
+#: includes/Email/BroadcastForm.php:335
+msgid "You do not have permission to email attendees."
+msgstr ""
+
+#: includes/Email/Templates.php:41
+msgid "Registration confirmation"
+msgstr ""
+
+#: includes/Email/Templates.php:42
+msgid "Waiting list confirmation"
+msgstr ""
+
+#: includes/Email/Templates.php:43
+msgid "Off the waiting list"
+msgstr ""
+
+#: includes/Email/Templates.php:44
+msgid "New registration, to you"
+msgstr ""
+
+#: includes/Email/Templates.php:70
+msgid "The name on the booking"
+msgstr ""
+
+#: includes/Email/Templates.php:71
+msgid "The email address on the booking"
+msgstr ""
+
+#: includes/Email/Templates.php:72
+msgid "The event"
+msgstr ""
+
+#: includes/Email/Templates.php:73
+msgid "A link to the event"
+msgstr ""
+
+#: includes/Email/Templates.php:74
+msgid "When it starts, in the event timezone"
+msgstr ""
+
+#: includes/Email/Templates.php:75
+msgid "The venue, or the joining link for an online event"
+msgstr ""
+
+#: includes/Email/Templates.php:76
+msgid "How many places were booked"
+msgstr ""
+
+#: includes/Email/Templates.php:77
+msgid "The booking reference"
+msgstr ""
+
+#: includes/Email/Templates.php:78
+msgid "A link the attendee can cancel with"
+msgstr ""
+
+#: includes/Email/Templates.php:79
+msgid "The name of this site"
+msgstr ""
+
+#: includes/Email/TemplatesModule.php:52
+#: includes/Email/TemplatesScreen.php:56
+#: includes/Email/TemplatesScreen.php:57
+#: includes/Email/TemplatesScreen.php:79
+msgid "Email templates"
+msgstr ""
+
+#: includes/Email/TemplatesModule.php:63
+msgid "Write your own wording for the emails this plugin sends, with an HTML option."
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:82
+msgid "Leave a template empty to use the wording this plugin ships with, which is what happens until you change it. Clearing a template you have written puts the built-in wording back."
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:85
+msgid "Placeholders"
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:90
+msgid "Placeholder"
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:91
+msgid "Becomes"
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:150
+msgid "Plain text is delivered and read everywhere. Choose HTML only if you need it — some people read mail in clients that show the markup instead of rendering it."
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:157
+msgid "Save templates"
+msgstr ""
+
+#: includes/Email/TemplatesScreen.php:172
+msgid "You do not have permission to edit email templates."
+msgstr ""
+
+#: includes/Email/Worker.php:150
+msgid "Every five minutes"
+msgstr ""
+
+#: includes/Email/Worker.php:294
+msgid "wp_mail() returned false."
+msgstr ""
+
+#: includes/Events/AdminColumns.php:49
+#: includes/Events/MetaBox.php:135
+msgid "Starts"
+msgstr ""
+
+#: includes/Events/AdminColumns.php:50
+msgid "Location"
+msgstr ""
+
+#: includes/Events/AdminColumns.php:76
+msgid "No date set"
+msgstr ""
+
+#: includes/Events/AdminColumns.php:90
+#: templates/event-details.php:32
+msgid "Happening now"
+msgstr ""
+
+#: includes/Events/AdminColumns.php:92
+msgid "Finished"
+msgstr ""
+
+#: includes/Events/AdminColumns.php:100
+#: includes/Frontend/Ics.php:149
+#: templates/event-details.php:61
+#: templates/event-list.php:59
+msgid "Online"
+msgstr ""
+
+#: includes/Events/Duplicator.php:92
+msgid "Duplicate"
+msgstr ""
+
+#: includes/Events/Duplicator.php:134
+msgid "You do not have permission to duplicate events."
+msgstr ""
+
+#. translators: %s: Title of the event being copied.
+#: includes/Events/Duplicator.php:185
+#, php-format
+msgid "%s (copy)"
+msgstr ""
+
+#: includes/Events/EventsModule.php:44
+#: src/event-list/index.js:25
+msgid "Events"
+msgstr ""
+
+#: includes/Events/EventsModule.php:55
+msgid "Create events with dates, times, locations and categories, and list them on your site."
+msgstr ""
+
+#: includes/Events/MetaBox.php:80
+#: src/event-details/index.js:41
+msgid "Event Details"
+msgstr ""
+
+#: includes/Events/MetaBox.php:140
+msgid "Ends"
+msgstr ""
+
+#: includes/Events/MetaBox.php:149
+msgid "All-day event"
+msgstr ""
+
+#: includes/Events/MetaBox.php:154
+msgid "Timezone"
+msgstr ""
+
+#: includes/Events/MetaBox.php:159
+msgid "Times are shown to visitors in this timezone, whatever your site timezone is."
+msgstr ""
+
+#: includes/Events/MetaBox.php:166
+msgid "This is an online event"
+msgstr ""
+
+#: includes/Events/MetaBox.php:171
+#: templates/event-details.php:65
+msgid "Joining link"
+msgstr ""
+
+#: includes/Events/MetaBox.php:177
+msgid "Location and organiser"
+msgstr ""
+
+#: includes/Events/MetaBox.php:181
+msgid "Venue name"
+msgstr ""
+
+#: includes/Events/MetaBox.php:186
+#: includes/Venues/VenueMetaBox.php:156
+msgid "City"
+msgstr ""
+
+#: includes/Events/MetaBox.php:187
+#: includes/Venues/VenueMetaBox.php:157
+msgid "State / region"
+msgstr ""
+
+#: includes/Events/MetaBox.php:192
+#: includes/Venues/VenueMetaBox.php:158
+msgid "Postal code"
+msgstr ""
+
+#: includes/Events/MetaBox.php:193
+#: includes/Venues/VenueMetaBox.php:159
+msgid "Country"
+msgstr ""
+
+#: includes/Events/MetaBox.php:200
+#: includes/Organizers/EventOrganizerBox.php:79
+#: includes/Organizers/EventOrganizerBox.php:103
+#: templates/event-details.php:79
+msgid "Organiser"
+msgstr ""
+
+#: includes/Events/MetaBox.php:201
+msgid "Organiser email"
+msgstr ""
+
+#: includes/Events/MetaBox.php:207
+msgid "Organiser phone"
+msgstr ""
+
+#: includes/Events/PostType.php:36
+msgctxt "post type general name"
+msgid "Events"
+msgstr ""
+
+#: includes/Events/PostType.php:37
+msgctxt "post type singular name"
+msgid "Event"
+msgstr ""
+
+#: includes/Events/PostType.php:38
+msgctxt "admin menu"
+msgid "Events"
+msgstr ""
+
+#: includes/Events/PostType.php:39
+msgctxt "add new on admin bar"
+msgid "Event"
+msgstr ""
+
+#: includes/Events/PostType.php:40
+#: includes/Organizers/PostType.php:38
+#: includes/Venues/PostType.php:50
+msgid "Add New"
+msgstr ""
+
+#: includes/Events/PostType.php:41
+msgid "Add New Event"
+msgstr ""
+
+#: includes/Events/PostType.php:42
+msgid "New Event"
+msgstr ""
+
+#: includes/Events/PostType.php:43
+msgid "Edit Event"
+msgstr ""
+
+#: includes/Events/PostType.php:44
+msgid "View Event"
+msgstr ""
+
+#: includes/Events/PostType.php:45
+msgid "View Events"
+msgstr ""
+
+#: includes/Events/PostType.php:46
+msgid "All Events"
+msgstr ""
+
+#: includes/Events/PostType.php:47
+msgid "Search Events"
+msgstr ""
+
+#: includes/Events/PostType.php:48
+msgid "No events found."
+msgstr ""
+
+#: includes/Events/PostType.php:49
+msgid "No events found in Trash."
+msgstr ""
+
+#: includes/Events/PostType.php:50
+msgid "Event Archives"
+msgstr ""
+
+#: includes/Events/PostType.php:51
+msgid "Event Image"
+msgstr ""
+
+#: includes/Events/PostType.php:52
+msgid "Set event image"
+msgstr ""
+
+#: includes/Events/PostType.php:53
+msgid "Remove event image"
+msgstr ""
+
+#: includes/Events/PostType.php:54
+msgid "Use as event image"
+msgstr ""
+
+#: includes/Events/PostType.php:55
+msgid "Event published."
+msgstr ""
+
+#: includes/Events/PostType.php:56
+msgid "Event updated."
+msgstr ""
+
+#: includes/Events/PostType.php:61
+msgid "Events with dates, locations and registration."
+msgstr ""
+
+#: includes/Events/PostType.php:112
+msgctxt "taxonomy general name"
+msgid "Event Categories"
+msgstr ""
+
+#: includes/Events/PostType.php:113
+msgctxt "taxonomy singular name"
+msgid "Event Category"
+msgstr ""
+
+#: includes/Events/PostType.php:114
+msgid "Search Event Categories"
+msgstr ""
+
+#: includes/Events/PostType.php:115
+msgid "All Event Categories"
+msgstr ""
+
+#: includes/Events/PostType.php:116
+msgid "Edit Event Category"
+msgstr ""
+
+#: includes/Events/PostType.php:117
+msgid "Update Event Category"
+msgstr ""
+
+#: includes/Events/PostType.php:118
+msgid "Add New Event Category"
+msgstr ""
+
+#: includes/Events/PostType.php:119
+msgid "New Event Category Name"
+msgstr ""
+
+#: includes/Events/PostType.php:120
+msgid "Categories"
+msgstr ""
+
+#: includes/Events/PostType.php:140
+msgctxt "taxonomy general name"
+msgid "Event Tags"
+msgstr ""
+
+#: includes/Events/PostType.php:141
+msgctxt "taxonomy singular name"
+msgid "Event Tag"
+msgstr ""
+
+#: includes/Events/PostType.php:142
+msgid "Search Event Tags"
+msgstr ""
+
+#: includes/Events/PostType.php:143
+msgid "All Event Tags"
+msgstr ""
+
+#: includes/Events/PostType.php:144
+msgid "Edit Event Tag"
+msgstr ""
+
+#: includes/Events/PostType.php:145
+msgid "Update Event Tag"
+msgstr ""
+
+#: includes/Events/PostType.php:146
+msgid "Add New Event Tag"
+msgstr ""
+
+#: includes/Events/PostType.php:147
+msgid "New Event Tag Name"
+msgstr ""
+
+#: includes/Events/PostType.php:148
+msgid "Tags"
+msgstr ""
+
+#: includes/Frontend/Renderer.php:592
+msgid "This event has already taken place, so registration is closed."
+msgstr ""
+
+#: includes/Frontend/Renderer.php:593
+msgid "Registration for this event has closed."
+msgstr ""
+
+#: includes/Organizers/EventOrganizerBox.php:106
+msgid "— Organiser on this event —"
+msgstr ""
+
+#: includes/Organizers/EventOrganizerBox.php:115
+msgid "Choosing an organiser fills in the contact details under Location and organiser, and keeps them in step with the record."
+msgstr ""
+
+#: includes/Organizers/EventOrganizerBox.php:119
+msgid "No organisers yet. Add one under Events → Organisers."
+msgstr ""
+
+#: includes/Organizers/OrganizerMetaBox.php:67
+msgid "Contact details"
+msgstr ""
+
+#: includes/Organizers/OrganizerMetaBox.php:180
+#: includes/Privacy/Privacy.php:166
+#: includes/Registration/AttendeesScreen.php:456
+#: includes/Registration/AttendeesScreen.php:819
+#: includes/Registration/Exporter.php:153
+#: templates/registration-form.php:116
+msgid "Email"
+msgstr ""
+
+#: includes/Organizers/OrganizerMetaBox.php:181
+#: includes/Privacy/Privacy.php:170
+#: includes/Registration/AttendeesScreen.php:463
+#: includes/Registration/AttendeesScreen.php:825
+#: includes/Registration/Exporter.php:154
+#: templates/registration-form.php:131
+msgid "Phone"
+msgstr ""
+
+#: includes/Organizers/OrganizerMetaBox.php:182
+msgid "Website"
+msgstr ""
+
+#: includes/Organizers/OrganizersModule.php:57
+msgid "Reusable organisers"
+msgstr ""
+
+#: includes/Organizers/OrganizersModule.php:68
+msgid "Keep the people or groups who run your events as records, and pick one instead of retyping their contact details."
+msgstr ""
+
+#: includes/Organizers/PostType.php:34
+msgctxt "post type general name"
+msgid "Organisers"
+msgstr ""
+
+#: includes/Organizers/PostType.php:35
+msgctxt "post type singular name"
+msgid "Organiser"
+msgstr ""
+
+#: includes/Organizers/PostType.php:36
+msgctxt "admin menu"
+msgid "Organisers"
+msgstr ""
+
+#: includes/Organizers/PostType.php:37
+msgctxt "add new on admin bar"
+msgid "Organiser"
+msgstr ""
+
+#: includes/Organizers/PostType.php:39
+msgid "Add New Organiser"
+msgstr ""
+
+#: includes/Organizers/PostType.php:40
+msgid "New Organiser"
+msgstr ""
+
+#: includes/Organizers/PostType.php:41
+msgid "Edit Organiser"
+msgstr ""
+
+#: includes/Organizers/PostType.php:42
+msgid "View Organiser"
+msgstr ""
+
+#: includes/Organizers/PostType.php:43
+msgid "View Organisers"
+msgstr ""
+
+#: includes/Organizers/PostType.php:44
+msgid "Organisers"
+msgstr ""
+
+#: includes/Organizers/PostType.php:45
+msgid "Search Organisers"
+msgstr ""
+
+#: includes/Organizers/PostType.php:46
+msgid "No organisers found."
+msgstr ""
+
+#: includes/Organizers/PostType.php:47
+msgid "No organisers found in Trash."
+msgstr ""
+
+#: includes/Organizers/PostType.php:48
+msgid "Organiser Archives"
+msgstr ""
+
+#: includes/Organizers/PostType.php:49
+msgid "Organiser Logo"
+msgstr ""
+
+#: includes/Organizers/PostType.php:50
+msgid "Set organiser logo"
+msgstr ""
+
+#: includes/Organizers/PostType.php:51
+msgid "Remove organiser logo"
+msgstr ""
+
+#: includes/Organizers/PostType.php:52
+msgid "Use as organiser logo"
+msgstr ""
+
+#: includes/Organizers/PostType.php:53
+msgid "Organiser published."
+msgstr ""
+
+#: includes/Organizers/PostType.php:54
+msgid "Organiser updated."
+msgstr ""
+
+#: includes/Organizers/PostType.php:59
+msgid "Reusable contacts, so a repeated organiser is typed once."
+msgstr ""
+
+#. translators: 1: number of organisers created, 2: number of events updated.
+#: includes/Organizers/Promoter.php:87
+#, php-format
+msgid "Quick Events Manager created %1$d organiser from the details already on your events, and linked %2$d event to it."
+msgid_plural "Quick Events Manager created %1$d organisers from the details already on your events, and linked %2$d events to them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Privacy/Privacy.php:58
+#: includes/Privacy/Privacy.php:75
+#: includes/Privacy/Privacy.php:130
+msgid "Event registrations"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:102
+msgid "Consent given"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:106
+msgid "Consent wording version"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:158
+#: src/event-details/index.js:25
+#: src/event-registration/index.js:25
+msgid "Event"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:162
+#: includes/Registration/AttendeesScreen.php:455
+#: includes/Registration/AttendeesScreen.php:813
+#: includes/Registration/Exporter.php:152
+#: includes/Tickets/TicketTypesBox.php:97
+#: templates/registration-form.php:100
+msgid "Name"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:176
+#: includes/Registration/AttendeesScreen.php:464
+#: includes/Registration/AttendeesScreen.php:884
+#: includes/Registration/Exporter.php:155
+#: includes/Tickets/TicketTypesBox.php:100
+#: templates/cancellation.php:49
+msgid "Places"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:180
+#: includes/Registration/AttendeesScreen.php:465
+#: includes/Registration/Exporter.php:156
+#: templates/cancellation.php:53
+msgid "Reference"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:184
+#: includes/Recurrence/DatesScreen.php:243
+#: includes/Registration/AttendeesScreen.php:467
+#: includes/Registration/Exporter.php:157
+msgid "Status"
+msgstr ""
+
+#: includes/Privacy/Privacy.php:188
+#: includes/Registration/AttendeesScreen.php:466
+msgid "Registered"
+msgstr ""
+
+#. translators: %s: Position of the place within the booking.
+#: includes/Privacy/Privacy.php:259
+#, php-format
+msgid "Guest %s"
+msgstr ""
+
+#. translators: %d: Number of registrations removed.
+#: includes/Privacy/Privacy.php:308
+#, php-format
+msgid "Removed %d event registration."
+msgid_plural "Removed %d event registrations."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Privacy/Privacy.php:338
+msgid "When you register for an event on this site, we store the name, email address, phone number and number of places you enter, so we know who is attending. If you book more than one place and give the names of the people taking them, we store those names too."
+msgstr ""
+
+#: includes/Privacy/Privacy.php:339
+msgid "We record that you agreed to this when you registered, and the time you did, so we can show what you were asked to agree to."
+msgstr ""
+
+#: includes/Privacy/Privacy.php:340
+msgid "We do not store your IP address, and we do not share this information with any external service."
+msgstr ""
+
+#: includes/Privacy/Privacy.php:341
+msgid "If the event asks questions of its own, we store your answers to them alongside your registration."
+msgstr ""
+
+#: includes/Privacy/Privacy.php:342
+msgid "Registrations are kept until the site owner deletes them."
+msgstr ""
+
+#: includes/Recurrence/Byday.php:171
+msgid "first"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:172
+msgid "second"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:173
+msgid "third"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:174
+msgid "fourth"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:175
+msgid "fifth"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:176
+msgid "last"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:177
+msgid "second-to-last"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:178
+msgid "third-to-last"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:179
+msgid "fourth-to-last"
+msgstr ""
+
+#: includes/Recurrence/Byday.php:180
+msgid "fifth-to-last"
+msgstr ""
+
+#. translators: 1: An ordinal such as "second" or "last", 2: A weekday name such as "Tuesday".
+#: includes/Recurrence/Byday.php:190
+#, php-format
+msgid "the %1$s %2$s"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:79
+#: includes/Recurrence/DatesScreen.php:80
+#: includes/Recurrence/DatesScreen.php:124
+msgid "Dates"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:115
+msgid "You do not have permission to manage event dates."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:139
+msgid "You do not have permission to manage this event."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:149
+msgid "This event has no dates yet."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:179
+msgid "Edit the event"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:184
+msgid "This series continues in:"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:244
+msgid "Move to"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:245
+msgid "Actions"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:254
+msgid "Booked"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:292
+msgid "New date and time"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:296
+msgid "Move"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:314
+msgid "Put back"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:316
+msgid "Call off"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:320
+msgid "Reset to the rule"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:330
+msgid "Split from here"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:457
+#: includes/Recurrence/OccurrenceEditor.php:324
+#: includes/Recurrence/Splitter.php:71
+msgid "That date could not be found."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:461
+msgid "You do not have permission to change this event."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:527
+msgid "That date has moved. Nobody has been emailed about it."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:528
+msgid "That date is called off. Any bookings on it are untouched, and nobody has been emailed."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:529
+msgid "That date is back on."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:530
+msgid "That date follows the repeat rule again."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:531
+msgid "The series was split. You are now looking at the second half, which is where changes from this date on belong."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:532
+#: includes/Registration/AttendeesScreen.php:213
+msgid "That did not work."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:566
+msgid "No event repeats yet. Open an event and tick \"This event repeats\"."
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:571
+msgid "Choose a repeating event:"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:606
+#: includes/Registration/AttendeesScreen.php:1076
+msgid "&laquo;"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:607
+#: includes/Registration/AttendeesScreen.php:1077
+msgid "&raquo;"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:643
+msgid "Called off"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:647
+msgid "Edited"
+msgstr ""
+
+#: includes/Recurrence/DatesScreen.php:650
+msgid "From the rule"
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:82
+msgid "That start time could not be read."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:93
+msgid "That end time could not be read."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:100
+msgid "An event cannot end before it starts."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:120
+msgid "That date could not be moved."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:179
+msgid "That date could not be called off."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:236
+msgid "That date could not be put back."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:289
+msgid "That date could not be reset."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:330
+msgid "This event does not repeat, so change its date on the event itself."
+msgstr ""
+
+#: includes/Recurrence/OccurrenceEditor.php:362
+msgid "This date is stored against a timezone that is no longer recognised."
+msgstr ""
+
+#: includes/Recurrence/RecurrenceModule.php:64
+msgid "Recurring events"
+msgstr ""
+
+#: includes/Recurrence/RecurrenceModule.php:75
+msgid "Repeat an event daily, weekly, monthly or yearly, with dates you can skip and individual dates you can move or call off."
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:75
+#: includes/Recurrence/RepeatBox.php:134
+msgid "Repeats"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:121
+msgid "This event repeats"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:128
+msgid "Every"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:146
+msgid "On these days"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:148
+msgid "Leave every day unticked to repeat on the same weekday the event starts on."
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:161
+msgid "Each month"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:173
+#: includes/Tickets/TicketTypesBox.php:102
+msgid "Until"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:176
+msgid "No end date"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:180
+msgid "On"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:186
+msgid "After"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:190
+msgid "times"
+msgstr ""
+
+#. translators: 1: maximum number of dates, 2: number of months generated ahead.
+#: includes/Recurrence/RepeatBox.php:196
+#, php-format
+msgid "A series without an end keeps going: dates are generated %2$d months ahead and topped up daily, up to %1$d in total."
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:205
+msgid "Skip these dates"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:209
+msgid "One date a line, as 2026-12-25. Holidays and the weeks you are away."
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:215
+msgid "Currently:"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:218
+msgid "Manage the dates in this series"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:304
+msgid "That repeat interval could not be read, so the event was saved without changing how it repeats."
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:360
+msgid "That end date could not be read, so the event was saved without changing how it repeats."
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:428
+msgid "On the same date each month"
+msgstr ""
+
+#. translators: %s: day of the month, e.g. 17.
+#: includes/Recurrence/RepeatBox.php:433
+#, php-format
+msgid "On day %s of the month"
+msgstr ""
+
+#: includes/Recurrence/RepeatBox.php:451
+msgid "On the same weekday each month"
+msgstr ""
+
+#. translators: %s: The largest allowed interval.
+#: includes/Recurrence/Rule.php:265
+#, php-format
+msgid "Repeating every %s is the most this supports."
+msgstr ""
+
+#: includes/Recurrence/Rule.php:280
+msgid "A repeat can end on a date or after a number of times, not both."
+msgstr ""
+
+#. translators: %s: The largest allowed number of dates.
+#: includes/Recurrence/Rule.php:289
+#, php-format
+msgid "A series can hold at most %s dates."
+msgstr ""
+
+#: includes/Recurrence/Rule.php:298
+msgid "That end date could not be read."
+msgstr ""
+
+#. translators: 1: Description such as "the second Tuesday", 2: Frequency label such as "Weekly".
+#: includes/Recurrence/Rule.php:308
+#, php-format
+msgid "\"%1$s\" cannot be used with a %2$s repeat."
+msgstr ""
+
+#: includes/Recurrence/Rule.php:320
+msgid "A day of the month must be between 1 and 31, or counted back from the end as -1 to -31."
+msgstr ""
+
+#: includes/Recurrence/Rule.php:329
+msgid "A month must be between 1 and 12."
+msgstr ""
+
+#: includes/Recurrence/Rule.php:358
+msgid "Choose either a day of the month or a weekday, not both — combining them only keeps the dates that satisfy each other."
+msgstr ""
+
+#: includes/Recurrence/Rule.php:530
+msgid "Every day"
+msgstr ""
+
+#: includes/Recurrence/Rule.php:531
+msgid "Every week"
+msgstr ""
+
+#: includes/Recurrence/Rule.php:532
+msgid "Every month"
+msgstr ""
+
+#: includes/Recurrence/Rule.php:533
+msgid "Every year"
+msgstr ""
+
+#. translators: %s: Number of days.
+#: includes/Recurrence/Rule.php:541
+#, php-format
+msgid "Every %s day"
+msgid_plural "Every %s days"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: Number of weeks.
+#: includes/Recurrence/Rule.php:543
+#, php-format
+msgid "Every %s week"
+msgid_plural "Every %s weeks"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: Number of months.
+#: includes/Recurrence/Rule.php:545
+#, php-format
+msgid "Every %s month"
+msgid_plural "Every %s months"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: Number of years.
+#: includes/Recurrence/Rule.php:547
+#, php-format
+msgid "Every %s year"
+msgid_plural "Every %s years"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: List of weekdays.
+#: includes/Recurrence/Rule.php:561
+#, php-format
+msgid "on %s"
+msgstr ""
+
+#. translators: %s: A number of days counted back from the end of the month.
+#: includes/Recurrence/Rule.php:569
+#, php-format
+msgid "%s from the end"
+msgstr ""
+
+#. translators: %s: List of days of the month.
+#: includes/Recurrence/Rule.php:576
+#, php-format
+msgid "on day %s"
+msgstr ""
+
+#. translators: %s: Number of occurrences.
+#: includes/Recurrence/Rule.php:590
+#, php-format
+msgid "%s time"
+msgid_plural "%s times"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: A date.
+#: includes/Recurrence/Rule.php:598
+#, php-format
+msgid "until %s"
+msgstr ""
+
+#. translators: 1: A comma-separated list, 2: The final item.
+#: includes/Recurrence/Rule.php:627
+#, php-format
+msgid "%1$s and %2$s"
+msgstr ""
+
+#: includes/Recurrence/Rule.php:628
+msgid ", "
+msgstr ""
+
+#: includes/Recurrence/Splitter.php:64
+msgid "Recurring events are switched off, so there is no series to split."
+msgstr ""
+
+#: includes/Recurrence/Splitter.php:77
+msgid "This event does not repeat, so there is nothing to split."
+msgstr ""
+
+#: includes/Recurrence/Splitter.php:88
+msgid "That date belongs to an event with no repeat rule."
+msgstr ""
+
+#: includes/Recurrence/Splitter.php:117
+msgid "This is the first date of the series, so change the series itself rather than splitting it."
+msgstr ""
+
+#: includes/Recurrence/Splitter.php:164
+msgid "Some dates could not be moved to the new event, so the split is incomplete."
+msgstr ""
+
+#: includes/Recurrence/Splitter.php:349
+msgid "This series is stored against a timezone that is no longer recognised."
+msgstr ""
+
+#: includes/Registration/Access.php:82
+msgid "You do not have permission to manage attendees for this event."
+msgstr ""
+
+#. translators: %d: Position of the guest within a booking.
+#: includes/Registration/Attendee.php:171
+#, php-format
+msgid "Guest %d"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:82
+#: includes/Registration/AttendeesScreen.php:83
+#: includes/Registration/AttendeesScreen.php:116
+msgid "Attendees"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:99
+msgid "You do not have permission to view attendees."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:186
+msgid "Attendee added."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:187
+msgid "Attendee added to the waiting list — the event is full."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:188
+msgid "Confirmation sent again."
+msgstr ""
+
+#. translators: %s: Number of people the message was queued for.
+#: includes/Registration/AttendeesScreen.php:193
+#, php-format
+msgid "Message queued for %s person. It goes out over the next few minutes."
+msgid_plural "Message queued for %s people. It goes out over the next few minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: Number of messages withdrawn.
+#: includes/Registration/AttendeesScreen.php:201
+#, php-format
+msgid "%s message withdrawn before it was sent."
+msgid_plural "%s messages withdrawn before they were sent."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: Email address the test went to.
+#: includes/Registration/AttendeesScreen.php:209
+#, php-format
+msgid "Test queued for %s."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:246
+msgid "You have not created any events yet."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:251
+msgid "Choose an event to see who has registered."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:263
+msgid "Choose an event"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:280
+msgid "Show attendees"
+msgstr ""
+
+#. translators: %s: Number of places taken.
+#: includes/Registration/AttendeesScreen.php:301
+#, php-format
+msgid "%s place taken"
+msgid_plural "%s places taken"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: Number of places remaining.
+#: includes/Registration/AttendeesScreen.php:309
+#, php-format
+msgid "%s place remaining"
+msgid_plural "%s places remaining"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Registration/AttendeesScreen.php:348
+msgid "Filter by status"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:350
+msgid "All statuses"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:358
+msgid "Search attendees"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:360
+msgid "Name, email or reference"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:362
+msgid "Filter"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:365
+msgid "Export CSV"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:370
+msgid "Export CSV including sensitive answers"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:377
+msgid "Answers marked sensitive — dietary needs, access requirements — are left out of the ordinary export. The second button includes them; that file holds health information about named people, so send it only where it needs to go."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:461
+#: includes/Registration/AttendeesScreen.php:864
+#: includes/Registration/Exporter.php:166
+msgid "Ticket"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:468
+#: includes/Registration/AttendeesScreen.php:892
+msgid "Confirmation"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:473
+msgid "Answers"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:479
+msgid "No registrations yet."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:511
+msgid "Change status"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:520
+msgid "Update"
+msgstr ""
+
+#. translators: %s: Attendee name, for screen readers.
+#: includes/Registration/AttendeesScreen.php:533
+#, php-format
+msgid "Resend%s"
+msgstr ""
+
+#. translators: %s: Attendee name.
+#: includes/Registration/AttendeesScreen.php:537
+#, php-format
+msgid "confirmation to %s"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:666
+#: includes/Registration/Exporter.php:213
+msgid "Any date"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:692
+#: includes/Registration/Exporter.php:221
+msgid "Removed"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:793
+msgid "Add an attendee"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:796
+msgid "For bookings taken by phone, by email or in person. The attendee is emailed a confirmation unless you say otherwise."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:801
+msgid "This event is full. Anybody you add now joins the waiting list."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:847
+#: templates/registration-form.php:147
+msgid "Choose a date"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:855
+msgid "A date that has already happened is allowed here — the sign-up sheet usually arrives afterwards."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:868
+msgid "Choose a kind of place"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:896
+msgid "Email the attendee a confirmation"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:903
+msgid "No consent record is stored for an attendee added this way, because they were never shown the wording. Make sure you have their permission to keep their details."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:906
+msgid "Add attendee"
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:922
+msgid "You do not have permission to add registrations."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:991
+msgid "You do not have permission to send confirmations."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:1006
+msgid "That booking could not be found."
+msgstr ""
+
+#: includes/Registration/AttendeesScreen.php:1106
+msgid "You do not have permission to change registrations."
+msgstr ""
+
+#: includes/Registration/CancellationHandler.php:123
+#: includes/Registration/CancellationHandler.php:249
+msgid "That booking could not be found. It may already have been removed."
+msgstr ""
+
+#: includes/Registration/CancellationHandler.php:141
+msgid "Your booking could not be cancelled. Please contact the organiser."
+msgstr ""
+
+#: includes/Registration/CancellationHandler.php:253
+#: includes/Registration/CancellationHandler.php:289
+msgid "This booking has already been cancelled."
+msgstr ""
+
+#: includes/Registration/CancellationHandler.php:285
+msgid "Your booking has been cancelled. Thank you for letting the organiser know."
+msgstr ""
+
+#: includes/Registration/CancellationHandler.php:295
+msgid "Your booking could not be cancelled."
+msgstr ""
+
+#: includes/Registration/CancellationLink.php:150
+msgid "That cancellation link is incomplete. Please use the link exactly as it appears in your confirmation email."
+msgstr ""
+
+#: includes/Registration/CancellationLink.php:164
+msgid "That cancellation link is not valid. Please use the link from your confirmation email."
+msgstr ""
+
+#: includes/Registration/CancellationLink.php:171
+msgid "That cancellation link has expired. Please contact the organiser to cancel your booking."
+msgstr ""
+
+#. translators: %s: Attendee name.
+#: includes/Registration/Emails.php:107
+#: includes/Registration/Emails.php:175
+#, php-format
+msgid "Hi %s,"
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:110
+#, php-format
+msgid "Good news — a place has become available at %s, and yours is now confirmed."
+msgstr ""
+
+#: includes/Registration/Emails.php:112
+msgid "You were on the waiting list, so you do not need to book again."
+msgstr ""
+
+#. translators: %s: Registration reference code.
+#: includes/Registration/Emails.php:117
+#: includes/Registration/Emails.php:190
+#, php-format
+msgid "Your reference: %s"
+msgstr ""
+
+#: includes/Registration/Emails.php:121
+#: includes/Registration/Emails.php:201
+msgid "If you can no longer come, please cancel so somebody else can take your place:"
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:138
+#, php-format
+msgid "Your place at %s is confirmed"
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:168
+#, php-format
+msgid "You are on the waiting list for %s"
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:170
+#, php-format
+msgid "You are registered for %s"
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:180
+#, php-format
+msgid "%s is currently full, so you have been added to the waiting list. We will be in touch if a place becomes available."
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:183
+#, php-format
+msgid "Your place at %s is confirmed."
+msgstr ""
+
+#. translators: 1: Attendee name, 2: Event title.
+#: includes/Registration/Emails.php:262
+#, php-format
+msgid "%1$s has registered for %2$s."
+msgstr ""
+
+#. translators: %s: Attendee email address.
+#: includes/Registration/Emails.php:265
+#, php-format
+msgid "Email: %s"
+msgstr ""
+
+#. translators: %s: Attendee phone number.
+#: includes/Registration/Emails.php:269
+#, php-format
+msgid "Phone: %s"
+msgstr ""
+
+#. translators: %s: Registration status.
+#: includes/Registration/Emails.php:273
+#, php-format
+msgid "Status: %s"
+msgstr ""
+
+#. translators: %s: Registration reference code.
+#. translators: %s: Order reference.
+#: includes/Registration/Emails.php:275
+#: templates/checkout-done.php:31
+#: templates/checkout-unavailable.php:33
+#: templates/checkout.php:34
+#, php-format
+msgid "Reference: %s"
+msgstr ""
+
+#. translators: %s: Event title.
+#: includes/Registration/Emails.php:295
+#, php-format
+msgid "New registration for %s"
+msgstr ""
+
+#. translators: %s: Formatted start date and time.
+#: includes/Registration/Emails.php:485
+#, php-format
+msgid "When: %s"
+msgstr ""
+
+#: includes/Registration/Emails.php:489
+msgid "Where: Online"
+msgstr ""
+
+#. translators: %s: Joining URL.
+#: includes/Registration/Emails.php:493
+#, php-format
+msgid "Joining link: %s"
+msgstr ""
+
+#. translators: %s: Venue address.
+#: includes/Registration/Emails.php:500
+#, php-format
+msgid "Where: %s"
+msgstr ""
+
+#: includes/Registration/EventMetaBox.php:54
+#: templates/registration-closed.php:19
+msgid "Registration"
+msgstr ""
+
+#: includes/Registration/EventMetaBox.php:82
+msgid "Let people register"
+msgstr ""
+
+#: includes/Registration/EventMetaBox.php:87
+msgid "Places available"
+msgstr ""
+
+#: includes/Registration/EventMetaBox.php:90
+msgid "0 for unlimited"
+msgstr ""
+
+#: includes/Registration/EventMetaBox.php:94
+msgid "Registration closes"
+msgstr ""
+
+#: includes/Registration/EventMetaBox.php:97
+msgid "Leave empty to accept registrations until the event starts."
+msgstr ""
+
+#. translators: %s: Number of places taken.
+#: includes/Registration/EventMetaBox.php:105
+#, php-format
+msgid "%s place taken so far."
+msgid_plural "%s places taken so far."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Registration/EventMetaBox.php:111
+msgid "View attendees"
+msgstr ""
+
+#: includes/Registration/Exporter.php:56
+msgid "You do not have permission to export attendees."
+msgstr ""
+
+#: includes/Registration/Exporter.php:158
+msgid "Registered (UTC)"
+msgstr ""
+
+#: includes/Registration/FormHandler.php:81
+msgid "Your session expired. Please try again."
+msgstr ""
+
+#: includes/Registration/RegistrationModule.php:52
+msgid "Registration and attendees"
+msgstr ""
+
+#: includes/Registration/RegistrationModule.php:63
+msgid "Add a sign-up form to your events, set a capacity, and manage the list of attendees. Includes confirmation emails and CSV export."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:137
+msgid "Registration for this event is closed."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:177
+msgid "That email address is already registered for this event."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:388
+msgid "Please choose which kind of place you are booking."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:411
+msgid "That kind of place is not on sale yet."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:422
+msgid "That kind of place is no longer on sale."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:441
+msgid "That kind of place is not available for this event."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:508
+msgid "Please choose which date you are booking."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:521
+msgid "That date is not one of this event's dates."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:532
+msgid "That date has been called off."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:548
+msgid "That date has already happened."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:709
+msgid "Please enter your name."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:726
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:750
+msgid "Please tick the box to confirm you agree before registering."
+msgstr ""
+
+#: includes/Registration/RegistrationService.php:1006
+msgid "Too many registration attempts. Please wait a few minutes and try again."
+msgstr ""
+
+#: includes/Registration/Repository.php:158
+msgid "Your registration could not be saved. Please try again."
+msgstr ""
+
+#: includes/Tickets/TicketsModule.php:57
+#: includes/Tickets/TicketTypesBox.php:68
+msgid "Ticket types"
+msgstr ""
+
+#: includes/Tickets/TicketsModule.php:68
+msgid "Offer more than one kind of place — member and guest, full and concession — each with its own capacity."
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:91
+msgid "Leave this empty and everybody books the same kind of place. Add types to offer more than one — member and guest, full and concession."
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:98
+msgid "Description"
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:99
+#: includes/Tickets/TicketTypesBox.php:245
+msgid "Price"
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:101
+#: includes/Tickets/TicketTypesBox.php:269
+msgid "On sale from"
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:118
+msgid "Places left empty means as many as the event allows. Clearing a name removes that type — or archives it, if somebody already holds one."
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:229
+msgid "Ticket type name"
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:237
+msgid "Ticket type description"
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:261
+msgid "Places of this type"
+msgstr ""
+
+#: includes/Tickets/TicketTypesBox.php:277
+msgid "On sale until"
+msgstr ""
+
+#: includes/Venues/EventVenueBox.php:75
+#: includes/Venues/EventVenueBox.php:99
+msgid "Venue"
+msgstr ""
+
+#: includes/Venues/EventVenueBox.php:102
+msgid "— Address on this event —"
+msgstr ""
+
+#: includes/Venues/EventVenueBox.php:111
+msgid "Choosing a venue fills in the address under Location and organiser, and keeps it in step with the venue record."
+msgstr ""
+
+#: includes/Venues/EventVenueBox.php:115
+msgid "No venues yet. Add one under Events → Venues."
+msgstr ""
+
+#: includes/Venues/PostType.php:46
+msgctxt "post type general name"
+msgid "Venues"
+msgstr ""
+
+#: includes/Venues/PostType.php:47
+msgctxt "post type singular name"
+msgid "Venue"
+msgstr ""
+
+#: includes/Venues/PostType.php:48
+msgctxt "admin menu"
+msgid "Venues"
+msgstr ""
+
+#: includes/Venues/PostType.php:49
+msgctxt "add new on admin bar"
+msgid "Venue"
+msgstr ""
+
+#: includes/Venues/PostType.php:51
+msgid "Add New Venue"
+msgstr ""
+
+#: includes/Venues/PostType.php:52
+msgid "New Venue"
+msgstr ""
+
+#: includes/Venues/PostType.php:53
+msgid "Edit Venue"
+msgstr ""
+
+#: includes/Venues/PostType.php:54
+msgid "View Venue"
+msgstr ""
+
+#: includes/Venues/PostType.php:55
+msgid "View Venues"
+msgstr ""
+
+#: includes/Venues/PostType.php:56
+msgid "Venues"
+msgstr ""
+
+#: includes/Venues/PostType.php:57
+msgid "Search Venues"
+msgstr ""
+
+#: includes/Venues/PostType.php:58
+msgid "No venues found."
+msgstr ""
+
+#: includes/Venues/PostType.php:59
+msgid "No venues found in Trash."
+msgstr ""
+
+#: includes/Venues/PostType.php:60
+msgid "Venue Archives"
+msgstr ""
+
+#: includes/Venues/PostType.php:61
+msgid "Venue Photo"
+msgstr ""
+
+#: includes/Venues/PostType.php:62
+msgid "Set venue photo"
+msgstr ""
+
+#: includes/Venues/PostType.php:63
+msgid "Remove venue photo"
+msgstr ""
+
+#: includes/Venues/PostType.php:64
+msgid "Use as venue photo"
+msgstr ""
+
+#: includes/Venues/PostType.php:65
+msgid "Venue published."
+msgstr ""
+
+#: includes/Venues/PostType.php:66
+msgid "Venue updated."
+msgstr ""
+
+#: includes/Venues/PostType.php:71
+msgid "Reusable places, so a repeated address is typed once."
+msgstr ""
+
+#. translators: 1: number of venues created, 2: number of events updated.
+#: includes/Venues/Promoter.php:99
+#, php-format
+msgid "Quick Events Manager created %1$d venue from the addresses already on your events, and linked %2$d event to it."
+msgid_plural "Quick Events Manager created %1$d venues from the addresses already on your events, and linked %2$d events to them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Venues/VenuesModule.php:54
+msgid "Reusable venues"
+msgstr ""
+
+#: includes/Venues/VenuesModule.php:65
+msgid "Keep the places you use often as records, and pick one instead of retyping the address on every event."
+msgstr ""
+
+#. translators: %s: Booking reference.
+#: includes/Woo/Orders.php:106
+#, php-format
+msgid "Event booking created: %s"
+msgstr ""
+
+#: includes/Woo/WooModule.php:64
+msgid "Sell through WooCommerce"
+msgstr ""
+
+#: includes/Woo/WooModule.php:75
+msgid "Use the shop you already have. A ticket becomes a product, and WooCommerce handles the basket, the payment, the tax and the refunds."
+msgstr ""
+
+#. translators: 1: Required PHP version, 2: PHP version currently running.
+#: quick-events-manager.php:64
+#, php-format
+msgid "Quick Events Manager requires PHP %1$s or newer. This site is running PHP %2$s, so the plugin has not been loaded."
+msgstr ""
+
+#. translators: 1: Required WordPress version, 2: WordPress version currently running.
+#: quick-events-manager.php:82
+#, php-format
+msgid "Quick Events Manager requires WordPress %1$s or newer. This site is running WordPress %2$s, so the plugin has not been loaded."
+msgstr ""
+
+#. translators: %s: number of events in the month.
+#: templates/calendar-list.php:40
+#: templates/calendar-month.php:86
+#, php-format
+msgid "%s event"
+msgid_plural "%s events"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/calendar-list.php:59
+#: templates/calendar-month.php:36
+msgid "Calendar months"
+msgstr ""
+
+#: templates/calendar-list.php:68
+#: templates/calendar-month.php:45
+msgid "This month"
+msgstr ""
+
+#. translators: %s: month and year, e.g. September 2026.
+#: templates/calendar-list.php:106
+#, php-format
+msgid "There are no events in %s."
+msgstr ""
+
+#: templates/calendar-list.php:157
+msgid "See these events as a month grid"
+msgstr ""
+
+#: templates/calendar-month.php:144
+msgid "(today)"
+msgstr ""
+
+#: templates/calendar-month.php:187
+msgid "See these events as a list"
+msgstr ""
+
+#: templates/cancellation.php:23
+msgid "Cancel your booking"
+msgstr ""
+
+#. translators: %s: event title.
+#: templates/cancellation.php:37
+#, php-format
+msgid "You are about to cancel your booking for %s."
+msgstr ""
+
+#: templates/cancellation.php:45
+msgid "Booked by"
+msgstr ""
+
+#: templates/cancellation.php:59
+msgid "This cannot be undone. If you change your mind you will need to book again, and the event may be full by then."
+msgstr ""
+
+#: templates/cancellation.php:71
+msgid "Cancel my booking"
+msgstr ""
+
+#: templates/cancellation.php:76
+msgid "Keep my booking"
+msgstr ""
+
+#: templates/checkout-done.php:20
+msgid "Paid — you are booked in"
+msgstr ""
+
+#: templates/checkout-done.php:21
+msgid "Thank you. Your confirmation is on its way by email."
+msgstr ""
+
+#: templates/checkout-done.php:23
+msgid "This booking is no longer waiting for payment"
+msgstr ""
+
+#: templates/checkout-done.php:24
+msgid "The place was held for a while and then went back to whoever was next. You are welcome to book again if there is still room."
+msgstr ""
+
+#: templates/checkout-unavailable.php:19
+msgid "Payment is not available right now"
+msgstr ""
+
+#: templates/checkout-unavailable.php:25
+msgid "We could not start a payment for this booking. Your place is held for now — please try again shortly, or contact the organiser."
+msgstr ""
+
+#: templates/checkout.php:18
+msgid "Pay for your place"
+msgstr ""
+
+#. translators: %s: Amount to pay.
+#: templates/checkout.php:24
+#, php-format
+msgid "Total: %s"
+msgstr ""
+
+#. translators: %s: Amount to pay.
+#: templates/checkout.php:56
+#, php-format
+msgid "Pay %s"
+msgstr ""
+
+#: templates/checkout.php:64
+msgid "Your place is held while you pay. If you do not finish, it goes back to whoever is next."
+msgstr ""
+
+#: templates/event-details.php:28
+msgid "This event has finished."
+msgstr ""
+
+#: templates/event-details.php:39
+msgid "When"
+msgstr ""
+
+#: templates/event-details.php:59
+#: templates/event-details.php:72
+msgid "Where"
+msgstr ""
+
+#: templates/event-details.php:88
+msgid "Add to calendar"
+msgstr ""
+
+#: templates/event-details.php:92
+msgid "Google Calendar"
+msgstr ""
+
+#: templates/event-list.php:21
+msgid "No past events."
+msgstr ""
+
+#: templates/event-list.php:22
+msgid "No upcoming events."
+msgstr ""
+
+#: templates/registration-fields.php:51
+#: templates/registration-fields.php:80
+#: templates/registration-fields.php:113
+#: templates/registration-fields.php:129
+msgid "(required)"
+msgstr ""
+
+#: templates/registration-fields.php:150
+msgid "— Choose —"
+msgstr ""
+
+#: templates/registration-form.php:28
+msgid "Register for this event"
+msgstr ""
+
+#: templates/registration-form.php:33
+msgid "You are registered. We have sent a confirmation to your email address."
+msgstr ""
+
+#: templates/registration-form.php:37
+msgid "This event is full, so you have been added to the waiting list. We will email you if a place becomes available."
+msgstr ""
+
+#: templates/registration-form.php:56
+msgid "Your registration could not be completed. Please try again."
+msgstr ""
+
+#: templates/registration-form.php:79
+msgid "This event is full. You can still join the waiting list below."
+msgstr ""
+
+#. translators: %s: Number of places remaining.
+#: templates/registration-form.php:86
+#, php-format
+msgid "Only %s place left."
+msgid_plural "Only %s places left."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: A date, e.g. "3 June 2026 6:00 pm".
+#: templates/registration-form.php:162
+#, php-format
+msgid "%s — full, join the waiting list"
+msgstr ""
+
+#: templates/registration-form.php:186
+msgid "Which kind of place"
+msgstr ""
+
+#. translators: %s: Date and time the sale opens.
+#: templates/registration-form.php:219
+#, php-format
+msgid "On sale from %s"
+msgstr ""
+
+#: templates/registration-form.php:226
+msgid "Full — join the waiting list"
+msgstr ""
+
+#. translators: %s: Number of places left.
+#: templates/registration-form.php:233
+#, php-format
+msgid "%s place left"
+msgid_plural "%s places left"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/registration-form.php:250
+msgid "Number of places"
+msgstr ""
+
+#: templates/registration-form.php:296
+msgid "Who else is coming?"
+msgstr ""
+
+#: templates/registration-form.php:299
+msgid "Your own place is the first one. Names are optional — leave a place blank if you do not know yet who is taking it."
+msgstr ""
+
+#. translators: %s: Position of the place within the booking, counting from 2.
+#: templates/registration-form.php:308
+#, php-format
+msgid "Name of guest %s"
+msgstr ""
+
+#: templates/registration-form.php:331
+msgid "Guest names need JavaScript. You can still book the places you need, and tell the organiser who is coming afterwards."
+msgstr ""
+
+#: templates/registration-form.php:343
+msgid "Leave this field empty"
+msgstr ""
+
+#: templates/registration-form.php:362
+msgid "I agree"
+msgstr ""
+
+#: templates/registration-form.php:375
+msgid "Join the waiting list"
+msgstr ""
+
+#: templates/registration-form.php:376
+msgid "Register"
+msgstr ""
+
+#: src/event-calendar/index.js:26
+msgid "Calendar"
+msgstr ""
+
+#: src/event-calendar/index.js:28
+msgid "Starting view"
+msgstr ""
+
+#: src/event-calendar/index.js:29
+msgid "Visitors can switch between the two at any time, and their choice is kept as they move between months."
+msgstr ""
+
+#: src/event-calendar/index.js:35
+msgid "Month grid"
+msgstr ""
+
+#: src/event-calendar/index.js:36
+msgid "List"
+msgstr ""
+
+#: src/event-calendar/index.js:42
+msgid "Starting month"
+msgstr ""
+
+#: src/event-calendar/index.js:43
+msgid "As YYYY-MM. Leave empty to start on the current month, which is almost always what you want."
+msgstr ""
+
+#: src/event-calendar/index.js:58
+msgid "Event Calendar"
+msgstr ""
+
+#: src/event-details/index.js:27
+#: src/event-registration/index.js:27
+msgid "Event ID"
+msgstr ""
+
+#: src/event-details/index.js:28
+#: src/event-registration/index.js:28
+msgid "Leave at 0 to use the event this block is placed on."
+msgstr ""
+
+#: src/event-list/index.js:27
+msgid "Show"
+msgstr ""
+
+#: src/event-list/index.js:30
+msgid "Upcoming events"
+msgstr ""
+
+#: src/event-list/index.js:31
+msgid "Past events"
+msgstr ""
+
+#: src/event-list/index.js:36
+msgid "How many"
+msgstr ""
+
+#: src/event-list/index.js:43
+msgid "Columns"
+msgstr ""
+
+#: src/event-list/index.js:50
+msgid "Category slug"
+msgstr ""
+
+#: src/event-list/index.js:51
+msgid "Leave empty to show every category."
+msgstr ""
+
+#: src/event-list/index.js:63
+msgid "Event List"
+msgstr ""
+
+#: src/event-registration/index.js:41
+msgid "Event Registration"
+msgstr ""
+
+#: src/shared/empty.js:28
+msgid "Nothing to show yet. This block fills in once the event is saved, or once there is something to list."
+msgstr ""
+
+#: src/event-calendar/block.json
+msgctxt "block title"
+msgid "Event Calendar"
+msgstr ""
+
+#: src/event-calendar/block.json
+msgctxt "block description"
+msgid "A month of events as a grid, with a list view alongside it."
+msgstr ""
+
+#: src/event-details/block.json
+msgctxt "block title"
+msgid "Event Details"
+msgstr ""
+
+#: src/event-details/block.json
+msgctxt "block description"
+msgid "The date, time and location of an event."
+msgstr ""
+
+#: src/event-list/block.json
+msgctxt "block title"
+msgid "Event List"
+msgstr ""
+
+#: src/event-list/block.json
+msgctxt "block description"
+msgid "A list of upcoming or past events."
+msgstr ""
+
+#: src/event-registration/block.json
+msgctxt "block title"
+msgid "Event Registration"
+msgstr ""
+
+#: src/event-registration/block.json
+msgctxt "block description"
+msgid "A sign-up form for an event."
+msgstr ""

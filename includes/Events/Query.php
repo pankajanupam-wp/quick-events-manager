@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Events;
+namespace QuickEventsManager\Events;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -48,122 +48,53 @@ final class Query {
 			return;
 		}
 
-		$is_event_archive = $query->is_post_type_archive( QEM_POST_TYPE )
-			|| $query->is_tax( QEM_TAX_CATEGORY )
-			|| $query->is_tax( QEM_TAX_TAG );
+		$is_event_archive = $query->is_post_type_archive( QEVM_POST_TYPE )
+			|| $query->is_tax( QEVM_TAX_CATEGORY )
+			|| $query->is_tax( QEVM_TAX_TAG );
 
 		if ( ! $is_event_archive ) {
 			return;
 		}
 
-		$query->set( 'meta_key', Meta::START_UTC );
-		$query->set( 'orderby', 'meta_value' );
-		$query->set( 'order', 'ASC' );
-
 		/*
-		 * `meta_value` compares as a string, which is exactly right here:
-		 * `Y-m-d H:i:s` is zero-padded and big-endian, so lexical order is
-		 * chronological order. Using meta_value_num would silently truncate
-		 * at the first non-digit and sort everything by year alone.
+		 * The archive lists what is still to come, soonest first. Undated
+		 * events are excluded rather than sorted to one end: an event with no
+		 * date cannot be "upcoming", and showing it in a chronological list
+		 * with nothing to place it against helps nobody.
 		 */
+		$query->set(
+			OccurrenceQuery::QUERY_VAR,
+			array(
+				'when'  => 'upcoming',
+				'order' => 'ASC',
+			)
+		);
 	}
 
 	/**
 	 * Query arguments for upcoming events.
 	 *
-	 * An event counts as upcoming until it *ends*, so a three-day conference
-	 * on its second day is still listed rather than disappearing the moment it
-	 * starts. Events with no end date fall back to their start.
+	 * Delegates to OccurrenceQuery. Kept as a name callers already use, and as
+	 * the single place the default page size lives.
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $args Additional WP_Query arguments to merge in.
-	 * @return array
+	 * @param array<string, mixed> $args Additional WP_Query arguments to merge in.
+	 * @return array<string, mixed>
 	 */
 	public static function upcoming_args( array $args = array() ) {
-		$now = Meta::now_utc();
-
-		return array_merge(
-			array(
-				'post_type'      => QEM_POST_TYPE,
-				'post_status'    => 'publish',
-				'meta_key'       => Meta::START_UTC,
-				'orderby'        => 'meta_value',
-				'order'          => 'ASC',
-				'posts_per_page' => 10,
-				'meta_query'     => array(
-					'relation' => 'OR',
-					array(
-						'key'     => Meta::END_UTC,
-						'value'   => $now,
-						'compare' => '>=',
-						'type'    => 'DATETIME',
-					),
-					array(
-						'relation' => 'AND',
-						array(
-							'key'     => Meta::END_UTC,
-							'compare' => 'NOT EXISTS',
-						),
-						array(
-							'key'     => Meta::START_UTC,
-							'value'   => $now,
-							'compare' => '>=',
-							'type'    => 'DATETIME',
-						),
-					),
-				),
-			),
-			$args
-		);
+		return OccurrenceQuery::upcoming_args( array_merge( array( 'posts_per_page' => 10 ), $args ) );
 	}
 
 	/**
 	 * Query arguments for events that have finished.
 	 *
-	 * Ordered newest-first, which is the useful direction for an archive of
-	 * things that already happened.
-	 *
 	 * @since 26.0
 	 *
-	 * @param array $args Additional WP_Query arguments to merge in.
-	 * @return array
+	 * @param array<string, mixed> $args Additional WP_Query arguments to merge in.
+	 * @return array<string, mixed>
 	 */
 	public static function past_args( array $args = array() ) {
-		$now = Meta::now_utc();
-
-		return array_merge(
-			array(
-				'post_type'      => QEM_POST_TYPE,
-				'post_status'    => 'publish',
-				'meta_key'       => Meta::START_UTC,
-				'orderby'        => 'meta_value',
-				'order'          => 'DESC',
-				'posts_per_page' => 10,
-				'meta_query'     => array(
-					'relation' => 'OR',
-					array(
-						'key'     => Meta::END_UTC,
-						'value'   => $now,
-						'compare' => '<',
-						'type'    => 'DATETIME',
-					),
-					array(
-						'relation' => 'AND',
-						array(
-							'key'     => Meta::END_UTC,
-							'compare' => 'NOT EXISTS',
-						),
-						array(
-							'key'     => Meta::START_UTC,
-							'value'   => $now,
-							'compare' => '<',
-							'type'    => 'DATETIME',
-						),
-					),
-				),
-			),
-			$args
-		);
+		return OccurrenceQuery::past_args( array_merge( array( 'posts_per_page' => 10 ), $args ) );
 	}
 }

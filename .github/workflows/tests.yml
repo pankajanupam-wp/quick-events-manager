@@ -7,6 +7,33 @@ on:
   pull_request:
 
 jobs:
+  quality:
+    name: Coding standards and static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Pinned rather than matrixed: the standards a file must meet do not
+      # depend on which PHP is running the checker. PHPCompatibility is what
+      # verifies the supported range, and it is configured in phpcs.xml.dist.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: WordPress Coding Standards
+        run: composer lint
+
+      - name: Static analysis
+        run: composer analyse
+
   test:
     name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
@@ -14,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5']
 
     steps:
       - name: Check out the repository
@@ -27,8 +54,10 @@ jobs:
           coverage: none
           tools: composer
 
-      # Proves the "Requires PHP: 7.4" claim in the plugin header: the shipped
+      # Proves the "Requires PHP: 8.1" claim in the plugin header: the shipped
       # files must parse on every version in the matrix, not just the newest.
+      # This is what catches an 8.2-only feature slipping into a codebase that
+      # promises 8.1.
       - name: Lint shipped files
         run: |
           find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 \
@@ -41,6 +70,157 @@ jobs:
 
       - name: Run unit tests
         run: composer test
+
+  integration:
+    name: Integration (real WordPress and MySQL)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checked out into a subdirectory so the workspace root can play the part
+      # the plugins directory plays locally: the wp-env config belongs beside
+      # the plugin, never inside it. A .wp-env.json committed to a plugin means
+      # anyone running `wp-env start` in that folder silently gets a second
+      # WordPress, its own containers and its own database.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          path: quick-events-manager
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer
+
+      - name: Install dependencies
+        working-directory: quick-events-manager
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The blocks, before WordPress starts, because the suite covers block
+      # registration and that reads build/. Without this the integration job
+      # tests a state no installed site is ever in: a plugin whose build output
+      # is missing, where every block is skipped and the test that asks whether
+      # gating one block took another down with it fails for the wrong reason.
+      #
+      # The Build blocks job proves the sources compile; this is here so the
+      # PHP that reads their output has something to read.
+      - name: Build blocks
+        working-directory: quick-events-manager
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: Describe the environment
+        run: |
+          echo '{ "plugins": [ "./quick-events-manager" ] }' > .wp-env.json
+
+      - name: Start WordPress
+        run: npx --yes @wordpress/env start
+
+      # The same command the README gives a contributor, rather than a CI-only
+      # copy of it: a documented command that nothing runs is one that rots.
+      # It activates the plugin first, because activation is what puts it in
+      # the load order a real site uses, early enough for `init` — and anything
+      # that resets the test database empties the active plugin list.
+      - name: Run integration tests
+        working-directory: quick-events-manager
+        run: composer test:integration
+
+      # The suite asserts no PHP notices of its own, but a fatal inside a hook
+      # can still be swallowed by a redirect. This is the second pair of eyes.
+      - name: Fail on anything WordPress logged
+        if: always()
+        run: |
+          log=$(npx --yes @wordpress/env run tests-cli \
+            bash -c 'cat /var/www/html/wp-content/debug.log 2>/dev/null || true')
+
+          if [ -n "$log" ]; then
+            echo "::error::WordPress logged errors during the integration run"
+            echo "$log"
+            exit 1
+          fi
+
+          echo "debug.log is empty"
+
+  accessibility:
+    name: Accessibility (axe-core)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Same subdirectory layout as the integration job, and for the same
+      # reason: the wp-env config belongs beside the plugin, never inside it.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          path: quick-events-manager
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Describe the environment
+        run: |
+          echo '{ "plugins": [ "./quick-events-manager" ] }' > .wp-env.json
+
+      - name: Start WordPress
+        run: npx --yes @wordpress/env start
+
+      # `npm install` rather than `npm ci`: package-lock.json is gitignored, so
+      # there is no lockfile to install from. That is a deliberate choice the
+      # PHP side makes too — each CI run resolving current dependencies is how
+      # a break in a dependency is found here rather than by a user.
+      # The build as well as the browser: this job runs the block-editor spec,
+      # and blocks are registered from build/, which is not committed. Without
+      # it the inserter has no plugin blocks in it and four tests fail looking
+      # for something that was never built.
+      - name: Install browser tooling and build the blocks
+        working-directory: quick-events-manager
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npx playwright install --with-deps chromium
+
+      # An event with registration switched on, and the rewrite rules flushed.
+      # wp-env starts from an empty database, so without this every test looks
+      # at a site with nothing on it and passes for the wrong reason.
+      - name: Seed the fixture
+        run: |
+          npx --yes @wordpress/env run cli wp plugin activate quick-events-manager
+          npx --yes @wordpress/env run cli \
+            wp eval-file wp-content/plugins/quick-events-manager/tests/e2e/fixture.php
+
+      # A fresh WordPress is slow on its first few requests — update checks,
+      # cron, caches that do not exist yet — and the suite runs with retries
+      # switched off on purpose, because an accessibility result that only
+      # appears on the second attempt is one nobody can act on. That makes a
+      # cold first request a red build about nothing, so warm the pages the
+      # suite opens before asking it to time anything.
+      - name: Warm the site
+        run: |
+          for path in / /events/ /qevm-calendar-fixture/ /wp-login.php; do
+            curl -fsS -o /dev/null "http://localhost:8888${path}" || true
+          done
+
+      - name: Run axe-core
+        working-directory: quick-events-manager
+        run: npm run test:a11y
+
+      # Traces and screenshots for the failures, which is the difference
+      # between "axe failed" and knowing what it saw.
+      - name: Keep the evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-failures
+          path: quick-events-manager/test-results/
+          retention-days: 7
 
   build:
     name: Build blocks
@@ -57,13 +237,18 @@ jobs:
 
       # The build output is not committed, so a broken block source has to be
       # caught here rather than at deploy time.
+      #
+      # `npm install` rather than `npm ci`, for the reason the accessibility job
+      # gives above: package-lock.json is gitignored, and `npm ci` refuses to
+      # run without one. This job asked for a lockfile that this repository has
+      # decided not to keep, and failed on every push in twelve seconds.
       - name: Install and build
         run: |
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       - name: Confirm every block was built
         run: |
-          for block in event-list event-details event-registration; do
+          for block in event-list event-details event-registration event-calendar; do
             test -f "build/${block}/block.json" || { echo "::error::build/${block}/block.json missing"; exit 1; }
           done

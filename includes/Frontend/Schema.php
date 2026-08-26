@@ -1,14 +1,14 @@
 <?php
 /**
- * schema.org Event markup.
+ * JSON-LD markup describing an event as a schema.org Event.
  *
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
-use QEM\Events\Event;
-use QEM\Events\Meta;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -42,7 +42,7 @@ final class Schema {
 	 * @return void
 	 */
 	public function output() {
-		if ( ! is_singular( QEM_POST_TYPE ) ) {
+		if ( ! is_singular( QEVM_POST_TYPE ) ) {
 			return;
 		}
 
@@ -70,7 +70,7 @@ final class Schema {
 	 * @since 26.0
 	 *
 	 * @param Event $event Event.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function build( Event $event ) {
 		$data = array(
@@ -108,14 +108,14 @@ final class Schema {
 			)
 			: $this->place( $event );
 
-		$organizer = (string) $event->meta( Meta::ORGANIZER_NAME );
+		$organizer = $event->organizer();
 
-		if ( '' !== $organizer ) {
+		if ( '' !== $organizer->name() ) {
 			$data['organizer'] = array_filter(
 				array(
 					'@type' => 'Organization',
-					'name'  => $organizer,
-					'url'   => (string) $event->meta( Meta::ORGANIZER_URL ),
+					'name'  => $organizer->name(),
+					'url'   => $organizer->url(),
 				)
 			);
 		}
@@ -128,7 +128,7 @@ final class Schema {
 		 * @param array $data  JSON-LD data.
 		 * @param Event $event The event.
 		 */
-		return apply_filters( 'qem_schema_data', $data, $event );
+		return apply_filters( 'qevm_schema_data', $data, $event );
 	}
 
 	/**
@@ -137,21 +137,23 @@ final class Schema {
 	 * @since 26.0
 	 *
 	 * @param Event $event Event.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	private function place( Event $event ) {
+		$venue = $event->venue();
+
 		$address = array_filter(
 			array(
 				'@type'           => 'PostalAddress',
-				'streetAddress'   => (string) $event->meta( Meta::VENUE_ADDRESS ),
-				'addressLocality' => (string) $event->meta( Meta::VENUE_CITY ),
-				'addressRegion'   => (string) $event->meta( Meta::VENUE_REGION ),
-				'postalCode'      => (string) $event->meta( Meta::VENUE_POSTAL ),
-				'addressCountry'  => (string) $event->meta( Meta::VENUE_COUNTRY ),
+				'streetAddress'   => $venue->part( Meta::VENUE_ADDRESS ),
+				'addressLocality' => $venue->part( Meta::VENUE_CITY ),
+				'addressRegion'   => $venue->part( Meta::VENUE_REGION ),
+				'postalCode'      => $venue->part( Meta::VENUE_POSTAL ),
+				'addressCountry'  => $venue->part( Meta::VENUE_COUNTRY ),
 			)
 		);
 
-		$name = (string) $event->meta( Meta::VENUE_NAME );
+		$name = $venue->name();
 
 		return array_filter(
 			array(

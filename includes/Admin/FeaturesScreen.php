@@ -5,9 +5,11 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Admin;
+namespace QuickEventsManager\Admin;
 
-use QEM\Modules\Registry;
+use QuickEventsManager\Modules\Registry;
+
+use QuickEventsManager\Domain\ModuleLevel;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,12 +28,12 @@ final class FeaturesScreen {
 	/**
 	 * Menu slug.
 	 */
-	const SLUG = 'qem-features';
+	const SLUG = 'qevm-features';
 
 	/**
 	 * Nonce action.
 	 */
-	const NONCE = 'qem_save_features';
+	const NONCE = 'qevm_save_features';
 
 	/**
 	 * Module registry.
@@ -60,8 +62,8 @@ final class FeaturesScreen {
 	 */
 	public function register() {
 		add_action( 'admin_menu', array( $this, 'add_page' ) );
-		add_action( 'admin_post_qem_save_features', array( $this, 'handle_save' ) );
-		add_filter( 'plugin_action_links_' . QEM_BASENAME, array( $this, 'action_links' ) );
+		add_action( 'admin_post_qevm_save_features', array( $this, 'handle_save' ) );
+		add_filter( 'plugin_action_links_' . QEVM_BASENAME, array( $this, 'action_links' ) );
 	}
 
 	/**
@@ -73,7 +75,7 @@ final class FeaturesScreen {
 	 */
 	public function add_page() {
 		add_submenu_page(
-			'edit.php?post_type=' . QEM_POST_TYPE,
+			'edit.php?post_type=' . QEVM_POST_TYPE,
 			__( 'Features', 'quick-events-manager' ),
 			__( 'Features', 'quick-events-manager' ),
 			'manage_options',
@@ -87,11 +89,11 @@ final class FeaturesScreen {
 	 *
 	 * @since 26.0
 	 *
-	 * @param array $links Existing action links.
-	 * @return array
+	 * @param array<string, string> $links Existing action links.
+	 * @return array<string, string>
 	 */
 	public function action_links( $links ) {
-		$url = admin_url( 'edit.php?post_type=' . QEM_POST_TYPE . '&page=' . self::SLUG );
+		$url = admin_url( 'edit.php?post_type=' . QEVM_POST_TYPE . '&page=' . self::SLUG );
 
 		array_unshift(
 			$links,
@@ -115,18 +117,11 @@ final class FeaturesScreen {
 
 		$modules = $this->registry->all();
 		$enabled = $this->registry->enabled_ids();
-		$levels  = array();
-
-		foreach ( $modules as $module ) {
-			$levels[ $module->level() ][] = $module;
-		}
-
-		ksort( $levels );
 		?>
-		<div class="wrap qem-features">
+		<div class="wrap qevm-features">
 			<h1><?php esc_html_e( 'Features', 'quick-events-manager' ); ?></h1>
 
-			<p class="qem-intro">
+			<p class="qevm-intro">
 				<?php esc_html_e( 'Quick Events Manager starts simple. Switch on only what you need — anything you leave off adds nothing to your site, loads no code and creates no database tables.', 'quick-events-manager' ); ?>
 			</p>
 
@@ -137,36 +132,75 @@ final class FeaturesScreen {
 			<?php endif; ?>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="qem_save_features" />
+				<input type="hidden" name="action" value="qevm_save_features" />
 				<?php wp_nonce_field( self::NONCE ); ?>
 
-				<?php foreach ( $levels as $level => $level_modules ) : ?>
-					<h2 class="qem-level-heading"><?php echo esc_html( self::level_title( $level ) ); ?></h2>
-					<p class="qem-level-description"><?php echo esc_html( self::level_description( $level ) ); ?></p>
+				<?php
+				// Iterating the enum rather than grouping into an array gives a
+				// deterministic order without a sort, and skips empty levels.
+				foreach ( ModuleLevel::all() as $level ) :
+					$level_modules = array_filter(
+						$modules,
+						static fn( $module ): bool => $level === $module->level()
+					);
 
-					<ul class="qem-module-list">
+					if ( empty( $level_modules ) ) {
+						continue;
+					}
+					?>
+					<h2 class="qevm-level-heading"><?php echo esc_html( $level->title() ); ?></h2>
+					<p class="qevm-level-description"><?php echo esc_html( $level->description() ); ?></p>
+
+					<ul class="qevm-module-list">
 						<?php foreach ( $level_modules as $module ) : ?>
 							<?php
 							$id         = $module->id();
 							$is_on      = in_array( $id, $enabled, true );
 							$is_locked  = $module->is_required();
-							$element_id = 'qem-module-' . sanitize_html_class( $id );
+							$element_id = 'qevm-module-' . sanitize_html_class( $id );
 							?>
-							<li class="qem-module<?php echo $is_on ? ' is-enabled' : ''; ?>">
+							<li class="qevm-module<?php echo $is_on ? ' is-enabled' : ''; ?>">
 								<label for="<?php echo esc_attr( $element_id ); ?>">
 									<input type="checkbox" id="<?php echo esc_attr( $element_id ); ?>"
-										name="qem_modules[]" value="<?php echo esc_attr( $id ); ?>"
+										name="qevm_modules[]" value="<?php echo esc_attr( $id ); ?>"
 										<?php checked( $is_on ); ?>
 										<?php disabled( $is_locked ); ?> />
-									<span class="qem-module-title"><?php echo esc_html( $module->title() ); ?></span>
+									<span class="qevm-module-title"><?php echo esc_html( $module->title() ); ?></span>
 								</label>
-								<p class="qem-module-description"><?php echo esc_html( $module->description() ); ?></p>
+								<p class="qevm-module-description"><?php echo esc_html( $module->description() ); ?></p>
 								<?php if ( $is_locked ) : ?>
-									<p class="qem-module-note">
+									<p class="qevm-module-note">
 										<?php esc_html_e( 'Always on — this is what the plugin does.', 'quick-events-manager' ); ?>
 									</p>
-									<input type="hidden" name="qem_modules[]" value="<?php echo esc_attr( $id ); ?>" />
+									<input type="hidden" name="qevm_modules[]" value="<?php echo esc_attr( $id ); ?>" />
 								<?php endif; ?>
+
+								<?php
+								/*
+								 * Said before it happens, not after. Switching
+								 * this on switches something else off, and
+								 * finding that out by noticing a feature has
+								 * gone is how a site owner stops trusting the
+								 * screen.
+								 */
+								$qevm_clashes = $module instanceof \QuickEventsManager\Modules\Exclusive
+									? $module->conflicts()
+									: array();
+								?>
+								<?php foreach ( $qevm_clashes as $qevm_clash ) : ?>
+									<?php $qevm_other = $this->registry->get( $qevm_clash ); ?>
+									<?php if ( null !== $qevm_other ) : ?>
+										<p class="qevm-module-note qevm-module-note--conflict">
+											<?php
+											printf(
+												/* translators: %s: The name of the module that would be switched off. */
+												esc_html__( 'Cannot be used with %s. Switching this on switches that off.', 'quick-events-manager' ),
+												'<strong>' . esc_html( $qevm_other->title() ) . '</strong>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped on this line.
+											);
+											?>
+										</p>
+									<?php endif; ?>
+								<?php endforeach; ?>
 							</li>
 						<?php endforeach; ?>
 					</ul>
@@ -192,10 +226,11 @@ final class FeaturesScreen {
 
 		check_admin_referer( self::NONCE );
 
-		$submitted = isset( $_POST['qem_modules'] ) ? (array) wp_unslash( $_POST['qem_modules'] ) : array();
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitised on the next line; sanitize_key() cannot be applied to the array itself.
+		$submitted = isset( $_POST['qevm_modules'] ) ? (array) wp_unslash( $_POST['qevm_modules'] ) : array();
 		$submitted = array_map( 'sanitize_key', $submitted );
 
-		foreach ( $this->registry->all() as $id => $module ) {
+		foreach ( array_keys( $this->registry->all() ) as $id ) {
 			if ( in_array( $id, $submitted, true ) ) {
 				$this->registry->enable( $id );
 			} else {
@@ -206,7 +241,7 @@ final class FeaturesScreen {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'post_type' => QEM_POST_TYPE,
+					'post_type' => QEVM_POST_TYPE,
 					'page'      => self::SLUG,
 					'updated'   => '1',
 				),
@@ -215,47 +250,5 @@ final class FeaturesScreen {
 		);
 
 		exit;
-	}
-
-	/**
-	 * Heading for a disclosure level.
-	 *
-	 * @since 26.0
-	 *
-	 * @param int $level Level number.
-	 * @return string
-	 */
-	private static function level_title( $level ) {
-		switch ( (int) $level ) {
-			case 0:
-				return __( 'The basics', 'quick-events-manager' );
-			case 1:
-				return __( 'Taking registrations', 'quick-events-manager' );
-			case 2:
-				return __( 'Going further', 'quick-events-manager' );
-			default:
-				return __( 'Advanced', 'quick-events-manager' );
-		}
-	}
-
-	/**
-	 * Explanatory line under a level heading.
-	 *
-	 * @since 26.0
-	 *
-	 * @param int $level Level number.
-	 * @return string
-	 */
-	private static function level_description( $level ) {
-		switch ( (int) $level ) {
-			case 0:
-				return __( 'Everything you need to publish events. This is always on.', 'quick-events-manager' );
-			case 1:
-				return __( 'Let people sign up, and keep track of who is coming.', 'quick-events-manager' );
-			case 2:
-				return __( 'More control over how registration works and how your events look.', 'quick-events-manager' );
-			default:
-				return __( 'For larger or more complex events.', 'quick-events-manager' );
-		}
 	}
 }

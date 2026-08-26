@@ -7,84 +7,84 @@
  * selectors.
  */
 
-.qem-event-details,
-.qem-event-list,
-.qem-registration {
-	--qem-gap: 1rem;
-	--qem-radius: 6px;
-	--qem-border: 1px solid rgba(0, 0, 0, 0.12);
-	--qem-muted: rgba(0, 0, 0, 0.62);
-	--qem-accent: currentColor;
+.qevm-event-details,
+.qevm-event-list,
+.qevm-registration {
+	--qevm-gap: 1rem;
+	--qevm-radius: 6px;
+	--qevm-border: 1px solid rgba(0, 0, 0, 0.12);
+	--qevm-muted: rgba(0, 0, 0, 0.62);
+	--qevm-accent: currentColor;
 }
 
 @media (prefers-color-scheme: dark) {
-	.qem-event-details,
-	.qem-event-list,
-	.qem-registration {
-		--qem-border: 1px solid rgba(255, 255, 255, 0.18);
-		--qem-muted: rgba(255, 255, 255, 0.68);
+	.qevm-event-details,
+	.qevm-event-list,
+	.qevm-registration {
+		--qevm-border: 1px solid rgba(255, 255, 255, 0.18);
+		--qevm-muted: rgba(255, 255, 255, 0.68);
 	}
 }
 
 /* Event details
    ------------------------------------------------------------------------ */
 
-.qem-event-details {
+.qevm-event-details {
 	margin: 0 0 1.5rem;
-	padding: var(--qem-gap);
-	border: var(--qem-border);
-	border-radius: var(--qem-radius);
+	padding: var(--qevm-gap);
+	border: var(--qevm-border);
+	border-radius: var(--qevm-radius);
 }
 
-.qem-event-meta {
+.qevm-event-meta {
 	display: grid;
 	gap: 0.75rem;
 	margin: 0;
 }
 
-.qem-event-meta__item {
+.qevm-event-meta__item {
 	display: grid;
 	grid-template-columns: minmax(6rem, max-content) 1fr;
 	gap: 0.75rem;
 	align-items: baseline;
 }
 
-.qem-event-meta dt {
+.qevm-event-meta dt {
 	margin: 0;
 	font-weight: 600;
-	color: var(--qem-muted);
+	color: var(--qevm-muted);
 }
 
-.qem-event-meta dd {
+.qevm-event-meta dd {
 	margin: 0;
 }
 
-.qem-event-meta__tz,
-.qem-event-meta__separator {
-	color: var(--qem-muted);
+.qevm-event-meta__tz,
+.qevm-event-meta__separator {
+	color: var(--qevm-muted);
 }
 
-.qem-event-status {
-	margin: 0 0 var(--qem-gap);
+.qevm-event-status {
+	margin: 0 0 var(--qevm-gap);
 	font-weight: 600;
 }
 
-.qem-event-status--past {
-	color: var(--qem-muted);
+.qevm-event-status--past {
+	color: var(--qevm-muted);
 }
 
-.qem-add-to-calendar {
+.qevm-add-to-calendar {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--qem-gap);
+	gap: var(--qevm-gap);
 	align-items: center;
-	margin: var(--qem-gap) 0 0;
+	margin: var(--qevm-gap) 0 0;
 }
 
 /* Event list
    ------------------------------------------------------------------------ */
 
-.qem-event-list {
+.qevm-event-list {
 	display: grid;
 	gap: 1.5rem;
 	margin: 0;
@@ -92,27 +92,27 @@
 	list-style: none;
 }
 
-.qem-event-list--cols-2 {
+.qevm-event-list--cols-2 {
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
 }
 
-.qem-event-list--cols-3 {
+.qevm-event-list--cols-3 {
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
 }
 
-.qem-event-list--cols-4 {
+.qevm-event-list--cols-4 {
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
 }
 
-.qem-event-card {
+.qevm-event-card {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	border: var(--qem-border);
-	border-radius: var(--qem-radius);
+	border: var(--qevm-border);
+	border-radius: var(--qevm-radius);
 }
 
-.qem-event-card__image img {
+.qevm-event-card__image img {
 	display: block;
 	width: 100%;
 	height: auto;
@@ -120,87 +120,217 @@
 	object-fit: cover;
 }
 
-.qem-event-card__body {
-	padding: var(--qem-gap);
+.qevm-event-card__body {
+	padding: var(--qevm-gap);
 }
 
-.qem-event-card__date {
+.qevm-event-card__date {
 	margin: 0 0 0.25rem;
 	font-size: 0.875em;
 	font-weight: 600;
-	color: var(--qem-muted);
+	color: var(--qevm-muted);
 }
 
-.qem-event-card__title {
+.qevm-event-card__title {
 	margin: 0 0 0.5rem;
 	font-size: 1.125em;
 	line-height: 1.3;
 }
 
-.qem-event-card__location,
-.qem-event-card__excerpt {
+.qevm-event-card__location,
+.qevm-event-card__excerpt {
 	margin: 0 0 0.5rem;
 	font-size: 0.9375em;
-	color: var(--qem-muted);
+	color: var(--qevm-muted);
 }
 
-.qem-event-list__empty {
-	color: var(--qem-muted);
+.qevm-event-list__empty {
+	color: var(--qevm-muted);
 }
 
 /* Registration
    ------------------------------------------------------------------------ */
 
-.qem-registration {
+.qevm-registration {
 	margin: 2rem 0 0;
 	padding: 1.25rem;
-	border: var(--qem-border);
-	border-radius: var(--qem-radius);
+	border: var(--qevm-border);
+	border-radius: var(--qevm-radius);
 }
 
-.qem-registration__heading {
+.qevm-registration__heading {
 	margin-top: 0;
 }
 
-.qem-registration__form {
+.qevm-registration__form {
 	display: grid;
-	gap: var(--qem-gap);
+	gap: var(--qevm-gap);
 	max-width: 32rem;
 }
 
-.qem-field {
+.qevm-field {
 	display: grid;
 	gap: 0.25rem;
 	margin: 0;
 }
 
-.qem-field label {
+.qevm-field label {
 	font-weight: 600;
 }
 
-.qem-field input {
+.qevm-field input {
 	width: 100%;
 	padding: 0.5rem;
-	border: var(--qem-border);
+	border: var(--qevm-border);
 	border-radius: 4px;
 	font: inherit;
 	color: inherit;
 	background: transparent;
 }
 
-.qem-field input:focus-visible {
-	outline: 2px solid var(--qem-accent);
+.qevm-field input:focus-visible {
+	outline: 2px solid var(--qevm-accent);
 	outline-offset: 1px;
 }
 
-.qem-required {
+.qevm-required {
 	color: #b32d2e;
 }
 
-.qem-button {
+/* Choosing a kind of place
+   ------------------------------------------------------------------------ */
+
+.qevm-ticket-choice {
+	border: 0;
+	margin: 0 0 1rem;
+	padding: 0;
+}
+
+.qevm-ticket-choice legend {
+	font-weight: 600;
+	padding: 0 0 0.35rem;
+}
+
+.qevm-ticket-option {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	margin: 0 0 0.5rem;
+}
+
+.qevm-ticket-option label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+
+/*
+ * The price sits with the name rather than under the description, because it is
+ * half of what the choice is between: "Member" and "Guest" are not a decision
+ * until they carry numbers.
+ */
+.qevm-ticket-option__price {
+	font-weight: 600;
+}
+
+.qevm-ticket-option__description,
+.qevm-ticket-option__state {
+	font-size: 0.875rem;
+	color: var( --qevm-muted );
+}
+
+/*
+ * A field-level error, sitting under its input and pointed at by
+ * aria-describedby. Colour is not the only signal — the text says what is
+ * wrong, and the input carries aria-invalid — because a red border alone
+ * conveys nothing to somebody who cannot see it or cannot distinguish it.
+ */
+.qevm-field__error {
+	color: #b32d2e;
+	font-size: 0.9em;
+	font-weight: 600;
+}
+
+.qevm-field input[aria-invalid="true"] {
+	border-color: #b32d2e;
+	outline: 1px solid #b32d2e;
+}
+
+.qevm-notice__list {
+	margin: 0.5rem 0 0;
+	padding-inline-start: 1.25rem;
+}
+
+/*
+ * The summary is a focus target, so it needs a focus style of its own — the
+ * browser default outline on a div is easy to miss against a tinted panel.
+ */
+.qevm-notice:focus-visible {
+	outline: 2px solid #b32d2e;
+	outline-offset: 2px;
+}
+
+/*
+ * The `hidden` attribute has to win here.
+ *
+ * A browser's own stylesheet says `[hidden] { display: none }`, but that
+ * declaration comes from the user-agent origin, and *any* author declaration
+ * beats it — specificity never enters into it. The guest rows are
+ * `.qevm-field`, which sets `display: grid`, so without this rule they would be
+ * hidden from assistive technology and fully visible on the page, all nineteen
+ * of them.
+ *
+ * Checked in Chrome rather than assumed: with this rule a hidden row computes
+ * to `display: none`, and without it to `display: grid`.
+ */
+.qevm-registration [hidden] {
+	display: none;
+}
+
+.qevm-guests {
+	display: grid;
+	gap: var(--qevm-gap);
+	margin: 0;
+	padding: 0.75rem 1rem 1rem;
+	border: var(--qevm-border);
+	border-radius: var(--qevm-radius);
+}
+
+.qevm-guests__legend {
+	padding: 0 0.35rem;
+	font-weight: 600;
+}
+
+.qevm-guests__hint {
+	margin: 0;
+	color: var(--qevm-muted);
+	font-size: 0.9em;
+}
+
+/*
+ * The checkbox sits inline with its own short label, and the site's wording
+ * goes underneath — so this field does not want the grid the text fields use.
+ */
+.qevm-field--consent {
+	display: block;
+}
+
+.qevm-field--consent label {
+	display: inline-flex;
+	gap: 0.4rem;
+	align-items: baseline;
+}
+
+.qevm-consent__text {
+	display: block;
+	margin-top: 0.25rem;
+	font-size: 0.9em;
+}
+
+.qevm-button {
 	display: inline-block;
 	padding: 0.6rem 1.25rem;
-	border: var(--qem-border);
+	border: var(--qevm-border);
 	border-radius: 4px;
 	font: inherit;
 	font-weight: 600;
@@ -208,27 +338,68 @@
 	cursor: pointer;
 }
 
-.qem-notice {
-	margin: 0 0 var(--qem-gap);
+/*
+ * Destructive, and it should look it. Colour alone would not be enough — a
+ * button that only differs by hue is the same button to anybody who cannot
+ * distinguish the two — so the weight of the border carries the meaning as
+ * well, and the label says "Cancel my booking" rather than "Confirm".
+ */
+.qevm-button--danger {
+	border-color: #b32d2e;
+	color: #b32d2e;
+}
+
+.qevm-link {
+	text-decoration: underline;
+}
+
+.qevm-notice {
+	margin: 0 0 var(--qevm-gap);
 	padding: 0.75rem 1rem;
-	border-left: 4px solid var(--qem-muted);
+	border-inline-start: 4px solid var(--qevm-muted);
 	border-radius: 4px;
 	background: rgba(0, 0, 0, 0.04);
 }
 
-.qem-notice--success {
-	border-left-color: #007017;
+.qevm-notice--success {
+	border-inline-start-color: #007017;
 }
 
-.qem-notice--error {
-	border-left-color: #b32d2e;
+.qevm-notice--error {
+	border-inline-start-color: #b32d2e;
 }
 
-.qem-notice--info {
-	border-left-color: #996800;
+.qevm-notice--info {
+	border-inline-start-color: #996800;
 }
 
-.qem-registration__remaining {
+.qevm-cancellation__summary {
+	display: grid;
+	gap: 0.35rem;
+	margin: 0 0 var(--qevm-gap);
+}
+
+.qevm-cancellation__item {
+	display: grid;
+	grid-template-columns: minmax(6rem, 12rem) 1fr;
+	gap: 0.5rem;
+}
+
+.qevm-cancellation__item dt {
+	margin: 0;
+	color: var(--qevm-muted);
+	font-weight: 600;
+}
+
+.qevm-cancellation__item dd {
+	margin: 0;
+}
+
+.qevm-cancellation__warning {
+	font-weight: 600;
+}
+
+.qevm-registration__remaining {
 	font-weight: 600;
 }
 
@@ -237,10 +408,176 @@
  * so it cannot use display:none — some bots skip fields that are hidden that
  * way, which defeats the point.
  */
-.qem-honeypot {
+.qevm-honeypot {
 	position: absolute !important;
+
+	/*
+	 * `left` first as the fallback, then the logical property, which wins on
+	 * anything that understands it. The order matters here more than anywhere
+	 * else in this file: if the offset failed to apply the honeypot would
+	 * become a visible, labelled "Website" field in the middle of the form,
+	 * and people would dutifully fill it in and have their booking refused.
+	 */
 	left: -9999px !important;
+	inset-inline-start: -9999px !important;
 	width: 1px;
 	height: 1px;
 	overflow: hidden;
+}
+
+/* Calendar
+   ---------------------------------------------------------------------- */
+
+.qevm-calendar__nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+	justify-content: space-between;
+	margin-block-end: 1rem;
+}
+
+.qevm-calendar__caption,
+.qevm-calendar caption.qevm-calendar__caption {
+	text-align: start;
+	caption-side: top;
+	margin-block-end: 0.75rem;
+}
+
+.qevm-calendar__month {
+	display: block;
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.qevm-calendar__summary {
+	display: block;
+	font-size: 0.875rem;
+	opacity: 0.8;
+}
+
+/*
+ * The grid scrolls inside its own box rather than pushing the page sideways.
+ * Seven columns of dates has a floor below which cells stop being tappable, and
+ * a calendar that makes the whole page scroll horizontally takes the article
+ * text with it.
+ */
+.qevm-calendar__grid {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+
+.qevm-calendar__grid th,
+.qevm-calendar__grid td {
+	border: 1px solid rgba( 0, 0, 0, 0.12 );
+	padding: 0.35rem;
+	vertical-align: top;
+	text-align: start;
+}
+
+.qevm-calendar__grid th {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	text-align: center;
+}
+
+.qevm-calendar__grid abbr {
+	text-decoration: none;
+	border: 0;
+}
+
+.qevm-calendar__day {
+	height: 5.5rem;
+}
+
+.qevm-calendar__day--empty {
+	background: rgba( 0, 0, 0, 0.03 );
+}
+
+.qevm-calendar__day--today {
+	outline: 2px solid currentColor;
+	outline-offset: -2px;
+}
+
+/*
+ * A focused day has to be obvious. The cells are only focusable once the
+ * script has added a roving tabindex, and a focus ring that is hard to see is
+ * the difference between arrow keys being useful and being disorienting.
+ */
+.qevm-calendar__day:focus-visible {
+	outline: 3px solid currentColor;
+	outline-offset: -3px;
+}
+
+.qevm-calendar__date {
+	display: block;
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+.qevm-calendar__events {
+	list-style: none;
+	margin: 0.25rem 0 0;
+	padding: 0;
+	font-size: 0.8125rem;
+}
+
+.qevm-calendar__event + .qevm-calendar__event {
+	margin-block-start: 0.25rem;
+}
+
+.qevm-calendar__time,
+.qevm-calendar__where {
+	display: block;
+	font-size: 0.8125rem;
+	opacity: 0.8;
+}
+
+.qevm-calendar__days {
+	margin: 0;
+}
+
+.qevm-calendar__day-heading {
+	font-weight: 600;
+	margin-block-start: 1rem;
+	padding-block-end: 0.25rem;
+	border-block-end: 1px solid rgba( 0, 0, 0, 0.12 );
+}
+
+.qevm-calendar--list dd {
+	margin-inline-start: 0;
+}
+
+.qevm-calendar__alternative {
+	margin-block-start: 1rem;
+}
+
+@media ( max-width: 600px ) {
+	/*
+	 * Cells grow to fit rather than keeping a fixed height, so a month with a
+	 * busy week is tall instead of clipped.
+	 *
+	 * The first version of this hid the event lists at this width and left a
+	 * dot behind, which is a common calendar pattern and was wrong here: the
+	 * titles are links, and clipping them visually leaves them in the tab order
+	 * while invisible. Somebody navigating by keyboard would have watched focus
+	 * disappear into nothing. Removing them outright would have taken them from
+	 * screen readers too. A tall grid is the honest answer, and the list view is
+	 * one link away and offered on every calendar for anybody who wants it.
+	 */
+	.qevm-calendar__day {
+		height: auto;
+		min-height: 2.75rem;
+	}
+
+	.qevm-calendar__grid th,
+	.qevm-calendar__grid td {
+		padding: 0.2rem;
+	}
+
+	.qevm-calendar__events,
+	.qevm-calendar__time {
+		font-size: 0.75rem;
+	}
 }

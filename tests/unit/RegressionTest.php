@@ -9,11 +9,12 @@
  * @package QuickEventsManager
  */
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use QEM\Frontend\Ics;
-use QEM\Frontend\SingleEvent;
-use QEM\Registration\Exporter;
-use QEM\Registration\RegistrationService;
+use QuickEventsManager\Frontend\Ics;
+use QuickEventsManager\Frontend\SingleEvent;
+use QuickEventsManager\Registration\Exporter;
+use QuickEventsManager\Registration\RegistrationService;
 
 /**
  * Regression guards.
@@ -74,7 +75,7 @@ final class RegressionTest extends TestCase {
 	}
 
 	/**
-	 * sanitize_title() must never be used as a bare sanitize_callback.
+	 * A bare sanitize_title() must never be used as a sanitize_callback.
 	 *
 	 * WordPress calls a sanitize_callback as ( $value, $request, $param ).
 	 * sanitize_title()'s second parameter is $fallback_title, which it returns
@@ -96,20 +97,19 @@ final class RegressionTest extends TestCase {
 	/**
 	 * Only callbacks that take a single argument are safe to pass by name.
 	 *
-	 * @dataProvider single_argument_callback_provider
-	 *
-	 * @param string $function Core function used as a sanitize_callback.
+	 * @param string $callback Core function used as a sanitize_callback.
 	 * @return void
 	 */
-	public function test_only_single_argument_callbacks_are_passed_by_name( $function ) {
-		$reflection = new ReflectionFunction( $function );
+	#[DataProvider( 'single_argument_callback_provider' )]
+	public function test_only_single_argument_callbacks_are_passed_by_name( $callback ) {
+		$reflection = new ReflectionFunction( $callback );
 
 		$this->assertSame(
 			1,
 			$reflection->getNumberOfParameters(),
 			sprintf(
 				'%s() takes more than one parameter, so WordPress passing ( $value, $request, $param ) changes its behaviour. Wrap it.',
-				$function
+				$callback
 			)
 		);
 	}
@@ -171,7 +171,7 @@ final class RegressionTest extends TestCase {
 	 */
 	public function test_rate_limit_is_filterable() {
 		$this->assertStringContainsString(
-			'qem_registration_rate_limit',
+			'qevm_registration_rate_limit',
 			$this->source( 'includes/Registration/RegistrationService.php' )
 		);
 	}
@@ -181,11 +181,10 @@ final class RegressionTest extends TestCase {
 	 * file is opened, so an attendee's name becomes code running on the
 	 * organiser's machine.
 	 *
-	 * @dataProvider formula_provider
-	 *
 	 * @param string $input Hostile cell value.
 	 * @return void
 	 */
+	#[DataProvider( 'formula_provider' )]
 	public function test_csv_formulas_are_defused( $input ) {
 		$this->assertStringStartsWith( "\t", Exporter::defuse( $input ) );
 	}
@@ -197,12 +196,12 @@ final class RegressionTest extends TestCase {
 	 */
 	public static function formula_provider() {
 		return array(
-			'equals'      => array( '=1+1' ),
-			'plus'        => array( '+1' ),
-			'minus'       => array( '-1' ),
-			'at'          => array( '@SUM(A1)' ),
-			'command'     => array( '=cmd|\' /C calc\'!A0' ),
-			'hyperlink'   => array( '=HYPERLINK("http://evil.test","click")' ),
+			'equals'    => array( '=1+1' ),
+			'plus'      => array( '+1' ),
+			'minus'     => array( '-1' ),
+			'at'        => array( '@SUM(A1)' ),
+			'command'   => array( '=cmd|\' /C calc\'!A0' ),
+			'hyperlink' => array( '=HYPERLINK("http://evil.test","click")' ),
 		);
 	}
 

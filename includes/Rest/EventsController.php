@@ -5,20 +5,21 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Rest;
+namespace QuickEventsManager\Rest;
 
-use QEM\Events\Event;
-use QEM\Events\Meta;
-use QEM\Events\Query;
+use QuickEventsManager\Events\Event;
+use QuickEventsManager\Events\Meta;
+use QuickEventsManager\Events\OccurrenceQuery;
+use QuickEventsManager\Events\Query;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * `qem/v1/events` — a shaped, public read API.
+ * `qevm/v1/events` — a shaped, public read API.
  *
  * Write endpoints are deliberately absent. The post type is registered with
  * `show_in_rest`, so core already serves authenticated CRUD at
- * `/wp/v2/qem_event` with permission handling the block editor relies on.
+ * `/wp/v2/qevm_event` with permission handling the block editor relies on.
  * Hand-rolling a second write path would mean a second permission surface to
  * audit for no benefit.
  *
@@ -33,7 +34,7 @@ final class EventsController {
 	/**
 	 * REST namespace.
 	 */
-	const NAMESPACE = 'qem/v1';
+	const NAMESPACE = 'qevm/v1';
 
 	/**
 	 * Hook into REST initialisation.
@@ -81,6 +82,7 @@ final class EventsController {
 							'minimum'           => 1,
 							'sanitize_callback' => 'absint',
 						),
+
 						/*
 						 * Wrapped rather than passed as the bare function name.
 						 * WordPress invokes a sanitize_callback as
@@ -160,9 +162,10 @@ final class EventsController {
 		}
 
 		if ( '' !== $category ) {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- A single-term slug lookup against wp_term_relationships, which is indexed on both columns it joins.
 			$args['tax_query'] = array(
 				array(
-					'taxonomy' => QEM_TAX_CATEGORY,
+					'taxonomy' => QEVM_TAX_CATEGORY,
 					'field'    => 'slug',
 					'terms'    => array( $category ),
 				),
@@ -174,16 +177,7 @@ final class EventsController {
 		} elseif ( 'upcoming' === $show ) {
 			$args = Query::upcoming_args( $args );
 		} else {
-			$args = array_merge(
-				array(
-					'post_type'   => QEM_POST_TYPE,
-					'post_status' => 'publish',
-					'meta_key'    => Meta::START_UTC,
-					'orderby'     => 'meta_value',
-					'order'       => 'ASC',
-				),
-				$args
-			);
+			$args = OccurrenceQuery::all_args( $args );
 		}
 
 		$query = new \WP_Query( $args );
@@ -195,8 +189,9 @@ final class EventsController {
 
 		$response = rest_ensure_response( $items );
 
-		$response->header( 'X-WP-Total', (int) $query->found_posts );
-		$response->header( 'X-WP-TotalPages', (int) $query->max_num_pages );
+		// Headers are strings on the wire; WP_HTTP_Response::header() says so too.
+		$response->header( 'X-WP-Total', (string) (int) $query->found_posts );
+		$response->header( 'X-WP-TotalPages', (string) (int) $query->max_num_pages );
 
 		return $response;
 	}
@@ -214,7 +209,7 @@ final class EventsController {
 
 		if ( ! $event->is_valid() || 'publish' !== get_post_status( $event->id() ) ) {
 			return new \WP_Error(
-				'qem_event_not_found',
+				'qevm_event_not_found',
 				__( 'That event could not be found.', 'quick-events-manager' ),
 				array( 'status' => 404 )
 			);
@@ -229,22 +224,22 @@ final class EventsController {
 	 * @since 26.0
 	 *
 	 * @param Event $event Event.
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	private function prepare( Event $event ) {
 		$data = array(
-			'id'        => $event->id(),
-			'title'     => get_the_title( $event->id() ),
-			'excerpt'   => wp_strip_all_tags( get_the_excerpt( $event->id() ) ),
-			'url'       => get_permalink( $event->id() ),
-			'image'     => get_the_post_thumbnail_url( $event->id(), 'large' ) ?: '',
-			'start_utc' => $event->start_utc(),
-			'end_utc'   => $event->end_utc(),
-			'timezone'  => $event->timezone(),
-			'all_day'   => $event->is_all_day(),
-			'is_online' => $event->is_online(),
-			'has_ended' => $event->has_ended(),
-			'venue'     => array(
+			'id'         => $event->id(),
+			'title'      => get_the_title( $event->id() ),
+			'excerpt'    => wp_strip_all_tags( get_the_excerpt( $event->id() ) ),
+			'url'        => get_permalink( $event->id() ),
+			'image'      => (string) get_the_post_thumbnail_url( $event->id(), 'large' ),
+			'start_utc'  => $event->start_utc(),
+			'end_utc'    => $event->end_utc(),
+			'timezone'   => $event->timezone(),
+			'all_day'    => $event->is_all_day(),
+			'is_online'  => $event->is_online(),
+			'has_ended'  => $event->has_ended(),
+			'venue'      => array(
 				'name'    => (string) $event->meta( Meta::VENUE_NAME ),
 				'address' => (string) $event->meta( Meta::VENUE_ADDRESS ),
 				'city'    => (string) $event->meta( Meta::VENUE_CITY ),
@@ -252,11 +247,11 @@ final class EventsController {
 				'postal'  => (string) $event->meta( Meta::VENUE_POSTAL ),
 				'country' => (string) $event->meta( Meta::VENUE_COUNTRY ),
 			),
-			'organizer' => array(
+			'organizer'  => array(
 				'name' => (string) $event->meta( Meta::ORGANIZER_NAME ),
 				'url'  => (string) $event->meta( Meta::ORGANIZER_URL ),
 			),
-			'categories' => wp_get_post_terms( $event->id(), QEM_TAX_CATEGORY, array( 'fields' => 'names' ) ),
+			'categories' => wp_get_post_terms( $event->id(), QEVM_TAX_CATEGORY, array( 'fields' => 'names' ) ),
 		);
 
 		/*
@@ -277,6 +272,6 @@ final class EventsController {
 		 * @param array $data  Prepared data.
 		 * @param Event $event The event.
 		 */
-		return apply_filters( 'qem_rest_prepare_event', $data, $event );
+		return apply_filters( 'qevm_rest_prepare_event', $data, $event );
 	}
 }

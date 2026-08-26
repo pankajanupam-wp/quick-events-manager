@@ -5,7 +5,7 @@
  * @package QuickEventsManager
  */
 
-namespace QEM\Frontend;
+namespace QuickEventsManager\Frontend;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -46,7 +46,7 @@ final class Templates {
 			return $found;
 		}
 
-		$plugin_path = QEM_PATH . 'templates/' . $template;
+		$plugin_path = QEVM_PATH . 'templates/' . $template;
 
 		/**
 		 * Filter the resolved path of a template.
@@ -56,7 +56,7 @@ final class Templates {
 		 * @param string $plugin_path Absolute path to the plugin's copy.
 		 * @param string $template    Requested file name.
 		 */
-		$plugin_path = apply_filters( 'qem_template_path', $plugin_path, $template );
+		$plugin_path = apply_filters( 'qevm_template_path', $plugin_path, $template );
 
 		return is_readable( $plugin_path ) ? $plugin_path : '';
 	}
@@ -69,8 +69,8 @@ final class Templates {
 	 *
 	 * @since 26.0
 	 *
-	 * @param string $template File name.
-	 * @param array  $vars     Variables to expose.
+	 * @param string               $template File name.
+	 * @param array<string, mixed> $vars     Variables to expose.
 	 * @return string Rendered markup.
 	 */
 	public static function render( $template, array $vars = array() ) {

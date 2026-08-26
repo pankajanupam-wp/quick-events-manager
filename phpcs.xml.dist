@@ -1,0 +1,222 @@
+<?xml version="1.0"?>
+<ruleset name="Quick Events Manager">
+
+	<description>
+		WordPress Coding Standards for Quick Events Manager.
+
+		Rules that govern this project live in docs/engineering-standards.md;
+		this file is the machine-checkable subset of them. Every exclusion below
+		names the decision that justifies it — an exclusion without a reason is a
+		rule someone found inconvenient, and should be removed rather than kept.
+	</description>
+
+	<file>.</file>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/build/*</exclude-pattern>
+	<exclude-pattern>/languages/*</exclude-pattern>
+
+	<arg name="basepath" value="."/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg name="colors"/>
+	<arg value="ps"/>
+
+	<!-- Minimum supported platform. See docs/adr/0002-php-and-wordpress-versions.md -->
+	<config name="minimum_wp_version" value="6.5"/>
+	<config name="testVersion" value="8.1-"/>
+
+	<rule ref="WordPress">
+		<!--
+			PSR-4 requires Foo.php, not class-foo.php. The autoloader maps
+			QuickEventsManager\Foo\Bar directly to includes/Foo/Bar.php with one
+			str_replace, which is only possible with PSR-4 file naming.
+			See docs/adr/0007-no-runtime-dependencies.md.
+		-->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+
+	<rule ref="PHPCompatibilityWP">
+		<!--
+			PHPCompatibility's latest stable is 9.3.5, from 2019 — four years
+			before PHP 8.1 shipped enums. It does not recognise an enum body as
+			a class scope, so every sniff that reasons about class context
+			misfires inside one. Both exclusions below are the same bug wearing
+			two names, and further enums will not add new kinds of it.
+
+			Excluding them costs nothing real. Both guard against changes
+			introduced in PHP 7.0 and 7.1, and this plugin's floor is 8.1 — they
+			are checking for things that cannot apply here.
+
+			Syntax-level compatibility is covered regardless: CI runs `php -l`
+			over every shipped file on each supported version, which is what
+			would actually catch an 8.2-only construct in an 8.1 codebase.
+
+			Remove both once PHPCompatibility 10.0 is stable. As of August 2026
+			it is at 10.0.0-alpha2 and not safe to depend on.
+		-->
+		<exclude name="PHPCompatibility.Variables.ForbiddenThisUseContexts"/>
+		<exclude name="PHPCompatibility.FunctionDeclarations.NewParamTypeDeclarations.SelfOutsideClassScopeFound"/>
+	</rule>
+
+	<!--
+		Everything global carries the plugin prefix. Namespaces protect classes
+		and functions; nothing protects options, hooks, constants, transients,
+		post types, shortcodes, script handles or table names.
+
+		C0.4 completed the rename from the previous `qem` prefix. This sniff
+		reporting nothing is the standing proof that it stayed complete — a
+		better check than grepping, because it also catches a new global added
+		later without a prefix.
+
+		See docs/adr/0001-naming-and-namespace.md.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="qevm"/>
+				<element value="QEVM"/>
+				<element value="QuickEventsManager"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		The text domain is the plugin slug, unabbreviated, because WordPress.org
+		generates translation packages from the slug. It is the one name in the
+		project that is not `qevm`.
+	-->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="quick-events-manager"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		The plugin uses a custom capability type rather than mapping onto `post`,
+		so a check-in role can exist without granting the right to edit blog
+		posts. WPCS cannot know these exist, and flags them as typos otherwise.
+
+		Capabilities are one of the easiest things to miss in a rename, so this
+		sniff staying quiet is a standing check on them specifically.
+
+		`manage_qevm_checkins` is added by C1.9 and listed here in advance.
+	-->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="edit_qevm_event"/>
+				<element value="read_qevm_event"/>
+				<element value="delete_qevm_event"/>
+				<element value="edit_qevm_events"/>
+				<element value="publish_qevm_events"/>
+				<element value="delete_qevm_events"/>
+				<element value="edit_others_qevm_events"/>
+				<element value="delete_others_qevm_events"/>
+				<element value="read_private_qevm_events"/>
+				<element value="edit_published_qevm_events"/>
+				<element value="delete_published_qevm_events"/>
+				<element value="edit_qevm_venue"/>
+				<element value="read_qevm_venue"/>
+				<element value="delete_qevm_venue"/>
+				<element value="edit_qevm_venues"/>
+				<element value="publish_qevm_venues"/>
+				<element value="delete_qevm_venues"/>
+				<element value="edit_others_qevm_venues"/>
+				<element value="delete_others_qevm_venues"/>
+				<element value="read_private_qevm_venues"/>
+				<element value="edit_published_qevm_venues"/>
+				<element value="delete_published_qevm_venues"/>
+				<element value="edit_qevm_organizer"/>
+				<element value="read_qevm_organizer"/>
+				<element value="delete_qevm_organizer"/>
+				<element value="edit_qevm_organizers"/>
+				<element value="publish_qevm_organizers"/>
+				<element value="delete_qevm_organizers"/>
+				<element value="edit_others_qevm_organizers"/>
+				<element value="delete_others_qevm_organizers"/>
+				<element value="read_private_qevm_organizers"/>
+				<element value="edit_published_qevm_organizers"/>
+				<element value="delete_published_qevm_organizers"/>
+				<element value="manage_qevm_registrations"/>
+				<element value="manage_qevm_checkins"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		Test scaffolding is not production code.
+
+		tests/unit/bootstrap.php is a hand-written stub of the slice of WordPress
+		the unit suite touches. Its whole job is to declare core's functions with
+		core's signatures, so most of what follows is the standard objecting to
+		it being what it is: it declares global functions (PrefixAllGlobals),
+		mixes them with helper classes in one file (SeparateFunctionsFromOO,
+		OneObjectStructurePerFile), and keeps parameters it never reads because
+		the real function has them (UnusedFunctionParameter).
+
+		The AlternativeFunctions exclusions are the same story from the other
+		direction: a stub cannot call wp_json_encode() or wp_strip_all_tags() to
+		implement json_encode() and strip_tags(), because those are the very
+		functions it is standing in for. Tests reading a fixture off disk with
+		file_get_contents() are told to use wp_remote_get(), which is for HTTP.
+
+		None of these are excluded for production code, where each is a real
+		finding.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<!--
+		Integration tests read the database on purpose.
+
+		Checking that a booking really landed means asking MySQL, not asking the
+		code that wrote it — a repository that returns what it just cached would
+		pass a test written any other way. Caching is equally beside the point:
+		a cached answer is the thing these tests exist to look past.
+
+		Scoped to tests/integration only. Everywhere else a direct query outside
+		a repository is still a finding, which is what stopped the same class of
+		bug that closed a competitor's listing.
+	-->
+	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude-pattern>/tests/integration/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Universal.Files.SeparateFunctionsFromOO">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Squiz.Commenting.ClassComment.Missing">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Squiz.Commenting.FileComment.Missing">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+</ruleset>

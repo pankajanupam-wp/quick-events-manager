@@ -2,78 +2,78 @@
  * Quick Events Manager — admin.
  */
 
-.qem-fields {
+.qevm-fields {
 	display: grid;
 	gap: 1rem;
 	max-width: 42rem;
 }
 
-.qem-field-row {
+.qevm-field-row {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
 	gap: 1rem;
 }
 
-.qem-field {
+.qevm-field {
 	display: grid;
 	gap: 0.25rem;
 }
 
-.qem-field label {
+.qevm-field label {
 	font-weight: 600;
 }
 
-.qem-field input[type="datetime-local"],
-.qem-field select {
+.qevm-field input[type="datetime-local"],
+.qevm-field select {
 	max-width: 100%;
 }
 
-.qem-checkbox {
+.qevm-checkbox {
 	margin: 0;
 }
 
-.qem-more {
+.qevm-more {
 	padding-top: 0.5rem;
 	border-top: 1px solid #dcdcde;
 }
 
-.qem-more > summary {
+.qevm-more > summary {
 	padding: 0.5rem 0;
 	font-weight: 600;
 	cursor: pointer;
 }
 
-.qem-more[open] > summary {
+.qevm-more[open] > summary {
 	margin-bottom: 0.5rem;
 }
 
-.qem-tz,
-.qem-past {
+.qevm-tz,
+.qevm-past {
 	color: #646970;
 }
 
-.qem-now {
+.qevm-now {
 	color: #007017;
 }
 
 /* Features screen
    ------------------------------------------------------------------------ */
 
-.qem-features .qem-intro {
+.qevm-features .qevm-intro {
 	max-width: 46rem;
 	font-size: 1rem;
 }
 
-.qem-features .qem-level-heading {
+.qevm-features .qevm-level-heading {
 	margin-bottom: 0.25rem;
 }
 
-.qem-features .qem-level-description {
+.qevm-features .qevm-level-description {
 	margin-top: 0;
 	color: #646970;
 }
 
-.qem-module-list {
+.qevm-module-list {
 	display: grid;
 	gap: 0.75rem;
 	max-width: 46rem;
@@ -82,24 +82,24 @@
 	list-style: none;
 }
 
-.qem-module {
+.qevm-module {
 	padding: 1rem;
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
 	background: #fff;
 }
 
-.qem-module.is-enabled {
+.qevm-module.is-enabled {
 	border-color: #2271b1;
 }
 
-.qem-module-title {
+.qevm-module-title {
 	font-size: 1.05rem;
 	font-weight: 600;
 }
 
-.qem-module-description,
-.qem-module-note {
+.qevm-module-description,
+.qevm-module-note {
 	margin: 0.35rem 0 0 1.9rem;
 	color: #646970;
 }
@@ -107,16 +107,36 @@
 /* Attendees screen
    ------------------------------------------------------------------------ */
 
-.qem-attendees-event {
+/*
+ * The attendee table sizes to its content rather than dividing the width
+ * equally, so a cell is never narrower than the button inside it. The two
+ * action columns are given a floor as well, because a long attendee name
+ * would otherwise take the space from them.
+ */
+.qevm-attendees-table td,
+.qevm-attendees-table th {
+	white-space: normal;
+}
+
+.qevm-attendees-table .qevm-status-form,
+.qevm-attendees-table .qevm-resend-form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	align-items: center;
+	min-width: 9rem;
+}
+
+.qevm-attendees-event {
 	margin-bottom: 0.25rem;
 }
 
-.qem-attendees-summary {
+.qevm-attendees-summary {
 	margin-top: 0;
 	color: #646970;
 }
 
-.qem-attendees-filters {
+.qevm-attendees-filters {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
@@ -124,8 +144,224 @@
 	margin: 1rem 0;
 }
 
-.qem-status-form {
+.qevm-status-form {
 	display: flex;
 	gap: 0.25rem;
 	align-items: center;
+}
+
+/* Emailing everybody
+   ------------------------------------------------------------------------ */
+
+.qevm-broadcast {
+	max-width: 50rem;
+	margin-block-start: 2rem;
+	padding-block-start: 1rem;
+	border-block-start: 1px solid #dcdcde;
+}
+
+.qevm-broadcast-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+/* Repeats
+   ------------------------------------------------------------------------ */
+
+.qevm-repeat fieldset legend {
+	font-weight: 600;
+	padding-block-end: 0.25rem;
+}
+
+.qevm-repeat fieldset label {
+	display: block;
+	margin-block-end: 0.35rem;
+}
+
+.qevm-repeat .qevm-weekday {
+	display: inline-block;
+	margin-inline-end: 0.75rem;
+}
+
+.qevm-repeat-summary {
+	margin-block-start: 1rem;
+	padding: 0.5rem 0.75rem;
+	background: #f6f7f7;
+	border-inline-start: 4px solid #2271b1;
+}
+
+/* The dates in a series
+   ------------------------------------------------------------------------ */
+
+.qevm-dates .qevm-date-move {
+	display: flex;
+	gap: 0.25rem;
+	align-items: center;
+}
+
+.qevm-dates .qevm-date-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: center;
+}
+
+.qevm-date-flag {
+	display: inline-block;
+	margin-inline-start: 0.5rem;
+	padding: 0.05rem 0.4rem;
+	border-radius: 3px;
+	background: #f0f0f1;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+/* The door
+   ------------------------------------------------------------------------ */
+
+.qevm-door__count {
+	font-size: 1.5rem;
+	font-weight: 600;
+	margin-block: 0.5rem 1rem;
+}
+
+.qevm-door__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	max-width: 40rem;
+}
+
+/* One row a person, tall enough to hit with a thumb without looking. */
+.qevm-door__person {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-template-areas:
+		"name action"
+		"code action"
+		"state action";
+	align-items: center;
+	gap: 0.1rem 1rem;
+	padding: 0.9rem 1rem;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	background: #fff;
+	margin-block-end: 0.6rem;
+	min-height: 3.5rem;
+}
+
+.qevm-door__person--in {
+	background: #f0f6f1;
+	border-color: #b7d3bd;
+}
+
+.qevm-door__name {
+	grid-area: name;
+	font-size: 1.15rem;
+	font-weight: 600;
+}
+
+.qevm-door__code {
+	grid-area: code;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 0.85rem;
+	opacity: 0.75;
+}
+
+.qevm-door__state {
+	grid-area: state;
+	font-size: 0.85rem;
+}
+
+.qevm-door__action {
+	grid-area: action;
+}
+
+.qevm-door__search,
+.qevm-door__dates {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+	margin-block-end: 1rem;
+}
+
+.qevm-door__search input[type="search"] {
+	flex: 1 1 14rem;
+	font-size: 1.1rem;
+	padding: 0.4rem 0.6rem;
+}
+
+.qevm-door__result p {
+	font-size: 1.1rem;
+}
+
+.qevm-door__events {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-width: 30rem;
+}
+
+@media (max-width: 782px) {
+	.qevm-door__person {
+		grid-template-columns: 1fr;
+		grid-template-areas:
+			"name"
+			"code"
+			"state"
+			"action";
+		gap: 0.35rem;
+	}
+
+	/* A button worth hitting while holding a clipboard. */
+	.qevm-door__action .button {
+		width: 100%;
+		min-height: 3rem;
+	}
+}
+
+.qevm-door__scan {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+	margin-block-end: 1rem;
+	padding: 0.75rem;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	background: #fff;
+}
+
+.qevm-door__scan input[type="text"] {
+	flex: 1 1 12rem;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 1.1rem;
+	padding: 0.4rem 0.6rem;
+}
+
+.qevm-door__video {
+	width: 100%;
+	max-width: 20rem;
+	border-radius: 6px;
+	background: #000;
+}
+
+/*
+ * The `hidden` attribute only hides an element while nothing gives it a
+ * `display`, and plenty of stylesheets give `video` one. The script sets
+ * `hidden` before scanning starts and the camera preview was showing anyway —
+ * a black rectangle sitting on the door screen of every site that never taps
+ * Scan. Found by taking the listing screenshots in C10.7.
+ */
+.qevm-door__video[hidden] {
+	display: none;
+}
+
+.qevm-door__scanstate {
+	flex-basis: 100%;
+	font-size: 0.9rem;
 }
